@@ -96,6 +96,12 @@
 
 **Reason:** A straight line drawn over streets would silently mislead, which is worse than a visible estimate. Open routers keep the free-first rule intact.
 
+## DEC-018: Grouped Filter Stack and Multi-Mode Travel Comparison
+
+**Decision:** The Explore filter overlay is a grouped, stacked panel (Where, What, Budget and time, When, Vibe) instead of two flat chip rows; it is open by default on desktop, collapsed on mobile, and exposes budget and time-available controls that were previously only reachable through search text. Detail pages gain an About section derived strictly from fields the record already has, plus a travel-options panel that fetches real foot, bike, and car OSRM profiles in parallel, marks the fastest, and falls back to per-mode straight-line estimates when routing is unreachable. The Discover page adds browse chips that deep-link into Explore query params (gems, free, walkable, bestTime, city).
+
+**Reason:** Flat chip rows hid capabilities and crowded the map on small screens; travelers compare travel modes when deciding, and OSRM's free profiles make honest comparison possible without a paid service. Every mode and About line still cites its provenance per the truth contract.
+
 ## DEC-017: Snapped Coordinates and Varied Editorial Status
 
 **Decision:** Every record coordinate is snapped to the OSM street network (verified with the router nearest endpoint), including the fixed demo position, which now sits on the Marine Drive promenade instead of in the water. Record status uses a varied vocabulary (Verified record, Curated record, Community sourced, Awaiting operator check, Seasonally reachable, Weather dependent) that reflects each record's actual editorial state instead of one blanket demo tag.

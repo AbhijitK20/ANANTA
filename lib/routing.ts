@@ -21,8 +21,28 @@ export type StreetRoute = {
   note: string;
 };
 
-const ROUTER_BASES = ["https://routing.openstreetmap.de/routed-foot", "https://router.project-osrm.org"];
+const ROUTER_BASES = ["https://routing.openstreetmap.de", "https://router.project-osrm.org"];
 const MAX_STEPS = 14;
+
+/** Travel modes the demo compares, each with its real OSRM profile. */
+export type TravelMode = "foot" | "bike" | "car";
+
+export const TRAVEL_MODES: Array<{ id: TravelMode; label: string; hint: string }> = [
+  { id: "foot", label: "Walk", hint: "Footpaths and promenades" },
+  { id: "bike", label: "Cycle", hint: "Cycle-friendly streets" },
+  { id: "car", label: "Drive", hint: "Road network" },
+];
+
+const PROFILE_BY_MODE: Record<TravelMode, string> = { foot: "foot", bike: "bike", car: "car" };
+
+const MODE_FALLBACK_NOTE: Record<TravelMode, string> = {
+  foot: "Live routing is unreachable right now, so this is a straight-line estimate, not a street route.",
+  bike: "Live cycle routing is unreachable, so this is a straight-line estimate, not a street route.",
+  car: "Live drive routing is unreachable, so this is a straight-line estimate, not a street route.",
+};
+
+/** Planning fallback speeds (km/h) per mode, used only when routers are down. */
+const MODE_FALLBACK_KMH: Record<TravelMode, number> = { foot: 5, bike: 12, car: 22 };
 
 /** Human instruction for one OSRM maneuver step. */
 export function instructionFor(maneuver: { type: string; modifier?: string }): string {
@@ -101,9 +121,9 @@ export function positionAlongRoute(coordinates: [number, number][], t: number): 
   return coordinates[coordinates.length - 1];
 }
 
-export function routeCacheKey(from: [number, number], to: [number, number]): string {
+export function routeCacheKey(from: [number, number], to: [number, number], mode: TravelMode = "foot"): string {
   const round = (v: number) => v.toFixed(4);
-  return `ananta-route-${round(from[0])},${round(from[1])}-${round(to[0])},${round(to[1])}`;
+  return `ananta-route-${mode}-${round(from[0])},${round(from[1])}-${round(to[0])},${round(to[1])}`;
 }
 
 /**
@@ -111,8 +131,8 @@ export function routeCacheKey(from: [number, number], to: [number, number]): str
  * clearly-labeled straight-line estimate when every router fails. Results are
  * cached per origin-destination pair in sessionStorage for the session.
  */
-export async function fetchStreetRoute(from: [number, number], to: [number, number]): Promise<StreetRoute> {
-  const cacheKey = routeCacheKey(from, to);
+export async function fetchStreetRoute(from: [number, number], to: [number, number], mode: TravelMode = "foot"): Promise<StreetRoute> {
+  const cacheKey = routeCacheKey(from, to, mode);
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) return JSON.parse(cached) as StreetRoute;
@@ -123,7 +143,7 @@ export async function fetchStreetRoute(from: [number, number], to: [number, numb
   const query = `${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson&steps=true`;
   for (const base of ROUTER_BASES) {
     try {
-      const response = await fetch(`${base}/route/v1/foot/${query}`);
+      const response = await fetch(`${base}/routed-${PROFILE_BY_MODE[mode]}/route/v1/${PROFILE_BY_MODE[mode]}/${query}`);
       if (!response.ok) continue;
       const data = (await response.json()) as {
         code: string;
@@ -142,7 +162,11 @@ export async function fetchStreetRoute(from: [number, number], to: [number, numb
         distanceKm: route.distance / 1000,
         durationMinutes: Math.max(1, Math.round(route.duration / 60)),
         steps: route.legs ? stepsFromLeg(route.legs[0]) : [],
-        note: "Walking route from OpenStreetMap data. Route data (c) OpenStreetMap contributors.",
+        note: mode === "foot"
+          ? "Walking route from OpenStreetMap data. Route data (c) OpenStreetMap contributors."
+          : mode === "bike"
+            ? "Cycle route from OpenStreetMap data; carry your own cycle. Route data (c) OpenStreetMap contributors."
+            : "Drive route from OpenStreetMap data; it does not account for live traffic. Route data (c) OpenStreetMap contributors.",
       };
       try { sessionStorage.setItem(cacheKey, JSON.stringify(streetRoute)); } catch { /* cache is best effort */ }
       return streetRoute;
@@ -156,9 +180,9 @@ export async function fetchStreetRoute(from: [number, number], to: [number, numb
     kind: "estimate",
     coordinates: [from, to],
     distanceKm: straightKm,
-    durationMinutes: Math.max(1, Math.round((straightKm * 1.3 * 60) / 5)),
+    durationMinutes: Math.max(1, Math.round((straightKm * 1.3 * 60) / MODE_FALLBACK_KMH[mode])),
     steps: [],
-    note: "Live routing is unreachable right now, so this is a straight-line estimate, not a street route.",
+    note: MODE_FALLBACK_NOTE[mode],
   };
   try { sessionStorage.setItem(cacheKey, JSON.stringify(estimate)); } catch { /* cache is best effort */ }
   return estimate;

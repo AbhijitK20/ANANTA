@@ -313,6 +313,12 @@ For longer multi-route interaction runs, use a persistent server process. A back
 
 **Honesty notes:** the watermark text itself was never readable by any tool available here, so the mask was built from color properties rather than recognized glyphs; the result was verified structurally (no residue tiles remain and no art pixels were altered) rather than by OCR. The original watermarked file is preserved unchanged at `docs/01-product/large.png`.
 
+## Pass: grouped filters, travel-mode comparison, and discover deep links
+
+**Scope:** Explore stacked filter panel (Where / What / Budget and time / When / Vibe) with desktop-open, mobile-collapsed behavior; detail-page About section plus real walk/cycle/drive OSRM comparison with fastest badge, turn-by-turn for the fastest mode, and honest per-mode estimate fallbacks; Discover browse chips deep-linking into Explore params; overflow scan at 390 and 1440.
+
+**Result:** 41/41 browser checks passed with zero console errors at 390 and 1440. The QA harness itself was hardened after the box's Chromium died twice mid-run: scenarios now launch a fresh browser and retry once on browser death, and the overflow scan excludes elements clipped by an ancestor with hidden or clipped overflow (map markers previously triggered false positives). Hydration-safe panel state (SSR collapsed, opened on mount for wide screens) replaced an SSR-mismatch-prone initial read.
+
 ## Pass: quick filters and nightlife records
 
 **Scope:** a new pure quick-filter engine (`lib/quick-filters.ts`) with four traveler filters on Explore: Hidden gems (resident- or community-sourced records only), Walkable from me (30 minute walk limit measured from the fixed demo position), Free entry, and a Best time select backed by a new optional `bestTime` field with honest per-record guidance (best in the morning, best in daylight, best after sunset, best after dark, best around high tide, best in monsoon). Three real nightlife records were researched and added to support the after-dark option: Prithvi Theatre Evening, NCPA Waterfront Evening, and Parel Mill District Night, each geocoded, snapped to the street network, and photographed from Commons with credits. Every exclusion cites its rule and measured value, and the Explore exclusion panel merges constraint and quick-filter reasons. Leftover demo wording was scrubbed from source fields for consistency with the varied status vocabulary.
