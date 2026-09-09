@@ -7,7 +7,7 @@ export type DiscoveryIntent = {
   weather?: "rain";
 };
 
-const categories = ["food", "culture", "shopping", "nature", "workshop"];
+const categories = ["food", "culture", "shopping", "nature", "workshop", "family"];
 
 export function parseDiscoveryIntent(text: string): DiscoveryIntent {
   const normalized = text.toLowerCase();

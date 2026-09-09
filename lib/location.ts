@@ -10,15 +10,17 @@ export type UserLocation = {
 };
 
 /**
- * Static demo traveler position for the prototype: the Churchgate station mouth.
- * Geolocation is deliberately not used; every screen labels this as a fixed
- * demo position. Swap this one record to move the demo persona.
+ * Static demo traveler position for the prototype: a point on the Marine Drive
+ * promenade near the Churchgate end, snapped to the actual OSM walkway so the
+ * demo pin sits on the seafront path rather than in the water. Geolocation is
+ * deliberately not used; every screen labels this as a fixed demo position.
+ * Swap this one record to move the demo persona.
  */
 export const demoUserLocation: UserLocation = {
-  label: "Churchgate station",
-  area: "Fort",
+  label: "Marine Drive promenade",
+  area: "Churchgate",
   city: "Mumbai",
-  coordinates: [72.8215, 18.9342],
+  coordinates: [72.82339, 18.93367],
   station: "Churchgate",
   note: "Fixed demo location",
 };

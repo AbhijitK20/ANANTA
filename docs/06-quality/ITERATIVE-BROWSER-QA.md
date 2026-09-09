@@ -292,3 +292,15 @@ For longer multi-route interaction runs, use a persistent server process. A back
 - One events-page overflow result appeared while the server ran a half-swapped build; a clean restart cleared it, confirming it was a process artifact rather than a layout defect.
 
 **Honesty notes:** every video URL was checked against its live source with oEmbed before seeding; titles and creators are the real ones. Every image is a Wikimedia Commons file rendered with its photographer credit and labeled as an area photo, not the venue. Distance values are straight-line estimates with a street factor and never claim a route. The moving dot illustrates the estimate; it is hidden entirely under prefers-reduced-motion.
+
+## Pass: hidden gems, real street directions, and coordinate corrections
+
+**Scope:** nine researched hidden-gem records (Khotachiwadi, Banganga Tank, Sewri shoreline, Chor Bazaar, Kanheri Caves, Wonders Park Nerul, Central Park Kharghar, Belapur Fort, Pandavkada Falls) with geocoded coordinates, Commons photos, and honest per-record statuses; the blanket demo-seed tag was removed in favor of a varied status vocabulary; ten existing coordinates that sat off the street network were snapped to OSM ways, including the fixed demo location, which moved from mid-harbor to the Marine Drive promenade; real walking directions from the open OSRM foot router now draw a street-following route on the map with a turn-by-turn panel, session caching, and a labeled straight-line fallback.
+
+**Verification:** `tsc --noEmit` clean; 65 of 65 unit tests pass (12 files, including routing instruction mapping, step capping, and position-along-path math); production build clean; 30 automated Chromium checks pass with zero console errors and zero horizontal overflow at 390 and 1440.
+
+**What was checked:** all nine gems render in explore with photos and varied statuses; no record shows the old blanket tag; distances measure from the seafront location; a selection fetches a real street route from OSRM (street-route label shown), the panel lists numbered turn steps with street names and segment distances, attribution appears, and the map dot travels along the real geometry; new detail routes resolve.
+
+**Findings fixed during this pass:** a QA assertion miscounted the expanded catalog (40 records, not 41); a routing test fixture initially omitted the depart and arrive steps that real OSRM legs always include.
+
+**Honesty notes:** routing uses open OSRM servers on OpenStreetMap data with visible attribution; the fallback line is explicitly labeled as an estimate and drawn in a muted color; hidden-gem statuses state their actual editorial state (community sourced, awaiting operator check, seasonally reachable) rather than a uniform label.

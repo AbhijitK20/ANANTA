@@ -25,7 +25,7 @@ npx tsc --noEmit # typecheck
 | Route | What it does |
 |---|---|
 | `/` | Natural-language discovery search, events and nearest places with photos and distances |
-| `/explore` | Map with clustered markers, the fixed demo traveler marker, an animated demo path to the selection, zone/city/category/budget/time filters, ranked results with reasons, and exclusion explanations |
+| `/explore` | Map with clustered markers, the fixed demo traveler marker, real street walking routes with turn-by-turn directions from open OSRM, zone/city/category/budget/time filters, ranked results with reasons, and exclusion explanations |
 | `/events` | Happening Near Me: reference-time event windows with reachability checks and change banners |
 | `/experience/[id]` | Detail page with area photo, approved external media, feasibility notes, save/plan/report actions |
 | `/trips` | Draft plan feasibility (time, travel, buffer, budget, deadline), plan comparison, rain and closure adaptation, animated travel connectors |
@@ -42,6 +42,7 @@ npx tsc --noEmit # typecheck
 - Changes require confirmation: adaptation flows update the plan only after an explicit action
 - Free-first: no paid API in any core flow, and external failures have visible fallbacks
 - Verified external media: every seeded video was checked against its live source; images are Wikimedia Commons files rendered with photographer credits
+- Real walking directions: open OSRM routing on OpenStreetMap data with a labeled straight-line fallback; coordinates snapped to the street network
 
 ## Documentation map
 

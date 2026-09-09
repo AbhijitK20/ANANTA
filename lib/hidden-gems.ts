@@ -34,6 +34,20 @@ const flagsByExperience: Record<string, SafetyFlag[]> = {
   "dadar-flower-market-morning": [
     { field: "Crowds", flag: "Wholesale hours are busy; keep to the marked walking side" },
   ],
+  "khotachiwadi-heritage-lanes": [
+    { field: "Privacy", flag: "Live residential lane; visit quietly and ask before photographing homes" },
+  ],
+  "sewri-flamingo-shoreline": [
+    { field: "Season", flag: "Flamingo sightings run roughly November to May and shift with the tide" },
+    { field: "Access", flag: "Creek edge is unsafe beyond the viewing stretch" },
+  ],
+  "central-park-kharghar-walk": [
+    { field: "Heat", flag: "Long open lawns with little shade after noon" },
+  ],
+  "pandavkada-falls-monsoon-view": [
+    { field: "Weather", flag: "Access is restricted during high flow; view from the marked area only" },
+    { field: "Crowds", flag: "Weekend monsoon crowds are heavy; weekdays are quieter" },
+  ],
 };
 
 const historyByExperience: Record<string, { state: string; at: string }[]> = {
@@ -54,6 +68,22 @@ const historyByExperience: Record<string, { state: string; at: string }[]> = {
     { state: "Resident recommendation received", at: "2026-08-10" },
     { state: "Awaiting market hours verification", at: "2026-08-22" },
   ],
+  "khotachiwadi-heritage-lanes": [
+    { state: "Resident recommendation received", at: "2026-08-18" },
+    { state: "Awaiting resident association confirmation", at: "2026-09-05" },
+  ],
+  "sewri-flamingo-shoreline": [
+    { state: "Resident recommendation received", at: "2026-08-12" },
+    { state: "Awaiting seasonal tide confirmation", at: "2026-09-01" },
+  ],
+  "central-park-kharghar-walk": [
+    { state: "Resident recommendation received", at: "2026-08-20" },
+    { state: "Awaiting operator check on open hours", at: "2026-09-03" },
+  ],
+  "pandavkada-falls-monsoon-view": [
+    { state: "Resident recommendation received", at: "2026-08-14" },
+    { state: "Awaiting safety access confirmation", at: "2026-08-28" },
+  ],
 };
 
 const detailByExperience: Record<string, string> = {
@@ -61,6 +91,10 @@ const detailByExperience: Record<string, string> = {
   "airoli-creek-flamingo-point": "Seasonal local favorite; candidate requires a confirmed season and safe viewing alignment.",
   "versova-fishing-village-walk": "Authentic koliwada walk; candidate needs a community host confirmation before discovery.",
   "dadar-flower-market-morning": "Distinctly local morning market; candidate needs verified public hours before ranking.",
+  "khotachiwadi-heritage-lanes": "Heritage hamlet walk with strong resident identity; needs a community sign-off before discovery.",
+  "sewri-flamingo-shoreline": "Seasonal creek-edge favorite; candidate requires a confirmed season and safe viewing alignment.",
+  "central-park-kharghar-walk": "Large local green with a real morning community; needs open-hours verification.",
+  "pandavkada-falls-monsoon-view": "Strongly seasonal monsoon spot; candidate needs a safe-access confirmation each season.",
 };
 
 const candidateIds = Object.keys(flagsByExperience);

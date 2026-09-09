@@ -4,16 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import { clusterMarkers } from "@/lib/cluster";
 import { demoUserLocation } from "@/lib/location";
+import { positionAlongRoute, type StreetRoute } from "@/lib/routing";
 import type { Experience } from "@/lib/seed";
 
-type Props = { experiences: Experience[]; selectedId?: string; onSelect: (id: string) => void };
+type Props = { experiences: Experience[]; selectedId?: string; onSelect: (id: string) => void; route?: StreetRoute | null };
 
-/** Interpolate a position along the straight demo path between two points. */
-function pointOnPath(from: [number, number], to: [number, number], t: number): [number, number] {
-  return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
-}
-
-export function ExperienceMap({ experiences, selectedId, onSelect }: Props) {
+export function ExperienceMap({ experiences, selectedId, onSelect, route }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -96,8 +92,9 @@ export function ExperienceMap({ experiences, selectedId, onSelect }: Props) {
     if (selected && mapRef.current) mapRef.current.flyTo({ center: selected.coordinates, zoom: 13, duration: 700 });
   }, [experiences, selectedId]);
 
-  // Demo travel path: dashed line from the fixed demo position to the selected
-  // place, with a dot that travels along it. An estimate, never a real route.
+  // Travel route: draw the real street polyline (or the labeled straight-line
+  // fallback), fit the view to it, and move a dot along the actual path. This
+  // is a walking estimate, never a turn-by-turn navigation claim.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -113,44 +110,48 @@ export function ExperienceMap({ experiences, selectedId, onSelect }: Props) {
       routeLayerRef.current = null;
     };
 
-    const selected = experiences.find((experience) => experience.id === selectedId);
-    if (!selected || selected.coordinates[0] === demoUserLocation.coordinates[0]) { cleanup(); return; }
+    if (!route || route.coordinates.length < 2) { cleanup(); return; }
 
     const sourceId = "demo-route-line";
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     }
-    const lineCoordinates = [demoUserLocation.coordinates, selected.coordinates];
     (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData({
       type: "FeatureCollection",
-      features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: lineCoordinates } }],
+      features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.coordinates } }],
     });
     if (!map.getLayer("demo-route-line-case")) {
-      map.addLayer({ id: "demo-route-line-case", type: "line", source: sourceId, paint: { "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.8 } });
+      map.addLayer({ id: "demo-route-line-case", type: "line", source: sourceId, paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.85 } });
     }
     if (!map.getLayer("demo-route-line-main")) {
-      map.addLayer({ id: "demo-route-line-main", type: "line", source: sourceId, paint: { "line-color": "#175cd3", "line-width": 3, "line-dasharray": [1.5, 1.5] } });
+      map.addLayer({ id: "demo-route-line-main", type: "line", source: sourceId, paint: { "line-color": route.kind === "street" ? "#175cd3" : "#667085", "line-width": 4 } });
     }
     routeLayerRef.current = { sourceId, layerIds: ["demo-route-line-main", "demo-route-line-case"] };
+
+    const bounds = route.coordinates.reduce(
+      (acc, coordinate) => acc.extend(coordinate as [number, number]),
+      new maplibregl.LngLatBounds(route.coordinates[0], route.coordinates[0]),
+    );
+    map.fitBounds(bounds, { padding: 90, duration: 800, maxZoom: 15 });
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!reducedMotion) {
       const element = document.createElement("div");
       element.className = "travel-dot";
       element.setAttribute("role", "presentation");
-      const dot = new maplibregl.Marker({ element }).setLngLat(demoUserLocation.coordinates).addTo(map);
+      const dot = new maplibregl.Marker({ element }).setLngLat(route.coordinates[0]).addTo(map);
       dotMarkerRef.current = dot;
       const start = performance.now();
-      const duration = 3200;
+      const duration = 3600;
       const step = (now: number) => {
         const t = ((now - start) % duration) / duration;
-        dot.setLngLat(pointOnPath(demoUserLocation.coordinates, selected.coordinates, t));
+        dot.setLngLat(positionAlongRoute(route.coordinates, t));
         dotFrameRef.current = requestAnimationFrame(step);
       };
       dotFrameRef.current = requestAnimationFrame(step);
     }
     return cleanup;
-  }, [experiences, mapReady, selectedId]);
+  }, [route, mapReady]);
 
   return (
     <div className="absolute inset-0">

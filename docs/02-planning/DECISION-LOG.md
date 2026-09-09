@@ -89,3 +89,15 @@
 **Decision:** Every seeded video is checked against its live platform source before entering the demo, with the real title and creator recorded. Images come from Wikimedia Commons and always render with a photographer credit and an area-photo label.
 
 **Reason:** A video that does not exist or does not show the place is a fabricated claim of exactly the kind the truth contract forbids. Credits keep the free-media licensing honest, and the area-photo label stops an atmosphere image from implying a venue claim.
+
+## DEC-016: Real Street Routing With a Labeled Estimate Fallback
+
+**Decision:** Walking directions are fetched from the open OSRM servers (OpenStreetMap data, no key) and drawn on the map as a street-following polyline with a turn-by-turn panel. If routing is unreachable, the app draws a straight-line line in a muted color and labels it as an estimate instead of pretending it is a street route. The moving dot follows the actual path geometry. Route data is attributed to OpenStreetMap contributors.
+
+**Reason:** A straight line drawn over streets would silently mislead, which is worse than a visible estimate. Open routers keep the free-first rule intact.
+
+## DEC-017: Snapped Coordinates and Varied Editorial Status
+
+**Decision:** Every record coordinate is snapped to the OSM street network (verified with the router nearest endpoint), including the fixed demo position, which now sits on the Marine Drive promenade instead of in the water. Record status uses a varied vocabulary (Verified record, Curated record, Community sourced, Awaiting operator check, Seasonally reachable, Weather dependent) that reflects each record's actual editorial state instead of one blanket demo tag.
+
+**Reason:** A pin in the sea or mid-block breaks routing and credibility, and a single repeated status label carries no information and misstates records that came from residents or were verified.
