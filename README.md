@@ -1,6 +1,6 @@
 # Local Tourist
 
-A free-first, Mumbai and Navi Mumbai discovery prototype: curated local places and events matched to your time, budget, interests, and route. Built to prove a decision engine, not a listings site. The full blueprint lives in `Local-Experiences-Masterplan.md`, and the working documentation lives in `docs/`.
+A free-first, Mumbai and Navi Mumbai discovery prototype: curated local places and events matched to your time, budget, interests, and route. Built to prove a decision engine, not a listings site. The full blueprint lives in `Local-Experiences-Masterplan.md`, and the working documentation lives in `docs/`
 
 ## Stack
 
