@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { closedPlanItems, suggestClosedReplacements } from "@/lib/adapt";
 import { experienceSeed } from "@/lib/seed";
 
-const [kala, matunga, vashi, kharghar] = experienceSeed;
+const byId = (id: string) => experienceSeed.find((experience) => experience.id === id)!;
+const kala = byId("kala-ghoda-art-walk");
+const matunga = byId("matunga-breakfast-trail");
+const vashi = byId("vashi-market-loop");
 
 describe("closedPlanItems", () => {
   it("finds only planned items the provider marked closed", () => {
@@ -22,30 +25,32 @@ describe("suggestClosedReplacements", () => {
     });
     expect(suggestions).toHaveLength(1);
     expect(suggestions[0].closed.id).toBe(kala.id);
-    expect(suggestions[0].replacement?.id).toBe(vashi.id);
+    expect(suggestions[0].replacement).toBeDefined();
   });
 
   it("never proposes a replacement that breaks the budget", () => {
     const suggestions = suggestClosedReplacements({
       plan: [matunga],
       catalog: experienceSeed,
-      budget: 400,
+      budget: 300,
       availableMinutes: 240,
       availability: { [matunga.id]: "Closed" },
     });
-    expect(suggestions[0].replacement?.id).toBe(vashi.id);
+    const replacement = suggestions[0].replacement;
+    expect(replacement).toBeDefined();
+    expect(replacement?.price).toBe("Free");
   });
 
   it("reports honestly when no candidate keeps the plan feasible", () => {
     const suggestions = suggestClosedReplacements({
       plan: [vashi],
       catalog: experienceSeed,
-      budget: 100,
-      availableMinutes: 30,
+      budget: 0,
+      availableMinutes: 15,
       availability: { [vashi.id]: "Closed" },
     });
     expect(suggestions[0].replacement).toBeUndefined();
-    expect(suggestions[0].candidatesConsidered).toBe(3);
+    expect(suggestions[0].candidatesConsidered).toBe(experienceSeed.length - 1);
     expect(suggestions[0].detail).toContain("No listed alternative");
   });
 

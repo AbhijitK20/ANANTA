@@ -44,6 +44,7 @@ Start here when implementing the project.
 - [Acceptance Criteria](06-quality/ACCEPTANCE-CRITERIA.md)
 - [Test Plan](06-quality/TEST-PLAN.md)
 - [Iterative Browser QA](06-quality/ITERATIVE-BROWSER-QA.md)
+- [Demo Script](06-quality/DEMO-SCRIPT.md)
 - [Definition of Done](06-quality/DEFINITION-OF-DONE.md)
 - [Design Review Checklist](06-quality/DESIGN-REVIEW-CHECKLIST.md)
 

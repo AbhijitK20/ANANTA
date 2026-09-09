@@ -41,7 +41,7 @@ export default function TripsPage() {
   const statusText = !places.length ? "No places added" : closedCount ? "A provider marked a place closed" : evaluation.feasible ? "Fits your limits" : "Needs adjustment";
 
   return (
-    <main className="min-h-screen bg-canvas">
+    <main id="main-content" className="min-h-screen bg-canvas">
       <div className="mx-auto min-h-screen max-w-[1180px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
           <a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Home</a>

@@ -45,6 +45,35 @@ a { color: inherit; text-decoration: none; }
 .map-pin { position: absolute; width: 30px; height: 30px; border: 3px solid white; border-radius: 50%; background: var(--color-blue); box-shadow: 0 5px 14px rgba(23,92,211,.32); }
 .map-pin::after { content: ""; position: absolute; width: 8px; height: 8px; left: 8px; top: 8px; border-radius: 50%; background: white; }
 
+.cluster-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--color-blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 5px 14px rgba(23,92,211,.32);
+}
+.cluster-badge:hover { background: #1249ad; }
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 50;
+  background: var(--color-blue);
+  color: #fff;
+  padding: 10px 16px;
+  font-weight: 700;
+}
+.skip-link:focus { left: 0; }
+
 @media (max-width: 768px) {
   .hide-mobile { display: none; }
 }

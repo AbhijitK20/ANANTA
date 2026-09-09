@@ -246,3 +246,32 @@ For longer multi-route interaction runs, use a persistent server process. A back
 **Fixes made during this pass:** event `startMinutes` are reference-relative, so change labels describe minutes from the reference time rather than fabricated clock times.
 
 **Remaining limitation:** media thumbnails are static per the media policy; embed playback happens on the platform after the user clicks. Unit coverage exists for media resolution (`lib/media.test.ts`), change detection (`lib/events.test.ts`), and replacement suggestions (`lib/adapt.test.ts`).
+
+## Sprint 1, 5, and 6 Completion Record (2026-09-09)
+
+**Scope closed:** Sprint 1 dataset and map gaps, the remaining Sprint 5 stories (US-024, US-032, US-035, US-037), and Sprint 6 polish and release hardening.
+
+**Routes checked:** `/`, `/explore`, `/events`, `/experience/marine-drive-sunset-walk`, `/experience/kharghar-hills-view`, `/experience/kala-ghoda-art-walk`, `/experience/vashi-market-loop`, `/trips`, `/saved`, `/provider`, `/admin/operations`, `/privacy`, `/terms`.
+
+**Viewports:** 390×844 mobile, 768×1024 tablet, 1440×900 desktop in Chromium (installed Playwright runtime, headless, `--disable-dev-shm-usage` for the container).
+
+**Build/test commands:** `npx tsc --noEmit` (pass), `npm test` (10 files, 48 tests, pass), `npm run build` (12 routes generated), HTTP smoke on all routes (200), scripted Chromium runs with console/page-error capture.
+
+**Findings and fixes made during this pass:**
+
+- Admin media actions initially did not persist because the action helper was made pure without updating the caller to write the store. Fixed in `app/admin/operations/page.tsx`.
+- Experience detail pages lacked the source-and-freshness block required by US-004. Added source link, confidence, and last-checked display.
+- A demo media record used an unresolvable YouTube id, which produced a 404 thumbnail request after admin approval. Replaced with a resolvable demo placeholder and an explicit provenance note.
+- Cluster cell sizes were tuned to the metro scale (0.1 degree at city zoom) after the first pass produced a single merged blob across 31 records.
+- Two QA script defects were found and fixed before drawing conclusions: a storage-clearing init script ran on every navigation and wiped state mid-loop, and cluster badge clicks targeted markers outside the mobile viewport.
+
+**Flows verified (29 automated browser checks, all passed, zero console errors, no horizontal overflow at any viewport):**
+
+- Sprint 1: cluster badges render at city zoom (9 clusters across 31 records), expand on click, zone filter shows only in-zone records with others excluded, confidence label and source link render on detail pages.
+- Sprint 5: provider signals panel renders and cites its demo signals; admin can approve and reject external media and the traveler-facing detail page follows the store; decisions persist across refresh; hidden-gem queue renders candidates with safety flags and verification history; media reports route to the media review kind.
+- Sprint 6: report dialog opens with dialog semantics, closes on Escape, skip link and main landmark present; all overflow checks pass at mobile, tablet, and desktop.
+- Adaptation regression: provider closure on a planned place still produces a constraint-checked, confirm-before-apply replacement with the expanded dataset.
+
+**Definition of Done check for the sprint:** acceptance criteria pass for closed stories; loading, empty, and error states exist (media empty state, map tile fallback, no-results states); responsive behavior checked at three viewports; accessibility basics checked (skip link, dialog behavior, labels); unit tests exist for every new pure module; external failure fallback exists for map tiles; provenance and freshness preserved on all new records; no secrets committed; user-facing copy contains no fabricated claim, emoji icon, or em dash; demo path documented in `docs/06-quality/DEMO-SCRIPT.md` and works without paid services.
+
+**Remaining limitations:** the dataset is 31 curated demo records against the 150 to 300 target; hidden-gem and alert signals remain demo-device-local; playback still happens on the platform after an explicit click.

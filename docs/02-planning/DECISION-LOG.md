@@ -47,3 +47,27 @@
 **Decision:** Every implementation slice must be built, browsed locally, tested through its user flow, checked at mobile and desktop viewports, and reverified after fixes.
 
 **Reason:** Compilation does not reveal layout failures, map issues, stale interactions, browser errors, or violations of the design and truth contracts.
+
+## DEC-009: Deterministic Client-Side Marker Clustering
+
+**Decision:** Cluster map markers with a pure grid function (`lib/cluster.ts`) keyed by zoom band instead of a clustering dependency or server-side tiling.
+
+**Reason:** The prototype dataset is small and bounded. A deterministic grid keeps the map legible at city zoom, costs no extra dependency, is fully unit-testable, and any future vector-tile clustering can replace it behind the same component interface.
+
+## DEC-010: Store-Owned Media Verification
+
+**Decision:** Experience pages render only media that is Approved in the admin media store (`lib/media-store.ts`), not whatever the seed says.
+
+**Reason:** The media policy requires that verification state, not editorial intent, controls publication. Making the traveler-facing page read from the same store the admin edits keeps the review loop honest end to end.
+
+## DEC-011: Reference-Relative Event Times
+
+**Decision:** Event seed times stay minutes-relative to the demo reference time, and change labels describe those minutes rather than wall-clock times.
+
+**Reason:** Wall-clock labels would fabricate a date the demo does not have. Relative minutes keep every displayed value traceable to the seed record.
+
+## DEC-012: Provider Alerts From Recorded Signals Only
+
+**Decision:** Provider alerts are derived deterministically from update age, availability state, and saves recorded in demo storage. No alert is invented from trends the prototype does not track.
+
+**Reason:** Alert copy that cites its signal preserves the truth contract; a plausible-sounding but untracked trend would be a fabricated claim.

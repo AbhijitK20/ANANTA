@@ -5,7 +5,7 @@ import { DiscoverySearch } from "@/components/discovery-search";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-canvas">
+    <main id="main-content" className="min-h-screen bg-canvas">
       <div className="mx-auto min-h-screen max-w-[1480px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
           <div className="flex items-center gap-3">
