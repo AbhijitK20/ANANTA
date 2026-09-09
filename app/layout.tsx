@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Local Tourist | Mumbai and Navi Mumbai",
+  title: "Ananta | Mumbai and Navi Mumbai",
   description: "Find verified local experiences, places, and events that fit your time, budget, and route.",
   icons: { icon: "/favicon.svg" },
 };

@@ -15,6 +15,6 @@ export function SectionHeading({ eyebrow, title, href }: { eyebrow: string; titl
 }
 
 export function BottomNav() {
-  const items = [{ href: "/", label: "Home", Icon: House }, { href: "/explore", label: "Explore", Icon: MapTrifold }, { href: "/trips", label: "Trips", Icon: Compass }, { href: "/saved", label: "Saved", Icon: BookmarkSimple }, { href: "#profile", label: "Profile", Icon: UserCircle }];
+  const items = [{ href: "/", label: "Home", Icon: House }, { href: "/explore", label: "Explore", Icon: MapTrifold }, { href: "/trips", label: "Trips", Icon: Compass }, { href: "/saved", label: "Saved", Icon: BookmarkSimple }, { href: "/profile", label: "Profile", Icon: UserCircle }];
   return <><div className="h-20 lg:hidden" aria-hidden="true" /><nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-line bg-white/95 px-3 py-3 backdrop-blur lg:static lg:mx-5 lg:border-t-0 lg:bg-transparent lg:px-8 lg:py-5"><div className="mx-auto flex w-full max-w-md items-center justify-between lg:max-w-none">{items.map(({ href, label, Icon }, index) => <a key={label} href={href} className={`flex min-w-[58px] flex-col items-center gap-1 text-xs font-semibold ${index === 0 ? "text-blue" : "text-muted"}`}><Icon size={21} weight={index === 0 ? "fill" : "regular"} />{label}</a>)}</div></nav></>;
 }

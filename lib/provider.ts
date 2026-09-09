@@ -14,8 +14,8 @@ export const providerListingSeed: ProviderListing[] = [
   { id: "vashi-market-loop", name: "Vashi Market Loop", area: "Vashi", category: "Shopping", status: "Published", availability: "Limited", updated: "Yesterday", updatedAt: "2026-09-08" },
 ];
 
-export const PROVIDER_LISTINGS_KEY = "local-tourist-provider-listings";
-export const PROVIDER_OPERATIONS_KEY = "local-tourist-provider-operations";
+export const PROVIDER_LISTINGS_KEY = "ananta-provider-listings";
+export const PROVIDER_OPERATIONS_KEY = "ananta-provider-operations";
 
 export function readProviderListings() {
   if (typeof window === "undefined") return providerListingSeed;
@@ -29,7 +29,7 @@ export function readProviderListings() {
 
 export function writeProviderListings(listings: ProviderListing[]) {
   window.localStorage.setItem(PROVIDER_LISTINGS_KEY, JSON.stringify(listings));
-  window.dispatchEvent(new Event("local-tourist-provider-change"));
+  window.dispatchEvent(new Event("ananta-provider-change"));
 }
 
 export function providerAvailability(listings: ProviderListing[]) {

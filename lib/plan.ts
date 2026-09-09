@@ -1,6 +1,6 @@
 import type { Experience } from "@/lib/seed";
 
-export const PLAN_STORAGE_KEY = "local-tourist-draft-plan";
+export const PLAN_STORAGE_KEY = "ananta-draft-plan";
 
 export function readPlan(): string[] {
   if (typeof window === "undefined") return [];
@@ -14,7 +14,7 @@ export function readPlan(): string[] {
 
 export function writePlan(ids: string[]) {
   window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(Array.from(new Set(ids))));
-  window.dispatchEvent(new Event("local-tourist-plan-change"));
+  window.dispatchEvent(new Event("ananta-plan-change"));
 }
 
 export function getPlannedExperiences(ids: string[], experiences: Experience[]) {

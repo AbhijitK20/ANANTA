@@ -19,7 +19,7 @@ export const operationSeed: OperationRecord[] = [
   { id: "op-gem-matunga", kind: "hidden-gem", title: "Matunga Breakfast Trail", area: "Matunga", source: "Resident recommendation", status: "Needs review", detail: "Verify provider and current hours", lastChecked: "Not checked" },
 ];
 
-export const OPERATIONS_KEY = "local-tourist-operations";
+export const OPERATIONS_KEY = "ananta-operations";
 
 export function readOperations() {
   if (typeof window === "undefined") return operationSeed;
@@ -33,5 +33,5 @@ export function readOperations() {
 
 export function writeOperations(records: OperationRecord[]) {
   window.localStorage.setItem(OPERATIONS_KEY, JSON.stringify(records));
-  window.dispatchEvent(new Event("local-tourist-operations-change"));
+  window.dispatchEvent(new Event("ananta-operations-change"));
 }

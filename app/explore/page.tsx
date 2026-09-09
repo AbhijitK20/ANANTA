@@ -5,6 +5,7 @@ import { ArrowLeft, CaretDown, Clock, Funnel, MapPin, NavigationArrow, Train, X 
 import { ExperienceMap } from "@/components/map";
 import { BottomNav, StatusLabel } from "@/components/ui";
 import { parseDiscoveryIntent } from "@/lib/discovery";
+import { demoUserLocation, estimateFromUser, formatDistance } from "@/lib/location";
 import { readPlan, writePlan } from "@/lib/plan";
 import { providerAvailability, readProviderListings } from "@/lib/provider";
 import { recommendExperiences, type RankedExperience } from "@/lib/recommendation";
@@ -47,15 +48,15 @@ export default function ExplorePage() {
     const syncAvailability = () => setAvailability(providerAvailability(readProviderListings()));
     sync();
     syncAvailability();
-    window.addEventListener("local-tourist-plan-change", sync);
-    window.addEventListener("local-tourist-provider-change", syncAvailability);
+    window.addEventListener("ananta-plan-change", sync);
+    window.addEventListener("ananta-provider-change", syncAvailability);
     const initial = new URLSearchParams(window.location.search).get("q") || "";
     if (initial) applyIntent(initial);
-    return () => { window.removeEventListener("local-tourist-plan-change", sync); window.removeEventListener("local-tourist-provider-change", syncAvailability); };
+    return () => { window.removeEventListener("ananta-plan-change", sync); window.removeEventListener("ananta-provider-change", syncAvailability); };
   }, [applyIntent]);
 
   const zoneExperiences = useMemo(() => zone === "All" ? experienceSeed : experienceSeed.filter((place) => place.zone === zone), [zone]);
-  const result = useMemo(() => recommendExperiences(zoneExperiences, { query, intentApplied, city, category, maxPrice, availableMinutes, rainMode, availability }), [availableMinutes, availability, category, city, intentApplied, maxPrice, query, rainMode, zoneExperiences]);
+  const result = useMemo(() => recommendExperiences(zoneExperiences, { query, intentApplied, city, category, maxPrice, availableMinutes, rainMode, availability, origin: demoUserLocation.coordinates }), [availableMinutes, availability, category, city, intentApplied, maxPrice, query, rainMode, zoneExperiences]);
   const visible = result.ranked.map(({ experience }) => experience);
   const selected = visible.find((place) => place.id === selectedId) ?? visible[0];
   const selectExperience = useCallback((id: string) => setSelectedId(id), []);
@@ -73,7 +74,7 @@ function FilterButton({ active, onClick, children }: { active: boolean; onClick:
 
 function ConstraintSummary({ city, category, zone, maxPrice, availableMinutes, rainMode, clear }: { city: City; category: Category; zone: Zone; maxPrice?: number; availableMinutes?: number; rainMode: boolean; clear: () => void }) { const labels = [city !== "All" && city, category !== "All" && category, zone !== "All" && zone, maxPrice !== undefined && `Under ₹${maxPrice}`, availableMinutes !== undefined && `${availableMinutes} minutes`, rainMode && "Indoor-ready"].filter(Boolean); return <div className="mt-5 border border-line bg-canvas p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Applied constraints</p><button aria-label="Clear filters" onClick={clear}><X size={16} /></button></div><p className="mt-2 text-sm leading-6">{labels.join(" · ") || "Search text"}</p></div>; }
 
-function ResultCard({ item, selected, onSelect }: { item: RankedExperience; selected: boolean; onSelect: (id: string) => void }) { const place = item.experience; return <button onClick={() => onSelect(place.id)} className={`block w-full border p-4 text-left transition-colors ${selected ? "border-blue bg-blueSoft/40" : "border-line hover:border-blue"}`}><div className="flex items-start justify-between gap-3"><div><StatusLabel tone={place.statusTone}>{place.status}</StatusLabel><h3 className="mt-3 font-bold">{place.name}</h3><p className="mt-1 text-sm text-muted">{place.area} · {place.category}</p></div><span className="text-sm font-bold">{place.price}</span></div><div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-muted"><span><Clock size={14} className="mr-1 inline" />{place.duration}</span><span><NavigationArrow size={14} className="mr-1 inline" />{place.travelTime}</span><span><Train size={14} className="mr-1 inline" />{place.station}</span></div><p className="mt-3 text-xs leading-5 text-blue">Why: {item.reasons.slice(0, 3).join(" · ")}</p></button>; }
+function ResultCard({ item, selected, onSelect }: { item: RankedExperience; selected: boolean; onSelect: (id: string) => void }) { const place = item.experience; const estimate = estimateFromUser(place.coordinates); return <button onClick={() => onSelect(place.id)} className={`block w-full border p-4 text-left transition-colors ${selected ? "border-blue bg-blueSoft/40" : "border-line hover:border-blue"}`}><div className="flex items-start justify-between gap-3"><div><StatusLabel tone={place.statusTone}>{place.status}</StatusLabel><h3 className="mt-3 font-bold">{place.name}</h3><p className="mt-1 text-sm text-muted">{place.area} · {place.category}</p></div><span className="text-sm font-bold">{place.price}</span></div><div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-muted"><span><Clock size={14} className="mr-1 inline" />{place.duration}</span><span><NavigationArrow size={14} className="mr-1 inline" />{place.travelTime}</span><span><Train size={14} className="mr-1 inline" />{place.station}</span></div><p className="mt-3 text-xs leading-5 text-blue">Why: {item.reasons.slice(0, 3).join(" · ")}</p><p className="mt-2 text-xs font-semibold text-muted">{formatDistance(estimate.km)} from {demoUserLocation.label} · about {estimate.walkMinutes} min walk (estimate)</p></button>; }
 
 function ExcludedList({ open, setOpen, items }: { open: boolean; setOpen: (value: boolean) => void; items: ReturnType<typeof recommendExperiences>["excluded"] }) { return <section className="mt-5 border-t border-line pt-4"><button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left text-sm font-bold"><span>Why {items.length} place{items.length === 1 ? " was" : "s were"} excluded</span><CaretDown size={17} className={open ? "rotate-180" : ""} /></button>{open && <div className="mt-3 space-y-3">{items.map(({ experience, reasons }) => <div key={experience.id} className="bg-canvas p-3"><p className="text-sm font-bold">{experience.name}</p><p className="mt-1 text-xs leading-5 text-muted">{reasons.join(" · ")}</p></div>)}</div>}</section>; }
 

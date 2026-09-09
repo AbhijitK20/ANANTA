@@ -24,9 +24,9 @@ export default function TripsPage() {
       setAvailability(providerAvailability(readProviderListings()));
     };
     sync();
-    window.addEventListener("local-tourist-plan-change", sync);
-    window.addEventListener("local-tourist-provider-change", sync);
-    return () => { window.removeEventListener("local-tourist-plan-change", sync); window.removeEventListener("local-tourist-provider-change", sync); };
+    window.addEventListener("ananta-plan-change", sync);
+    window.addEventListener("ananta-provider-change", sync);
+    return () => { window.removeEventListener("ananta-plan-change", sync); window.removeEventListener("ananta-provider-change", sync); };
   }, []);
 
   const places = useMemo(() => getPlannedExperiences(ids, experienceSeed), [ids]);
@@ -122,7 +122,7 @@ function ClosedAdaptationCard({ suggestion, onApply }: { suggestion: ReturnType<
 }
 
 function PlanTimeline({ places }: { places: typeof experienceSeed }) {
-  return <section className="mt-8 border-t border-line pt-7"><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Plan review</p><h3 className="mt-2 text-2xl font-bold tracking-[-0.04em]">A workable afternoon sequence</h3><div className="mt-6 space-y-2">{places.map((place, index) => <div key={place.id}><article className="grid gap-4 border border-line p-5 sm:grid-cols-[90px_1fr_auto] sm:items-start"><div><p className="text-sm font-bold text-blue">{index === 0 ? "Start" : `${index + 1}:15 PM`}</p><p className="mt-1 text-xs text-muted">{place.duration}</p></div><div><h4 className="font-bold">{place.name}</h4><p className="mt-1 text-sm text-muted">{place.area} · {place.station}</p><p className="mt-3 text-sm leading-6 text-muted">Selected because it matches the current interest and sits inside the available plan area.</p></div><StatusLabel tone={place.statusTone}>{place.price}</StatusLabel></article>{index < places.length - 1 && <div className="ml-8 border-l border-dashed border-line py-3 pl-5 text-xs font-semibold text-muted"><NavigationArrow size={14} className="mr-1 inline" />Estimated travel · {places[index + 1].travelTime}</div>}</div>)}</div></section>;
+  return <section className="mt-8 border-t border-line pt-7"><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Plan review</p><h3 className="mt-2 text-2xl font-bold tracking-[-0.04em]">A workable afternoon sequence</h3><div className="mt-6 space-y-2">{places.map((place, index) => <div key={place.id}><article className="grid gap-4 border border-line p-5 sm:grid-cols-[90px_1fr_auto] sm:items-start"><div><p className="text-sm font-bold text-blue">{index === 0 ? "Start" : `${index + 1}:15 PM`}</p><p className="mt-1 text-xs text-muted">{place.duration}</p></div><div><h4 className="font-bold">{place.name}</h4><p className="mt-1 text-sm text-muted">{place.area} · {place.station}</p><p className="mt-3 text-sm leading-6 text-muted">Selected because it matches the current interest and sits inside the available plan area.</p></div><StatusLabel tone={place.statusTone}>{place.price}</StatusLabel></article>{index < places.length - 1 && <div className="travel-connector ml-8 py-3 pl-5 text-xs font-semibold text-muted"><span aria-hidden="true" className="travel-connector-line" /><span aria-hidden="true" className="travel-connector-dot" /><NavigationArrow size={14} className="mr-1 inline" />Estimated travel · {places[index + 1].travelTime}</div>}</div>)}</div></section>;
 }
 
 function AlternativeCard({ alternativeId, currentIds, onClose, onApply }: { alternativeId: string; currentIds: string[]; onClose: () => void; onApply: () => void }) {

@@ -10,7 +10,7 @@ export type DataReport = {
   status: "Needs review" | "Resolved";
 };
 
-export const REPORTS_KEY = "local-tourist-data-reports";
+export const REPORTS_KEY = "ananta-data-reports";
 
 export function readReports() {
   if (typeof window === "undefined") return [] as DataReport[];
@@ -24,5 +24,5 @@ export function readReports() {
 
 export function writeReports(reports: DataReport[]) {
   window.localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
-  window.dispatchEvent(new Event("local-tourist-reports-change"));
+  window.dispatchEvent(new Event("ananta-reports-change"));
 }

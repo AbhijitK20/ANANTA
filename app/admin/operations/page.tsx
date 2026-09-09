@@ -31,10 +31,10 @@ export default function OperationsPage() {
     const syncMedia = () => setMediaRecords(readMediaRecords());
     sync();
     syncMedia();
-    window.addEventListener("local-tourist-reports-change", sync);
-    window.addEventListener("local-tourist-operations-change", sync);
-    window.addEventListener("local-tourist-media-change", syncMedia);
-    return () => { window.removeEventListener("local-tourist-reports-change", sync); window.removeEventListener("local-tourist-operations-change", sync); window.removeEventListener("local-tourist-media-change", syncMedia); };
+    window.addEventListener("ananta-reports-change", sync);
+    window.addEventListener("ananta-operations-change", sync);
+    window.addEventListener("ananta-media-change", syncMedia);
+    return () => { window.removeEventListener("ananta-reports-change", sync); window.removeEventListener("ananta-operations-change", sync); window.removeEventListener("ananta-media-change", syncMedia); };
   }, []);
 
   const filtered = useMemo(() => records.filter((record) => `${record.title} ${record.area} ${record.kind} ${record.status}`.toLowerCase().includes(query.toLowerCase())), [records, query]);
@@ -43,7 +43,7 @@ export default function OperationsPage() {
   const updateStatus = (id: string, status: OperationRecord["status"]) => setRecords((current) => { const next = current.map((record) => record.id === id ? { ...record, status, lastChecked: "Just now" } : record); writeOperations(next); return next; });
   const actOnMedia = (id: string, action: Parameters<typeof applyMediaAction>[2]) => setMediaRecords((current) => { const next = applyMediaAction(current, id, action); writeMediaRecords(next); return next; });
 
-  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto min-h-screen max-w-[1320px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card"><header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8"><a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Local Tourist</a><div className="text-right"><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Operations</p><h1 className="mt-1 text-lg font-bold">Data review queue</h1></div></header><section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Source and freshness</p><h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep local information trustworthy.</h2><p className="mt-4 leading-7 text-muted">Review events, experiences, videos, and hidden-gem candidates before they influence traveler recommendations.</p></div><div className="mt-8 flex items-center gap-3 border-b border-line pb-5"><MagnifyingGlass size={20} className="text-muted" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the review queue" aria-label="Search data review queue" className="w-full bg-transparent text-sm font-semibold outline-none" /></div>
+  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto min-h-screen max-w-[1320px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card"><header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8"><a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Ananta</a><div className="text-right"><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Operations</p><h1 className="mt-1 text-lg font-bold">Data review queue</h1></div></header><section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Source and freshness</p><h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep local information trustworthy.</h2><p className="mt-4 leading-7 text-muted">Review events, experiences, videos, and hidden-gem candidates before they influence traveler recommendations.</p></div><div className="mt-8 flex items-center gap-3 border-b border-line pb-5"><MagnifyingGlass size={20} className="text-muted" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the review queue" aria-label="Search data review queue" className="w-full bg-transparent text-sm font-semibold outline-none" /></div>
 
       <h2 className="mt-10 text-xl font-bold tracking-[-0.02em]">Records and reports</h2>
       <div className="mt-4 grid gap-4">{filtered.map((record) => <ReviewCard key={record.id} record={record} onStatusChange={updateStatus} />)}</div>

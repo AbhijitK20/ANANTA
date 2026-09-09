@@ -12,17 +12,19 @@ describe("mediaSeedRecords", () => {
 
   it("seeds archived and unreviewed records without a fabricated approval", () => {
     const records = mediaSeedRecords();
-    expect(records.find(({ id }) => id === "media-kharghar")?.state).toBe("Archived");
-    expect(records.find(({ id }) => id === "media-kharghar")?.history).toEqual([]);
+    expect(records.find(({ id }) => id === "media-archived-demo")?.state).toBe("Archived");
+    expect(records.find(({ id }) => id === "media-archived-demo")?.history).toEqual([]);
+    expect(records.find(({ id }) => id === "media-juhu-morning")?.state).toBe("Needs review");
+    expect(records.find(({ id }) => id === "media-juhu-morning")?.history).toEqual([]);
   });
 });
 
 describe("applyMediaAction", () => {
   it("approving a record updates state and appends history", () => {
     const records = mediaSeedRecords();
-    const next = applyMediaAction(records, "media-kharghar", "Approved");
-    expect(next.find(({ id }) => id === "media-kharghar")?.state).toBe("Approved");
-    expect(next.find(({ id }) => id === "media-kharghar")?.history.at(-1)?.action).toBe("Approved");
+    const next = applyMediaAction(records, "media-juhu-morning", "Approved");
+    expect(next.find(({ id }) => id === "media-juhu-morning")?.state).toBe("Approved");
+    expect(next.find(({ id }) => id === "media-juhu-morning")?.history.at(-1)?.action).toBe("Approved");
   });
 
   it("rejecting archives the record so it leaves discovery", () => {
@@ -44,7 +46,8 @@ describe("applyMediaAction", () => {
 describe("approvedMediaIds", () => {
   it("only lists currently approved records", () => {
     const records = mediaSeedRecords();
-    expect(approvedMediaIds(records)).toEqual(new Set(["media-kala-ghoda", "media-matunga", "media-vashi"]));
+    const expected = mediaSeed.filter((item) => item.state === "Approved").map((item) => item.id);
+    expect(approvedMediaIds(records)).toEqual(new Set(expected));
     expect(mediaSeed.every((item) => item.id !== undefined)).toBe(true);
   });
 });

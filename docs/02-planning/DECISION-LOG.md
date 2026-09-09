@@ -71,3 +71,21 @@
 **Decision:** Provider alerts are derived deterministically from update age, availability state, and saves recorded in demo storage. No alert is invented from trends the prototype does not track.
 
 **Reason:** Alert copy that cites its signal preserves the truth contract; a plausible-sounding but untracked trend would be a fabricated claim.
+
+## DEC-013: Product Name Is Ananta
+
+**Decision:** The product is renamed to Ananta everywhere: user-facing copy, metadata, package name, and internal storage keys and event names (`ananta-*`).
+
+**Reason:** A single name across visible and internal surfaces prevents drift and keeps the demo coherent. Old `local-tourist-*` keys are dropped rather than migrated because all state is device-local demo data.
+
+## DEC-014: Fixed Demo Location With Estimate-Only Distances
+
+**Decision:** The traveler position is a single static record in `lib/location.ts` (Churchgate station), labeled as a fixed demo location on every surface. Distances are haversine plus a 1.3 street factor expressed as walk minutes, and proximity contributes a small, cited scoring bonus.
+
+**Reason:** Geolocation would fake a capability the prototype cannot back, while a static point still makes near-versus-far reasoning visible. Estimates are labeled as estimates and never presented as routes; routing remains future work.
+
+## DEC-015: External Media Verified Against Source Before Seeding
+
+**Decision:** Every seeded video is checked against its live platform source before entering the demo, with the real title and creator recorded. Images come from Wikimedia Commons and always render with a photographer credit and an area-photo label.
+
+**Reason:** A video that does not exist or does not show the place is a fabricated claim of exactly the kind the truth contract forbids. Credits keep the free-media licensing honest, and the area-photo label stops an atmosphere image from implying a venue claim.

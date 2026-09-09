@@ -10,8 +10,8 @@ export function ExperienceMedia({ experienceId, fallbackTitle }: { experienceId:
   useEffect(() => {
     const sync = () => setRecords(readMediaRecords());
     sync();
-    window.addEventListener("local-tourist-media-change", sync);
-    return () => window.removeEventListener("local-tourist-media-change", sync);
+    window.addEventListener("ananta-media-change", sync);
+    return () => window.removeEventListener("ananta-media-change", sync);
   }, []);
 
   const media = approvedMediaFor(experienceId, records);

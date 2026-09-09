@@ -11,7 +11,11 @@ describe("approvedMediaFor", () => {
   });
 
   it("excludes archived media from discovery", () => {
-    expect(approvedMediaFor("kharghar-hills-view", mediaSeed)).toHaveLength(0);
+    expect(approvedMediaFor("girgaon-chowpatty-snack-trail", mediaSeed)).toHaveLength(0);
+  });
+
+  it("holds needs-review media out of the traveler view", () => {
+    expect(approvedMediaFor("juhu-beach-morning-walk", mediaSeed)).toHaveLength(0);
   });
 
   it("falls back to a platform link when embedding is not permitted", () => {
@@ -19,6 +23,22 @@ describe("approvedMediaFor", () => {
     expect(media[0].embeddable).toBe(false);
     expect(media[0].label).toBe("Open on Instagram");
     expect(media[0].href).toContain("instagram.com");
+  });
+
+  it("every approved YouTube record resolves to an embed and a thumbnail", () => {
+    for (const item of mediaSeed) {
+      if (item.platform !== "youtube" || item.state !== "Approved") continue;
+      expect(youtubeEmbedUrl(item.url), item.id).toMatch(/^https:\/\/www\.youtube\.com\/embed\/[\w-]{11}$/);
+      expect(youtubeThumbUrl(item.url), item.id).toMatch(/^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/hqdefault\.jpg$/);
+      expect(item.title.length, item.id).toBeGreaterThan(5);
+      expect(item.creator.length, item.id).toBeGreaterThan(2);
+      expect(item.note.length, item.id).toBeGreaterThan(10);
+    }
+  });
+
+  it("gives a dozen real approved videos across the city", () => {
+    const approved = mediaSeed.filter((item) => item.state === "Approved" && item.platform === "youtube");
+    expect(approved.length).toBe(12);
   });
 });
 

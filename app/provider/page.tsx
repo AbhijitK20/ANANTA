@@ -18,8 +18,8 @@ export default function ProviderPage() {
   useEffect(() => {
     const sync = () => setListings(readProviderListings());
     sync();
-    window.addEventListener("local-tourist-provider-change", sync);
-    return () => window.removeEventListener("local-tourist-provider-change", sync);
+    window.addEventListener("ananta-provider-change", sync);
+    return () => window.removeEventListener("ananta-provider-change", sync);
   }, []);
 
   const [savedCounts, setSavedCounts] = useState<Record<string, number>>({});
@@ -32,8 +32,8 @@ export default function ProviderPage() {
       setSavedCounts(counts);
     };
     computeSaves();
-    window.addEventListener("local-tourist-saved-change", computeSaves);
-    return () => window.removeEventListener("local-tourist-saved-change", computeSaves);
+    window.addEventListener("ananta-saved-change", computeSaves);
+    return () => window.removeEventListener("ananta-saved-change", computeSaves);
   }, []);
 
   // Alerts derive only from recorded demo signals: update age, availability state, and saves.
@@ -85,7 +85,7 @@ export default function ProviderPage() {
     writeProviderListings(nextListings);
   };
 
-  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto min-h-screen max-w-[1320px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card"><header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8"><a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Local Tourist</a><div className="text-right"><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Provider workspace</p><h1 className="mt-1 text-lg font-bold">Manage your local listings</h1></div></header><section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14"><div className="grid gap-10 lg:grid-cols-[1fr_430px]"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Your experiences</p><h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep the details current.</h2><p className="mt-4 max-w-2xl leading-7 text-muted">Update availability, capacity, and listing details so travelers receive recommendations they can actually use.</p>
+  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto min-h-screen max-w-[1320px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card"><header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8"><a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Ananta</a><div className="text-right"><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Provider workspace</p><h1 className="mt-1 text-lg font-bold">Manage your local listings</h1></div></header><section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14"><div className="grid gap-10 lg:grid-cols-[1fr_430px]"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Your experiences</p><h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep the details current.</h2><p className="mt-4 max-w-2xl leading-7 text-muted">Update availability, capacity, and listing details so travelers receive recommendations they can actually use.</p>
 
 {alerts.length > 0 && <section aria-label="Demand alerts" className="mt-6 border border-line bg-[#fbfcfd] p-5"><div className="flex items-center gap-2"><Bell size={18} className="text-blue" /><h3 className="font-bold">Signals about your listings</h3></div><p className="mt-1 text-xs text-muted">Derived from recorded demo signals only: update age, availability state, and saves on this device.</p><ul className="mt-4 space-y-2">{alerts.map((alert) => <li key={alert.id} className="flex items-start gap-2 text-sm leading-6"><span className="mt-0.5 shrink-0">{alert.severity === "attention" ? <Warning size={16} className="text-amber" /> : <Bell size={16} className="text-blue" />}</span><span><span className="font-bold">{alert.title}.</span> {alert.detail}</span></li>)}</ul></section>}
 

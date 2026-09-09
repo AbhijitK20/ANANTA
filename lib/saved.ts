@@ -1,4 +1,4 @@
-export const SAVED_KEY = "local-tourist-saved-experiences";
+export const SAVED_KEY = "ananta-saved-experiences";
 
 export function readSaved() {
   if (typeof window === "undefined") return [] as string[];
@@ -12,5 +12,5 @@ export function readSaved() {
 
 export function writeSaved(ids: string[]) {
   window.localStorage.setItem(SAVED_KEY, JSON.stringify(Array.from(new Set(ids))));
-  window.dispatchEvent(new Event("local-tourist-saved-change"));
+  window.dispatchEvent(new Event("ananta-saved-change"));
 }

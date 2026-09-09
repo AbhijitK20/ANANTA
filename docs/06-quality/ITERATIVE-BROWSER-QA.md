@@ -1,6 +1,6 @@
 # Iterative Browser QA Loop
 
-This is the default development process for Local Tourist. A feature is not considered ready because the code compiles. It must be rendered, browsed, interacted with, and checked against the product rules.
+This is the default development process for Ananta. A feature is not considered ready because the code compiles. It must be rendered, browsed, interacted with, and checked against the product rules.
 
 ## Required Loop
 
@@ -275,3 +275,20 @@ For longer multi-route interaction runs, use a persistent server process. A back
 **Definition of Done check for the sprint:** acceptance criteria pass for closed stories; loading, empty, and error states exist (media empty state, map tile fallback, no-results states); responsive behavior checked at three viewports; accessibility basics checked (skip link, dialog behavior, labels); unit tests exist for every new pure module; external failure fallback exists for map tiles; provenance and freshness preserved on all new records; no secrets committed; user-facing copy contains no fabricated claim, emoji icon, or em dash; demo path documented in `docs/06-quality/DEMO-SCRIPT.md` and works without paid services.
 
 **Remaining limitations:** the dataset is 31 curated demo records against the 150 to 300 target; hidden-gem and alert signals remain demo-device-local; playback still happens on the platform after an explicit click.
+
+## Pass: Ananta rename, real media, demo location, and travel-path motion
+
+**Scope:** full rebrand from Local Tourist to Ananta (UI, metadata, package name, localStorage keys, custom event names, docs); real verified images and videos across places and events; fixed demo traveler location with distance labels and proximity scoring; animated demo travel path on the map and plan timeline; new profile page replacing the dead anchor.
+
+**Verification:** `tsc --noEmit` clean; 59 of 59 unit tests pass (12 files); production build generates 13 routes; HTTP smoke returns 200 on every route including the new `/profile`; 42 automated Chromium checks pass across 390 by 844, 768 by 1024, and 1440 by 900 with zero console errors and zero horizontal overflow.
+
+**What was checked:** home renders Commons photos with photographer credits and a nearest-to-location list with distances; explore cards show distance from the fixed demo position and ranking reasons cite proximity; the map shows the demo user marker and the dashed demo path after selection; the Kharghar detail page shows the traveler-submitted trek video with its real creator; events render photo credits and change banners; the trips timeline shows travel connectors and the moving dot; the profile page labels the demo location as fixed and discloses device-local storage.
+
+**Findings and fixes made during this pass:**
+
+- The tablet home header overflowed after adding profile and legal links; the desktop nav breakpoint moved from md to lg so mobile keeps the bottom nav until 1024 pixels.
+- An events-card edit left a stray brace that failed typecheck; caught by the loop before any commit.
+- The user-marker browser check flaked when the map style loaded slowly; the check now waits on the element instead of a fixed timeout.
+- One events-page overflow result appeared while the server ran a half-swapped build; a clean restart cleared it, confirming it was a process artifact rather than a layout defect.
+
+**Honesty notes:** every video URL was checked against its live source with oEmbed before seeding; titles and creators are the real ones. Every image is a Wikimedia Commons file rendered with its photographer credit and labeled as an area photo, not the venue. Distance values are straight-line estimates with a street factor and never claim a route. The moving dot illustrates the estimate; it is hidden entirely under prefers-reduced-motion.

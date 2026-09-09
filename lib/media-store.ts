@@ -5,7 +5,7 @@ export type MediaRecord = MediaSeed & {
   history: { action: "Approved" | "Rejected" | "Marked stale" | "Archived"; at: string }[];
 };
 
-export const MEDIA_STORE_KEY = "local-tourist-media-records";
+export const MEDIA_STORE_KEY = "ananta-media-records";
 
 /** Seeds the admin media store from the curated demo media set. */
 export function mediaSeedRecords(): MediaRecord[] {
@@ -28,7 +28,7 @@ export function readMediaRecords(): MediaRecord[] {
 
 export function writeMediaRecords(records: MediaRecord[]) {
   window.localStorage.setItem(MEDIA_STORE_KEY, JSON.stringify(records));
-  window.dispatchEvent(new Event("local-tourist-media-change"));
+  window.dispatchEvent(new Event("ananta-media-change"));
 }
 
 /** Pure: returns the next records; the caller persists with writeMediaRecords. */
