@@ -313,6 +313,12 @@ For longer multi-route interaction runs, use a persistent server process. A back
 
 **Honesty notes:** the watermark text itself was never readable by any tool available here, so the mask was built from color properties rather than recognized glyphs; the result was verified structurally (no residue tiles remain and no art pixels were altered) rather than by OCR. The original watermarked file is preserved unchanged at `docs/01-product/large.png`.
 
+## Pass: open-place link from the explore selection
+
+**Scope:** The explore sidebar's current-selection block now links to the full place page (`/experience/{id}`) below Add to plan, so the map selection always leads to photos, videos, About, and turn-by-turn directions.
+
+**Result:** 8/8 checks at 1440 and 390: the link renders once, points at the currently selected record (defaults to kala-ghoda-art-walk), navigates on click, with zero page errors.
+
 ## Pass: grouped filters, travel-mode comparison, and discover deep links
 
 **Scope:** Explore stacked filter panel (Where / What / Budget and time / When / Vibe) with desktop-open, mobile-collapsed behavior; detail-page About section plus real walk/cycle/drive OSRM comparison with fastest badge, turn-by-turn for the fastest mode, and honest per-mode estimate fallbacks; Discover browse chips deep-linking into Explore params; overflow scan at 390 and 1440.
