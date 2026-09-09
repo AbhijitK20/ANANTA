@@ -1,0 +1,50 @@
+/* Local Tourist · quiet utility · royal blue anchor · map-and-list workspace */
+@import "maplibre-gl/dist/maplibre-gl.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ink: #18202b;
+  --color-muted: #667085;
+  --color-canvas: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-line: #dde3ea;
+  --color-blue: #175cd3;
+  --color-blue-soft: #e8f0ff;
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--color-canvas); }
+body {
+  margin: 0;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input { font: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+::selection { color: #fff; background: var(--color-blue); }
+
+.map-grid {
+  background-color: #e8edf0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.58) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.58) 1px, transparent 1px),
+    linear-gradient(27deg, transparent 47%, rgba(192,204,205,.55) 48%, rgba(192,204,205,.55) 49%, transparent 50%);
+  background-size: 42px 42px, 42px 42px, 160px 160px;
+}
+
+.map-road { position: absolute; height: 2px; background: rgba(255,255,255,.9); transform-origin: left center; }
+.map-water { position: absolute; inset: 0 0 0 70%; background: #d8edf0; border-left: 1px solid rgba(255,255,255,.7); }
+.map-pin { position: absolute; width: 30px; height: 30px; border: 3px solid white; border-radius: 50%; background: var(--color-blue); box-shadow: 0 5px 14px rgba(23,92,211,.32); }
+.map-pin::after { content: ""; position: absolute; width: 8px; height: 8px; left: 8px; top: 8px; border-radius: 50%; background: white; }
+
+@media (max-width: 768px) {
+  .hide-mobile { display: none; }
+}
