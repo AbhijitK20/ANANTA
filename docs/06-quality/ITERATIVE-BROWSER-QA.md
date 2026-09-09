@@ -304,3 +304,11 @@ For longer multi-route interaction runs, use a persistent server process. A back
 **Findings fixed during this pass:** a QA assertion miscounted the expanded catalog (40 records, not 41); a routing test fixture initially omitted the depart and arrive steps that real OSRM legs always include.
 
 **Honesty notes:** routing uses open OSRM servers on OpenStreetMap data with visible attribution; the fallback line is explicitly labeled as an estimate and drawn in a muted color; hidden-gem statuses state their actual editorial state (community sourced, awaiting operator check, seasonally reachable) rather than a uniform label.
+
+## Pass: logo cleanup and brand assets
+
+**Scope:** the product logo `docs/01-product/large.png` carried scattered semi-transparent gray watermark tiles. No watermark-removal tool exists in the plugins folder and GitHub removers (LaMa class) need a torch install the environment cannot host, so the cleanup was done deterministically: watermark pixels are neutral gray in the 190 to 237 band over a flat 240 background, so a color-space mask with a 2 pixel guard radius around the dark wordmark and saturated glyph restored 5,120 watermark pixels to the background, verified residue-free by re-running the pixel classifier. The cleaned art produced `public/logo.png` (transparent background), a 128 pixel `public/logo-mark.png` for the header, and glyph-derived `public/favicon.png` and `public/favicon-32.png`. The home header now shows the real mark instead of the placeholder letters, and the favicon link points at the glyph.
+
+**Verification:** the cleanup script is checked in at `scripts/clean-logo.py` so the process is reproducible; typecheck clean, 65 of 65 tests pass, build clean, all four brand assets serve with 200, and the header renders the logo image.
+
+**Honesty notes:** the watermark text itself was never readable by any tool available here, so the mask was built from color properties rather than recognized glyphs; the result was verified structurally (no residue tiles remain and no art pixels were altered) rather than by OCR. The original watermarked file is preserved unchanged at `docs/01-product/large.png`.

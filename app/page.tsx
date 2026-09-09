@@ -13,7 +13,7 @@ export default function HomePage() {
       <div className="mx-auto min-h-screen max-w-[1480px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue text-sm font-bold text-white">AN</div>
+            <img src="/logo-mark.png" alt="Ananta logo" className="h-9 w-9" />
             <span className="text-lg font-bold tracking-[-0.03em]">Ananta</span>
           </div>
           <nav className="hidden items-center gap-7 text-sm font-semibold text-muted lg:flex">
