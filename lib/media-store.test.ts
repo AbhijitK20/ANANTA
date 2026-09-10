@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyMediaAction, mediaSeedRecords, approvedMediaIds } from "@/lib/media-store";
-import { mediaSeed } from "@/lib/seed";
+import { allMedia } from "@/lib/data";
 
 describe("mediaSeedRecords", () => {
   it("seeds approved records with a demo history entry", () => {
@@ -46,8 +46,8 @@ describe("applyMediaAction", () => {
 describe("approvedMediaIds", () => {
   it("only lists currently approved records", () => {
     const records = mediaSeedRecords();
-    const expected = mediaSeed.filter((item) => item.state === "Approved").map((item) => item.id);
+    const expected = allMedia.filter((item) => item.state === "Approved").map((item) => item.id);
     expect(approvedMediaIds(records)).toEqual(new Set(expected));
-    expect(mediaSeed.every((item) => item.id !== undefined)).toBe(true);
+    expect(allMedia.every((item) => item.id !== undefined)).toBe(true);
   });
 });

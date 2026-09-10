@@ -1,0 +1,151 @@
+/**
+ * Real Mumbai and Navi Mumbai adventure and outdoor-activity places by area:
+ * trekking trails, water sports, cycling routes, climbing, and nature-edge
+ * activities. Prices and durations are derived demo bands, not operator claims.
+ */
+export const adventureNames: Record<string, string[]> = {
+  "Borivali East": [
+    "Kanheri Caves trek inside SGNP",
+    "SGNP SHILONDA trail walk",
+    "SGNP bamboo trail",
+    "SGNP highest point trail",
+    "Yeoor hills trek entry",
+    "Tulsi lake trail SGNP",
+    "Borivali national park cycling loop",
+    "Kanheri base rock scramble",
+    "SGNP leopard-safari van slot",
+    "SGNP nature-interpreted walk",
+    "Borivali–Magathane cycling spur",
+    "Kanheri sunrise photography hike",
+    "Tungareshwar trek extension",
+  ],
+  "Aarey": [
+    "Aarey forest walking trail",
+    "Aarey cycling route",
+    "Chhota Kashmir trail",
+    "Aarey milk colony trail network",
+    "Aarey creek-edge walk",
+    "Aarey horse-riding track",
+    "Aarey sunrise birding trail",
+    "Aarey monsoon waterfall short hike",
+  ],
+  "Powai": [
+    "Powai lake kayaking session",
+    "Powai lake paddle-boarding",
+    "Powai lake rowing course",
+    "Hiranandani cycling loop",
+    "Powai–Vihar lake walk",
+    "IIT Powai trail edge",
+    "Powai zip-line activity park",
+    "Powai climbing wall session",
+  ],
+  "Panvel": [
+    "Karnala Fort trek",
+    "Karnala bird sanctuary trail",
+    "Karnala base rock-scramble route",
+    "Kalavantin Durg trek start",
+    "Prabalgad trek start",
+    "Panvel–Matheran ghat cycling",
+    "Panvel creek kayaking trip",
+    "Panvel parasailing weekend slot",
+  ],
+  "Kharghar": [
+    "Kharghar hills trek",
+    "Kharghar waterfall monsoon hike",
+    "Kharghar valley trail run",
+    "Central Park cycling loop",
+    "Kharghar–Taloja hills traverse",
+    "Kharghar paramotoring weekend slot",
+    "Kharghar hills sunrise hike",
+  ],
+  "Belapur": [
+    "Belapur fort hill climb",
+    "Belapur creek kayaking",
+    "Belapur hills nature trail",
+    "Belapur–Parsik hill ridge walk",
+  ],
+  "Nerul/Seawoods": [
+    "Seawoods creek kayaking",
+    "Nerul–Seawoods cycling loop",
+    "Wonders Park climbing wall",
+    "Nerul paragliding weekend slot",
+  ],
+  "Vashi": [
+    "Vashi creek kayaking slot",
+    "Vashi cycling loop Palm Beach",
+    "Vashi mini seashore paddle session",
+  ],
+  "Airoli": [
+    "Airoli flamingo boat safari",
+    "Airoli creek kayaking",
+    "Airoli–Ghansoli cycling track",
+    "Airoli mangrove boardwalk trail",
+  ],
+  "Girgaon": [
+    "Girgaon Chowpatty kayaking session",
+    "Girgaon Chowpatty banana-ride slot",
+  ],
+  "Colaba": [
+    "Gateway of India speedboat ride",
+    "Gateway of India jet-ski slot",
+    "Colaba sailing excursion",
+    "Colaba sea-kayaking session",
+  ],
+  "Marine Drive": [
+    "Marine Drive sunrise cycling run",
+    "Backbay rowing course",
+    "Marine Drive badminton-on-promenade meetup",
+    "Nariman Point sunrise run",
+    "Backbay fishing trip slot",
+    "Marine Drive promenade run loop",
+  ],
+  "Worli": [
+    "Worli sea-face cycling loop",
+    "Worli fort edge walk",
+  ],
+  "Bandra": [
+    "Bandra fort seaside walk",
+    "Bandra–Worli sea link cycling slot",
+    "Bandra reclamation run loop",
+  ],
+  "Juhu": [
+    "Juhu beach volleyball pickup",
+    "Juhu beach morning run loop",
+    "Juhu–Versova shoreline walk",
+  ],
+  "Andheri": [
+    "Versova beach horse-riding slot",
+    "Versova kayaking session",
+    "Andheri MIDC climbing gym",
+    "Andheri indoor skydiving slot",
+  ],
+  "Walkeshwar": [
+    "Malabar hill perimeter walk",
+    "Kamala Nehru park fitness loop",
+    "Banganga heritage-and-hill walk",
+    "Walkeshwar ridge walk",
+  ],
+  "Sewri": [
+    "Sewri mudflat kayak trip",
+    "Sewri flamingo-season walk",
+  ],
+  "Dadar": [
+    "Shivaji park running loop",
+    "Five Gardens morning run",
+  ],
+  "Matunga": [
+    "Matunga cycling loop",
+    "King circle fitness walk",
+  ],
+  "Fort": [
+    "Fort heritage run loop",
+    "Azad maidan fitness track",
+    "Cross maidan open-air workout",
+  ],
+  "Lower Parel": [
+    "Lower Parel mill-run loop",
+    "Parel cycling corridor",
+    "Mahalaxmi racecourse running loop",
+    "Worli–Bandra sea-link run slot",
+  ],
+};

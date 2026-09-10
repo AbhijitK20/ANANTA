@@ -1,4 +1,4 @@
-import { mediaSeed, type MediaSeed } from "@/lib/seed";
+import { allMedia, type MediaSeed } from "@/lib/data";
 
 export type MediaRecord = MediaSeed & {
   lastChecked: string;
@@ -7,9 +7,9 @@ export type MediaRecord = MediaSeed & {
 
 export const MEDIA_STORE_KEY = "ananta-media-records";
 
-/** Seeds the admin media store from the curated demo media set. */
+/** Seeds the admin media store from the merged demo media set. */
 export function mediaSeedRecords(): MediaRecord[] {
-  return mediaSeed.map((item) => ({
+  return allMedia.map((item) => ({
     ...item,
     lastChecked: item.state === "Approved" ? "Demo data" : "Not checked",
     history: item.state === "Approved" ? [{ action: "Approved" as const, at: "Demo data" }] : [],

@@ -7,7 +7,7 @@ import { demoUserLocation, estimateFromUser, formatDistance } from "@/lib/locati
 import { readPlan } from "@/lib/plan";
 import { readSaved } from "@/lib/saved";
 import { readReports } from "@/lib/reports";
-import { experienceSeed } from "@/lib/seed";
+import { allExperiences } from "@/lib/data";
 
 export default function ProfilePage() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -75,7 +75,7 @@ export default function ProfilePage() {
 
           <div className="mt-8 border border-amber bg-amberSoft/40 p-5">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber">Demo data notice</p>
-            <p className="mt-2 text-sm leading-6 text-muted">Saved places, plans, and reports live in this browser's local storage. Clearing site data removes them. Nothing is shared with a server, and no behavioral profile is built in this prototype.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">Saved places, plans, and reports live in this browser&apos;s local storage. Clearing site data removes them. Nothing is shared with a server, and no behavioral profile is built in this prototype.</p>
           </div>
         </section>
         <BottomNav />
@@ -107,7 +107,7 @@ function nearestSavedEstimate(ids: string[]) {
 }
 
 function experienceById(id: string) {
-  return experienceSeed.find((place) => place.id === id);
+  return allExperiences.find((place) => place.id === id);
 }
 
 function StatCard({ Icon, label, value, href, note }: { Icon: typeof BookmarkSimple; label: string; value: number; href: string; note: string }) {

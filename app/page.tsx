@@ -1,11 +1,12 @@
 import { ArrowRight, CalendarDots, MapPin } from "@phosphor-icons/react/dist/ssr";
-import { experienceSeed, eventSeed } from "@/lib/seed";
+import { allExperiences } from "@/lib/data";
+import { eventSeed } from "@/lib/seed";
 import { demoUserLocation, estimateFromUser, formatDistance } from "@/lib/location";
 import { BottomNav, SectionHeading, StatusLabel } from "@/components/ui";
 import { DiscoverySearch } from "@/components/discovery-search";
 
 export default function HomePage() {
-  const nearest = [...experienceSeed]
+  const nearest = [...allExperiences]
     .sort((a, b) => estimateFromUser(a.coordinates).km - estimateFromUser(b.coordinates).km)
     .slice(0, 8);
   return (

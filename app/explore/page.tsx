@@ -11,16 +11,18 @@ import { providerAvailability, readProviderListings } from "@/lib/provider";
 import { recommendExperiences, type RankedExperience } from "@/lib/recommendation";
 import { applyQuickFilters, BEST_TIME_OPTIONS } from "@/lib/quick-filters";
 import { fetchStreetRoute, type StreetRoute } from "@/lib/routing";
-import { experienceSeed, zones as dataZones } from "@/lib/seed";
+import { allExperiences, DATASET_CATEGORIES } from "@/lib/data";
+import { zones as dataZones, type Experience } from "@/lib/seed";
 
-const categories = ["All", "Food", "Culture", "Shopping", "Nature", "Workshop", "Family"] as const;
+const categories = ["All", ...DATASET_CATEGORIES] as const;
 const zones = ["All", ...dataZones] as const;
+const PAGE_SIZE = 24;
 type City = "All" | "Mumbai" | "Navi Mumbai";
 type Category = (typeof categories)[number];
 type Zone = (typeof zones)[number];
 
 export default function ExplorePage() {
-  const [selectedId, setSelectedId] = useState(experienceSeed[0].id);
+  const [selectedId, setSelectedId] = useState(allExperiences[0].id);
   const [plan, setPlan] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [city, setCity] = useState<City>("All");
@@ -38,6 +40,7 @@ export default function ExplorePage() {
   const [walkable, setWalkable] = useState(false);
   const [free, setFree] = useState(false);
   const [bestTime, setBestTime] = useState<string>("Any time");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const applyIntent = useCallback((text: string) => {
     const intent = parseDiscoveryIntent(text);
@@ -64,6 +67,7 @@ export default function ExplorePage() {
     if (params.get("gems") === "1") setHiddenGems(true);
     if (params.get("free") === "1") setFree(true);
     if (params.get("walkable") === "1") setWalkable(true);
+    setVisibleCount(PAGE_SIZE);
     const bestTimeParam = params.get("bestTime");
     if (bestTimeParam && BEST_TIME_OPTIONS.includes(bestTimeParam as (typeof BEST_TIME_OPTIONS)[number])) setBestTime(bestTimeParam);
     const cityParam = params.get("city");
@@ -71,19 +75,20 @@ export default function ExplorePage() {
     return () => { window.removeEventListener("ananta-plan-change", sync); window.removeEventListener("ananta-provider-change", syncAvailability); };
   }, [applyIntent]);
 
-  const zoneExperiences = useMemo(() => zone === "All" ? experienceSeed : experienceSeed.filter((place) => place.zone === zone), [zone]);
+  const zoneExperiences = useMemo(() => zone === "All" ? allExperiences : allExperiences.filter((place) => place.zone === zone), [zone]);
   const result = useMemo(() => recommendExperiences(zoneExperiences, { query, intentApplied, city, category, maxPrice, availableMinutes, rainMode, availability, origin: demoUserLocation.coordinates }), [availableMinutes, availability, category, city, intentApplied, maxPrice, query, rainMode, zoneExperiences]);
   const quick = useMemo(() => applyQuickFilters(result.ranked.map(({ experience }) => experience), { hiddenGems, walkable, free, bestTime }), [bestTime, free, hiddenGems, result, walkable]);
   const keptIds = useMemo(() => new Set(quick.kept.map(({ id }) => id)), [quick]);
   const visibleRanked = useMemo(() => result.ranked.filter(({ experience }) => keptIds.has(experience.id)), [keptIds, result]);
   const visible = visibleRanked.map(({ experience }) => experience);
+  const pagedRanked = useMemo(() => visibleRanked.slice(0, visibleCount), [visibleCount, visibleRanked]);
   const allExcluded = useMemo(() => [...result.excluded, ...quick.excluded], [quick, result]);
   const selected = visible.find((place) => place.id === selectedId) ?? visible[0];
   const effectiveSelectedId = selected?.id;
 
   // Fetch the real walking route from the fixed demo position to the selection.
   useEffect(() => {
-    const target = experienceSeed.find((place) => place.id === effectiveSelectedId);
+    const target = allExperiences.find((place) => place.id === effectiveSelectedId);
     if (!target) { setRoute(null); return; }
     let cancelled = false;
     setRouteLoading(true);
@@ -96,9 +101,10 @@ export default function ExplorePage() {
 
   const selectExperience = useCallback((id: string) => setSelectedId(id), []);
   const hasConstraints = city !== "All" || category !== "All" || zone !== "All" || maxPrice !== undefined || availableMinutes !== undefined || rainMode || Boolean(query) || hiddenGems || walkable || free || bestTime !== "Any time";
-  const clear = () => { setCity("All"); setCategory("All"); setZone("All"); setMaxPrice(undefined); setAvailableMinutes(undefined); setRainMode(false); setIntentApplied(false); setQuery(""); setShowExcluded(false); setHiddenGems(false); setWalkable(false); setFree(false); setBestTime("Any time"); };
+  const clear = () => { setCity("All"); setCategory("All"); setZone("All"); setMaxPrice(undefined); setAvailableMinutes(undefined); setRainMode(false); setIntentApplied(false); setQuery(""); setShowExcluded(false); setHiddenGems(false); setWalkable(false); setFree(false); setBestTime("Any time"); setVisibleCount(PAGE_SIZE); };
 
-  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto max-w-[1480px] bg-white lg:my-5 lg:rounded-[28px] lg:shadow-card"><Header city={city} setCity={setCity} /><div className="grid lg:grid-cols-[minmax(0,1fr)_430px]"><section className="relative min-h-[540px] overflow-hidden lg:min-h-[720px]"><ExperienceMap experiences={visible} selectedId={selected?.id} onSelect={selectExperience} route={route} /><SearchOverlay query={query} setQuery={setQuery} applyIntent={applyIntent} city={city} setCity={setCity} category={category} setCategory={setCategory} zone={zone} setZone={setZone} maxPrice={maxPrice} setMaxPrice={setMaxPrice} availableMinutes={availableMinutes} setAvailableMinutes={setAvailableMinutes} rainMode={rainMode} setRainMode={setRainMode} hiddenGems={hiddenGems} setHiddenGems={setHiddenGems} walkable={walkable} setWalkable={setWalkable} free={free} setFree={setFree} bestTime={bestTime} setBestTime={setBestTime} /></section><aside className="border-l border-line bg-white p-5 sm:p-8"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Curated demo data</p><h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">Ranked matches</h2></div><span className="text-sm font-semibold text-muted">{visible.length} results</span></div>{hasConstraints && <ConstraintSummary city={city} category={category} zone={zone} maxPrice={maxPrice} availableMinutes={availableMinutes} rainMode={rainMode} hiddenGems={hiddenGems} walkable={walkable} free={free} bestTime={bestTime} clear={clear} />}<div className="mt-6 space-y-3">{visibleRanked.map((item) => <ResultCard key={item.experience.id} item={item} selected={item.experience.id === selected?.id} onSelect={selectExperience} />)}</div>{!visible.length && <div className="mt-6 border border-line bg-canvas p-5"><h3 className="font-bold">No place meets every constraint</h3><p className="mt-2 text-sm leading-6 text-muted">Review why records were excluded or clear one constraint.</p></div>}{allExcluded.length > 0 && <ExcludedList open={showExcluded} setOpen={setShowExcluded} items={allExcluded} />}{selected && <Selection place={selected} plan={plan} />}{selected && <DirectionsPanel route={route} loading={routeLoading} />}</aside></div><BottomNav /></div></main>;
+  return <main id="main-content" className="min-h-screen bg-canvas"><div className="mx-auto max-w-[1480px] bg-white lg:my-5 lg:rounded-[28px] lg:shadow-card"><Header city={city} setCity={setCity} /><div className="flex flex-col lg:h-[calc(100vh-12rem)]"><section className="relative h-[540px] shrink-0 overflow-hidden lg:h-auto lg:min-h-0 lg:flex-[3]"><ExperienceMap experiences={visible} selectedId={selected?.id} onSelect={selectExperience} route={route} /><SearchOverlay query={query} setQuery={setQuery} applyIntent={applyIntent} city={city} setCity={setCity} category={category} setCategory={setCategory} zone={zone} setZone={setZone} maxPrice={maxPrice} setMaxPrice={setMaxPrice} availableMinutes={availableMinutes} setAvailableMinutes={setAvailableMinutes} rainMode={rainMode} setRainMode={setRainMode} hiddenGems={hiddenGems} setHiddenGems={setHiddenGems} walkable={walkable} setWalkable={setWalkable} free={free} setFree={setFree} bestTime={bestTime} setBestTime={setBestTime} /></section><aside className="border-t border-line bg-white p-5 sm:p-8 lg:min-h-0 lg:flex-[2] lg:overflow-y-auto"><div className="flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Curated demo data</p><h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">Ranked matches</h2></div><span className="text-sm font-semibold text-muted">{visible.length} results</span></div>{hasConstraints && <ConstraintSummary city={city} category={category} zone={zone} maxPrice={maxPrice} availableMinutes={availableMinutes} rainMode={rainMode} hiddenGems={hiddenGems} walkable={walkable} free={free} bestTime={bestTime} clear={clear} />}<div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{pagedRanked.map((item) => <ResultCard key={item.experience.id} item={item} selected={item.experience.id === selected?.id} onSelect={selectExperience} />)}</div>
+          {visibleCount < visibleRanked.length && <button onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="w-full border border-line py-3 text-sm font-bold text-blue transition-colors hover:border-blue">Show more ({visibleRanked.length - visibleCount} remaining)</button>}{!visible.length && <div className="mt-6 border border-line bg-canvas p-5"><h3 className="font-bold">No place meets every constraint</h3><p className="mt-2 text-sm leading-6 text-muted">Review why records were excluded or clear one constraint.</p></div>}{allExcluded.length > 0 && <ExcludedList open={showExcluded} setOpen={setShowExcluded} items={allExcluded} />}{selected && <Selection place={selected} plan={plan} />}{selected && <DirectionsPanel route={route} loading={routeLoading} />}</aside></div><BottomNav /></div></main>;
 }
 
 function Header({ city, setCity }: { city: City; setCity: (city: City) => void }) { return <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8"><a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Home</a><h1 className="text-lg font-bold">Explore</h1><button onClick={() => setCity(city === "Navi Mumbai" ? "Mumbai" : "Navi Mumbai")} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold">{city === "Navi Mumbai" ? "Show Mumbai" : "Show Navi Mumbai"}</button></header>; }
@@ -195,7 +201,7 @@ function ResultCard({ item, selected, onSelect }: { item: RankedExperience; sele
 
 function ExcludedList({ open, setOpen, items }: { open: boolean; setOpen: (value: boolean) => void; items: ReturnType<typeof recommendExperiences>["excluded"] }) { return <section className="mt-5 border-t border-line pt-4"><button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left text-sm font-bold"><span>Why {items.length} place{items.length === 1 ? " was" : "s were"} excluded</span><CaretDown size={17} className={open ? "rotate-180" : ""} /></button>{open && <div className="mt-3 space-y-3">{items.map(({ experience, reasons }) => <div key={experience.id} className="bg-canvas p-3"><p className="text-sm font-bold">{experience.name}</p><p className="mt-1 text-xs leading-5 text-muted">{reasons.join(" · ")}</p></div>)}</div>}</section>; }
 
-function Selection({ place, plan }: { place: (typeof experienceSeed)[number]; plan: string[] }) { return <div className="mt-6 border-t border-line pt-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Current selection</p><p className="mt-1 font-bold">{place.name}</p></div><span className="text-sm font-bold">{place.price}</span></div><button onClick={() => writePlan(plan.includes(place.id) ? plan : [...plan, place.id])} className="mt-4 w-full rounded-lg bg-blue px-4 py-3 text-sm font-bold text-white">{plan.includes(place.id) ? "Added to plan" : "Add to plan"}</button><a href={`/experience/${place.id}`} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-bold text-blue transition-colors hover:border-blue">Open the full place page <ArrowSquareOut size={16} /></a><p className="mt-2 text-center text-xs text-muted">Photos, videos, About, and turn-by-turn directions live there.</p>{plan.length > 0 && <a href="/trips" className="mt-3 block text-center text-xs font-bold text-green">{plan.length} experience{plan.length === 1 ? "" : "s"} in your draft plan</a>}</div>; }
+function Selection({ place, plan }: { place: Experience; plan: string[] }) { return <div className="mt-6 border-t border-line pt-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Current selection</p><p className="mt-1 font-bold">{place.name}</p></div><span className="text-sm font-bold">{place.price}</span></div><button onClick={() => writePlan(plan.includes(place.id) ? plan : [...plan, place.id])} className="mt-4 w-full rounded-lg bg-blue px-4 py-3 text-sm font-bold text-white">{plan.includes(place.id) ? "Added to plan" : "Add to plan"}</button><a href={`/experience/${place.id}`} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-bold text-blue transition-colors hover:border-blue">Open the full place page <ArrowSquareOut size={16} /></a><p className="mt-2 text-center text-xs text-muted">Photos, videos, About, and turn-by-turn directions live there.</p>{plan.length > 0 && <a href="/trips" className="mt-3 block text-center text-xs font-bold text-green">{plan.length} experience{plan.length === 1 ? "" : "s"} in your draft plan</a>}</div>; }
 
 function DirectionsPanel({ route, loading }: { route: StreetRoute | null; loading: boolean }) {
   return <section className="mt-6 border border-line p-5" aria-live="polite"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Directions</p><h3 className="mt-2 text-lg font-bold">Walking from {demoUserLocation.label}</h3></div><NavigationArrow size={20} className="text-blue" /></div>{loading && <p className="mt-3 text-sm text-muted">Finding the walking route on the map...</p>}{!loading && route && <div><div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"><span className="font-bold">{formatDistance(route.distanceKm)}</span><span className="text-muted">about {route.durationMinutes} min walk</span><StatusLabel tone={route.kind === "street" ? "green" : "amber"}>{route.kind === "street" ? "Street route" : "Estimate only"}</StatusLabel></div><p className="mt-2 text-xs leading-5 text-muted">{route.note}</p>{route.steps.length > 0 && <ol className="mt-4 space-y-2 border-t border-line pt-4">{route.steps.map((step, index) => <li key={`${step.instruction}-${index}`} className="flex gap-3 text-sm"><span className="w-5 shrink-0 text-right text-xs font-bold text-blue">{index + 1}</span><span><span className="font-bold">{step.instruction}</span>{step.streetName ? ` onto ${step.streetName}` : ""}{step.distanceMeters >= 1000 ? <span className="text-muted"> · {(step.distanceMeters / 1000).toFixed(1)} km</span> : <span className="text-muted"> · {step.distanceMeters} m</span>}</span></li>)}</ol>}</div>}</section>;

@@ -1,0 +1,153 @@
+/**
+ * Real Mumbai and Navi Mumbai shopping places by area: historic markets,
+ * street-shopping stretches, and landmark stores. Prices and durations are
+ * derived demo bands, not venue claims.
+ */
+export const shoppingNames: Record<string, string[]> = {
+  "Fort": [
+    "Crawford Market",
+    "Mangaldas Market",
+    "Zaveri Bazaar",
+    "Chor Bazaar edge Mutton Street",
+    "Fort stationery lanes",
+    "Dhanji Street textile shops",
+    "Abdul Rehman Street",
+    "JN Petite store Fort",
+    "Bhatia Bazaar",
+    "Mulji Jetha Market",
+    "Ranganathan Kelkar Street shops",
+    "CN Naik Market",
+  ],
+  "Colaba": [
+    "Colaba Causeway street shopping",
+    "Colaba pavement book stalls",
+    "Army Navy Store",
+    "Colaba fashion boutiques",
+    "Regal Circle souvenir carts",
+    "Colaba handicraft emporia",
+  ],
+  "Bhendi Bazaar": [
+    "Bhendi Bazaar antique lanes",
+    "Chor Bazaar Mutton Street",
+    "Bhendi Bazaar perfume shops",
+    "Minara Masjid shopping stretch",
+    "Zainab Market Bhendi",
+  ],
+  "Bandra": [
+    "Linking Road shopping street",
+    "Hill Road shopping strip",
+    "Bandra reclamation weekend market",
+    "Waterfield Road boutiques",
+    "St Paul Road shoe lanes",
+  ],
+  "Juhu": [
+    "Juhu boutique strip",
+    "Juhu Tara Road weekend stalls",
+    "Juhu beach vendor carts",
+    "Juhu Chandan wadi flower stalls",
+  ],
+  "Andheri": [
+    "Lokhandwala Market",
+    "Andheri west street shopping",
+    "Infiniti Mall Andheri",
+    "Four Bungalows market",
+    "Versova fishing-village craft stalls",
+    "Andheri east wholesale lanes",
+    "MIDC Andheri factory outlets",
+  ],
+  "Powai": [
+    "Galleria Market",
+    "Central Avenue shops",
+    "Powai Plaza retail strip",
+    "Hiranandani boutique lane",
+  ],
+  "Dadar": [
+    "Dadar TT clothing lanes",
+    "Hindmata cloth market",
+    "Dadar vegetable market",
+    "Shivaji Park sports shops",
+    "Dadar shoe streets",
+    "Plaza cinema junction stalls Dadar",
+  ],
+  "Matunga": [
+    "Matunga market flower stalls",
+    "King's Circle shopping strip",
+    "Matunga east provision lanes",
+    "Matunga goldsmith lanes",
+    "Matunga east vegetable market",
+  ],
+  "Girgaon": [
+    "Girgaon market lanes",
+    "Thakurdwar shopping street",
+    "Girgaon fish-market morning",
+  ],
+  "Marine Drive": [
+    "Marine Drive souvenir carts",
+    "Chowpatty balloon-and-toy sellers",
+  ],
+  "Lower Parel": [
+    "Palladium Mall",
+    "Phoenix Marketcity Kurla edge",
+    "Lower Parel design stores",
+    "Worli sea face Saturday market",
+    "Mathuradas Mill compound shops",
+  ],
+  "Worli": [
+    "Worli seafood-drying lane stalls",
+    "Worli Koliwada craft carts",
+  ],
+  "Walkeshwar": [
+    "Banganga temple-stall row",
+    "Walkeshwar flower sellers",
+  ],
+  "Sewri": [
+    "Sewri flower-deck lanes",
+    "Sewri market morning",
+  ],
+  "Borivali East": [
+    "Borivali station shopping street",
+    "Rivali Park retail strip",
+    "Borivali vegetable market",
+  ],
+  "Aarey": [
+    "Aarey dairy produce stalls",
+    "Aarey tribal craft carts",
+  ],
+  "Vashi": [
+    "Vashi Market",
+    "Inorbit Mall Vashi",
+    "Vashi station shopping lanes",
+    "Sector 17 market Vashi",
+    "Palm Beach Galleria",
+  ],
+  "Nerul/Seawoods": [
+    "Nerul market lanes",
+    "Seawoods Grand Central retail",
+    "Nerul station shopping street",
+    "Wonders Park vendor carts",
+  ],
+  "Belapur": [
+    "CBD Belapur market",
+    "Belapur station shopping lanes",
+    "Belapur artisan weekend stalls",
+  ],
+  "Kharghar": [
+    "Kharghar station market",
+    "Little World Mall",
+    "Utsav Chowk bazaar stalls",
+    "Central Park vendor rows",
+  ],
+  "Airoli": [
+    "Airoli market",
+    "Airoli station shopping street",
+    "Airoli weekend bazaar",
+    "Airoli Milind Nagar stalls",
+  ],
+  "Panvel": [
+    "Panvel old market",
+    "Panvel Friday bazaar",
+    "Panvel station market street",
+    "Panvel wada-lane shops",
+    "Karnala base souvenir stalls",
+  ],
+};
