@@ -65,6 +65,10 @@ const distanceMentions = (cardText.match(/from your location/g) ?? []).length;
 const walkMentions = (cardText.match(/min walk/g) ?? []).length;
 record("B6: distance stated once (walk estimate only)", distanceMentions === 0 && walkMentions === 1, JSON.stringify(cardText.slice(-120)));
 
+// T3: confidence tier legend explains the vocabulary
+const legend = await page.getByText("What the confidence labels mean").count();
+record("T3: confidence tier legend present on explore", legend === 1);
+
 // ---- B3/B4: event contradiction visible and consistent on home + events ----
 await page.goto(BASE + "/", { waitUntil: "networkidle" });
 const changedHome = await page.getByText("Details changed since the last check").count();
