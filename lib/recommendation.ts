@@ -1,4 +1,4 @@
-import { formatDistance, haversineKm, proximityBonus } from "@/lib/location";
+import { haversineKm, proximityBonus } from "@/lib/location";
 import { parseDurationMinutes, parsePrice, parseTravelMinutes } from "@/lib/plan";
 import type { Experience } from "@/lib/seed";
 
@@ -63,7 +63,7 @@ export function recommendExperiences(experiences: Experience[], constraints: Rec
       const km = haversineKm(constraints.origin, experience.coordinates);
       const bonus = proximityBonus(km);
       score += bonus;
-      if (bonus > 0) reasons.push(`${formatDistance(km)} from your location`);
+      // Proximity is stated once on cards via the walk estimate ("1.3 km · about 9 min walk"), not repeated here.
     }
     if (normalizedQuery && searchable.includes(normalizedQuery)) { score += 3; reasons.push("Matches search text"); }
     if (!reasons.length) reasons.push("Available in the curated demo set");

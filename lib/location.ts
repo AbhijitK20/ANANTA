@@ -45,6 +45,21 @@ export function formatDistance(km: number): string {
   return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
 }
 
+/**
+ * Station display: Mumbai acronym codes are expanded on first use so
+ * out-of-town visitors are not left guessing (audit item C1).
+ */
+const STATION_EXPANSIONS: Record<string, string> = {
+  CSMT: "CSMT (Chhatrapati Shivaji Terminus)",
+  CST: "CST (Chhatrapati Shivaji Terminus)",
+  KYN: "KYN (Kalyan Junction)",
+  VSH: "VSH (Vashi)",
+};
+
+export function stationLabel(station: string): string {
+  return STATION_EXPANSIONS[station] ?? station;
+}
+
 /** Distance from the static demo position to an experience. */
 export function distanceFromUser(coordinates: [number, number]): number {
   return haversineKm(demoUserLocation.coordinates, coordinates);

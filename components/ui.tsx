@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BookmarkSimple, Compass, House, MapTrifold, UserCircle } from "@phosphor-icons/react/dist/ssr";
+import { PlanBadge } from "@/components/plan-badge";
 
 export function ButtonLink({ href, className = "", children }: { href: string; className?: string; children: ReactNode }) {
   return <a href={href} className={`rounded-lg px-4 py-3 text-sm font-bold transition-colors ${className}`}>{children}</a>;
@@ -16,5 +17,5 @@ export function SectionHeading({ eyebrow, title, href }: { eyebrow: string; titl
 
 export function BottomNav() {
   const items = [{ href: "/", label: "Home", Icon: House }, { href: "/explore", label: "Explore", Icon: MapTrifold }, { href: "/trips", label: "Trips", Icon: Compass }, { href: "/saved", label: "Saved", Icon: BookmarkSimple }, { href: "/profile", label: "Profile", Icon: UserCircle }];
-  return <><div className="h-20 lg:hidden" aria-hidden="true" /><nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-line bg-white/95 px-3 py-3 backdrop-blur lg:static lg:mx-5 lg:border-t-0 lg:bg-transparent lg:px-8 lg:py-5"><div className="mx-auto flex w-full max-w-md items-center justify-between lg:max-w-none">{items.map(({ href, label, Icon }, index) => <a key={label} href={href} className={`flex min-w-[58px] flex-col items-center gap-1 text-xs font-semibold ${index === 0 ? "text-blue" : "text-muted"}`}><Icon size={21} weight={index === 0 ? "fill" : "regular"} />{label}</a>)}</div></nav></>;
+  return <><div className="h-20 lg:hidden" aria-hidden="true" /><nav className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-line bg-white/95 px-3 py-3 backdrop-blur lg:static lg:mx-5 lg:border-t-0 lg:bg-transparent lg:px-8 lg:py-5"><div className="mx-auto flex w-full max-w-md items-center justify-between lg:max-w-none">{items.map(({ href, label, Icon }, index) => <a key={label} href={href} className={`flex min-w-[58px] flex-col items-center gap-1 text-xs font-semibold ${index === 0 ? "text-blue" : "text-muted"}`}><span className="relative"><Icon size={21} weight={index === 0 ? "fill" : "regular"} />{label === "Trips" && <span className="absolute -right-2 -top-1"><PlanBadge /></span>}</span>{label}</a>)}</div></nav></>;
 }

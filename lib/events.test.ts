@@ -33,7 +33,7 @@ describe("event lifecycle", () => {
 describe("event change detection", () => {
   it("flags venue, time, and price changes against the last snapshot", () => {
     const changes = eventChanges(stage);
-    expect(changes.map(({ field }) => field)).toEqual(["Venue", "Start time"]);
+    expect(changes.map(({ field }) => field)).toEqual(["Venue", "Start time", "Price"]);
     expect(changes.find(({ field }) => field === "Venue")?.from).toContain("community hall");
   });
 
