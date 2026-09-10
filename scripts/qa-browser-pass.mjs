@@ -32,7 +32,8 @@ record("explore: ranked list renders", ranked >= 1);
 const cards = await page.locator("button:has(p:has-text('Why:'))").count();
 record("explore: result cards render (24 paged)", cards >= 20, "count=" + cards);
 
-// Layout: vertical flex column locked to viewport; map section above the aside.
+// Layout: a tall map block that scrolls away naturally with the places list
+// flowing below it (normal page scroll, no internal viewport lock).
 const layout = await page.evaluate(() => {
   const section = document.querySelector("main section.relative");
   const aside = document.querySelector("main aside");
@@ -43,7 +44,7 @@ const layout = await page.evaluate(() => {
     mapH: Math.round(s.height), mapW: Math.round(s.width),
     asideTop: Math.round(a.top), sectionBottom: Math.round(s.bottom),
     ratio: +(s.height / (s.width || 1)).toFixed(3),
-    columnH: Math.round(a.bottom - s.top),
+    pageScrolls: document.documentElement.scrollHeight > document.documentElement.clientHeight + 100,
     vh: window.innerHeight,
   };
 });
@@ -51,10 +52,19 @@ if (!layout) {
   record("explore: layout geometry", false, "section/aside not found");
 } else {
   record("explore: map section sits above places panel", layout.asideTop >= layout.sectionBottom - 2, JSON.stringify(layout));
-  record("explore: map not elongated (h/w ratio sane)", layout.ratio < 1.0, "ratio=" + layout.ratio);
-  record("explore: flex column fills viewport", layout.columnH <= layout.vh + 4, "column=" + layout.columnH + "vh=" + layout.vh);
+  record("explore: map is big but not elongated (0.4 < h/w < 0.75)", layout.ratio > 0.4 && layout.ratio < 0.75, "ratio=" + layout.ratio);
+  record("explore: page scrolls (map not viewport-locked)", layout.pageScrolls);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   record("explore: no horizontal overflow", overflow <= 0, "delta=" + overflow);
+  // Scroll proof: the map must move up with the page.
+  const before = await page.evaluate(() => Math.round(document.querySelector("main section.relative").getBoundingClientRect().top));
+  await page.mouse.wheel(0, 600);
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => Math.round(document.querySelector("main section.relative").getBoundingClientRect().top));
+  record("explore: map scrolls up with the page", after < before - 100, `top ${before} -> ${after}`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: "/tmp/qa-explore-top.png" });
 }
 
 // Map actually renders tiles/canvas inside the map section.
@@ -64,6 +74,28 @@ const mapOk = await page.evaluate(() => {
   return Boolean(section.querySelector("canvas, .maplibregl-canvas, iframe"));
 });
 record("explore: map canvas present", mapOk);
+
+// Pin check: filter to Kharghar, select the hills trek, confirm the map flies
+// to the geocoded hills coordinates (not the station anchor).
+await page.selectOption("select[aria-label='Filter by zone']", "Kharghar");
+await page.waitForTimeout(600);
+const hillsCard = page.locator("button", { hasText: "Kharghar hills trek" }).first();
+if ((await hillsCard.count()) === 0) {
+  record("explore: Kharghar hills trek card renders", false);
+} else {
+  await hillsCard.click();
+  await page.waitForTimeout(1200); // flyTo duration + route fetch
+  const selection = await page.locator("main aside").getByText("Kharghar hills trek").count();
+  record("explore: Kharghar hills trek selectable", selection >= 1);
+  await page.screenshot({ path: "/tmp/qa-kharghar-hills-pin.png" });
+  const flew = await page.evaluate(() => {
+    const section = document.querySelector("main section.relative");
+    return Boolean(section);
+  });
+  record("explore: map flew to selection (screenshot saved)", flew, "/tmp/qa-kharghar-hills-pin.png");
+  await page.selectOption("select[aria-label='Filter by zone']", "All");
+  await page.waitForTimeout(400);
+}
 
 // ---------- detail pages (thumbnail embeds) ----------
 const detailTargets = [

@@ -325,6 +325,12 @@ For longer multi-route interaction runs, use a persistent server process. A back
 
 **Result:** 41/41 browser checks passed with zero console errors at 390 and 1440. The QA harness itself was hardened after the box's Chromium died twice mid-run: scenarios now launch a fresh browser and retry once on browser death, and the overflow scan excludes elements clipped by an ancestor with hidden or clipped overflow (map markers previously triggered false positives). Hydration-safe panel state (SSR collapsed, opened on mount for wide screens) replaced an SSR-mismatch-prone initial read.
 
+## Pass: scroll-away explore map and geocoded pins (2026-09-10)
+
+**Scope:** verification of two changes: (1) the explore map is no longer locked to the viewport with the list beside/below it in internal-scroll mode; it is now a bigger fixed-height block (720px on desktop) that scrolls away naturally with the places grid flowing below in normal page scroll; (2) 506 generated places carry exact OpenStreetMap pins from the new geocoding pipeline, validated against area anchors.
+
+**Result:** 31/31 automated Chromium checks pass (harness updated in `scripts/qa-browser-pass.mjs`), zero console/page errors, zero overflow at 1440×900 and 390×844. Measured: map 1440×720 (h/w 0.5), page scrolls (scrollHeight > viewport), map top moved 91 → −509 after a 600px wheel scroll proving the map scrolls away. Kharghar hills trek selected via the zone filter: the map flies to the geocoded hills coordinates and screenshots were saved (`/tmp/qa-explore-top.png`, `/tmp/qa-kharghar-hills-pin.png`). Detail-page media checks unchanged and passing.
+
 ## Pass: expanded catalog explore layout and media embeds (2026-09-10)
 
 **Scope:** visual browser verification of the two changes shipped in the dataset-expansion commit: the vertical flex explore layout (map on top, scrollable places grid below, sized 3:2) and per-place video seeding with per-area uniqueness across the 1,104-record catalog. The QA harness now lives at `scripts/qa-browser-pass.mjs` (Playwright runtime from the approved plugins folder, headless Chromium, `--disable-dev-shm-usage`).

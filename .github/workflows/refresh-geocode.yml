@@ -1,0 +1,68 @@
+name: Refresh geocoded places
+
+# Re-run the OpenStreetMap geocoder on a schedule so new or corrected OSM
+# features (renamed POIs, newly mapped venues) flow into the dataset, and so
+# OSM-side edits that push a matched place outside its area radius get pruned.
+# Only validated coordinates are pushed: every row must share name tokens with
+# its place and sit within 3.5 km of the area anchor, enforced again by the
+# dataset tests before anything is committed.
+
+on:
+  schedule:
+    # Monthly, first day of the month 04:43 UTC (after the Monday media refresh
+    # cadence; staggered to avoid overlapping network-heavy jobs).
+    - cron: "43 4 1 * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  geocode:
+    name: Re-match place pins against OpenStreetMap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Prune first: drop saved rows whose coordinates no longer satisfy the
+      # anchor-distance rule (OSM edits, or anchors corrected upstream).
+      - name: Prune out-of-radius matches
+        run: npx tsx scripts/geocode-overpass.ts --prune
+
+      # Bulk re-match. Cached per-area dumps keep runs light; fresh fetches
+      # catch new OSM coverage. Retry/backoff is built into the fetcher.
+      - name: Re-match places against OSM features
+        run: npx tsx scripts/geocode-overpass.ts
+
+      # The refreshed coordinates must keep every dataset invariant before
+      # anything is committed. A failed run pushes nothing.
+      - name: Typecheck and test refreshed dataset
+        run: |
+          npx tsc --noEmit
+          npm test
+
+      - name: Commit refreshed coordinates
+        id: commit
+        run: |
+          git config user.name "ananta-geo-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add lib/data/geocoded.generated.ts
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Refresh geocoded place coordinates from OpenStreetMap"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push refreshed coordinates
+        if: steps.commit.outputs.changed == 'true'
+        run: git push
