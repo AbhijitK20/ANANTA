@@ -45,7 +45,10 @@ describe("expanded dataset", () => {
       const km = Math.sqrt(dLng * dLng + dLat * dLat);
       expect(km, `${experience.id} sits ${km.toFixed(2)} km from its ${experience.area} anchor`).toBeLessThanOrEqual(3.5);
     }
-    expect(geocoded).toBeGreaterThan(400);
+    // Precision over recall: the strict matcher only accepts validated OSM
+    // matches, so the count is lower but free of known false positives. It
+    // grows as Nominatim/OSM coverage improves; 350 catches regressions.
+    expect(geocoded).toBeGreaterThan(350);
   });
 
   it("pins the Kharghar hills experiences on the hills, not at the station anchor", () => {

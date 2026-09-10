@@ -54,12 +54,53 @@ const MODIFIERS = new Set([
   "lanes", "street", "market", "food", "shopping", "district", "precinct", "area",
 ]);
 
+/** Per-category experience words: stripped from place names before matching so
+ * descriptors like "night bar" or "intro class" do not dilute the token score. */
+const CATEGORY_MODIFIERS: Record<string, Set<string>> = {
+  Food: new Set(["counters", "counter", "carts", "cart", "stalls", "stall", "lunch", "dinner", "breakfast", "delivery"]),
+  Nightlife: new Set(["bar", "lounge", "microbrewery", "rooftop"]),
+  Shopping: new Set(["store", "shops", "shop", "bazaar", "textile", "stationery"]),
+  Adventure: new Set(["entry", "rappelling", "kayaking", "camp", "camping", "base"]),
+  Recreation: new Set(["benches", "katta", "yoga", "promenade", "joggers"]),
+  Stay: new Set(["stay", "stays", "wing", "equivalent", "guesthouse", "guesthouses", "hostel", "suite", "rooms"]),
+  Culture: new Set(["hall", "stop", "stops", "viewing", "auction"]),
+  Nature: new Set(["network", "groves", "grove", "edge", "viewpoint", "viewpoints"]),
+  Workshop: new Set(["class", "classes", "studio", "studios", "intro", "beginner", "workshop", "workshops", "lesson", "lessons"]),
+  Family: new Set(["family", "families", "kids", "boating", "picnic", "play"]),
+};
+
+/** Area names and well-known aliases: place names repeat them ("Colaba
+ * Causeway ...", "SGNP ..."), and they belong to the area, not the venue. */
+const AREA_ALIASES = new Set([
+  "sgnp", "csmt", "sanjay", "gandhi", "national", ...zoneRows.map((zone) => zone.area.toLowerCase().split(/[^a-z0-9]+/)).flat(),
+]);
+
 const STOP = new Set(["the", "and", "of", "in", "at", "for", "with", "mumbai", "navi"]);
 
-function tokens(name: string): string[] {
+function tokens(name: string, category?: string): string[] {
+  const extra = category ? CATEGORY_MODIFIERS[category] : undefined;
   return name.toLowerCase().split(/[^a-z0-9]+/).filter(
-    (token) => token.length >= 3 && !STOP.has(token) && !MODIFIERS.has(token),
+    (token) => token.length >= 3 && !STOP.has(token) && !AREA_ALIASES.has(token)
+      && !MODIFIERS.has(token) && !(extra && extra.has(token)),
   );
+}
+
+/** Venue-type words: a 2-token match on one of these alone proves nothing. */
+const GENERIC = new Set([
+  "road", "station", "park", "garden", "gardens", "lake", "mall", "hotel", "cafe", "café",
+  "restaurant", "bar", "club", "museum", "gallery", "beach", "temple", "church", "mosque",
+  "market", "centre", "center", "tower", "building", "complex", "plaza", "chowk", "marg",
+  "court", "house", "cinema", "theatre", "theater", "hospital", "school", "college",
+  "campus", "office", "arch", "gate", "bridge", "terminus", "point", "hill", "hills",
+  "fort", "docks", "dock", "pier", "library", "ground", "grounds", "field", "institute",
+]);
+
+/** Acronym from an element name's words: "General Post Office" -> "gpo". */
+function acronymOf(name: string): string | null {
+  const words = name.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  if (words.length < 2 || words.length > 6) return null;
+  const acronym = words.map((word) => word[0].toLowerCase()).join("");
+  return acronym.length >= 2 ? acronym : null;
 }
 
 function lev(a: string, b: string): number {
@@ -78,7 +119,8 @@ function lev(a: string, b: string): number {
   return prev[n];
 }
 
-/** Tolerant token equality: exact, prefix >=5, or edit distance <=1 for long tokens. */
+/** Tolerant token equality: exact, prefix >=5, or edit distance <=1 for
+ * tokens of 6+ characters (catches OSM spelling drift like kharghar/khargar). */
 function tokenEq(a: string, b: string): boolean {
   if (a === b) return true;
   if (a.length >= 5 && b.length >= 5 && (a.startsWith(b) || b.startsWith(a))) return true;
@@ -86,7 +128,7 @@ function tokenEq(a: string, b: string): boolean {
   return false;
 }
 
-type Element = { name: string; names: string[]; lng: number; lat: number };
+type Element = { name: string; names: string[]; acronyms: string[]; lng: number; lat: number };
 
 type Task = { id: string; name: string; area: string };
 
@@ -159,9 +201,12 @@ async function fetchAreaDump(area: string): Promise<Element[]> {
     const center = element.center ?? (element.lat !== undefined ? { lat: element.lat, lon: element.lon } : undefined);
     if (!name || !center) continue;
     const extra = [element.tags?.["name:en"], element.tags?.brand, element.tags?.operator].filter(Boolean) as string[];
+    const lowered = Array.from(new Set([name, ...extra].map((value) => value.toLowerCase())));
+    const acronyms = Array.from(new Set(lowered.map(acronymOf).filter(Boolean) as string[]));
     elements.push({
       name,
-      names: Array.from(new Set([name, ...extra].map((value) => value.toLowerCase()))),
+      names: lowered,
+      acronyms,
       lng: center.lon,
       lat: center.lat,
     });
@@ -178,30 +223,61 @@ function distanceKm(a: [number, number], b: [number, number]): number {
 }
 
 function matchTask(task: Task, elements: Element[], anchor: [number, number]): Row | null {
-  const placeTokens = tokens(task.name);
+  const placeTokens = tokens(task.name, taskCategory(task));
   if (!placeTokens.length) return null;
+  // Per-element qualification, evaluated independently of dump order: an
+  // element qualifies when its token score clears the threshold AND the
+  // relaxation rules hold for its own name length. First qualified element
+  // (stable dump order) wins.
   let best: Element | null = null;
-  let bestScore = 0;
+  let bestScore = -1;
   for (const element of elements) {
     // The fetch bbox is generous, so enforce the area radius here: a corner
     // match 6 km out belongs to a neighboring neighborhood, not this area.
     if (distanceKm(anchor, [element.lng, element.lat]) > 3.5) continue;
     const elementTokens = element.names.flatMap((name) => name.split(/[^a-z0-9]+/)).filter(Boolean);
     let overlap = 0;
+    let distinctiveHit = false;
     for (const placeToken of placeTokens) {
-      if (elementTokens.some((elementToken) => tokenEq(placeToken, elementToken))) overlap += 1;
+      const hit = elementTokens.some((elementToken) => tokenEq(placeToken, elementToken))
+        || (element.acronyms ?? []).some((acronym) => tokenEq(placeToken, acronym));
+      if (hit) {
+        overlap += 1;
+        if (!GENERIC.has(placeToken) && placeToken.length >= 4) distinctiveHit = true;
+      }
     }
     const score = overlap / placeTokens.length;
+    const threshold = placeTokens.length >= 3 ? 0.5 : 0.99;
+    if (score < threshold) continue;
+    // The element's own name length decides how much a partial hit proves:
+    // "Dhanji" inside a 7-token donor-attribution health centre is noise,
+    // while a venue actually named "Tulsi Lake" proves the 2-token place.
+    const nameTokens = element.name.split(/[^a-zA-Z0-9]+/).filter(Boolean).length;
+    if (placeTokens.length === 1 && !(distinctiveHit && nameTokens <= 3)) continue;
+    if (placeTokens.length === 2 && score < 0.99 && !(distinctiveHit && nameTokens <= 3)) continue;
     if (score > bestScore) {
       bestScore = score;
       best = element;
     }
   }
-  // Accept strong matches only: most tokens matched (or the single distinctive
-  // token of a short name), so invented combinations never outrank real POIs.
-  const threshold = placeTokens.length >= 3 ? 0.5 : 0.99;
-  if (!best || bestScore < threshold) return null;
+  if (!best) return null;
   return { id: task.id, coordinates: [best.lng, best.lat], match: best.name };
+}
+
+/** Category lookup for a task id (ids are slugs of names, not reversible, so
+ * category comes from the task during matching). */
+let TASK_CATEGORY: Map<string, string> | null = null;
+function taskCategory(task: Task): string | undefined {
+  if (!TASK_CATEGORY) {
+    TASK_CATEGORY = new Map();
+    for (const [category, namesByArea] of Object.entries(NAMES_BY_CATEGORY)) {
+      for (const [area, names] of Object.entries(namesByArea)) {
+        if (!VALID_AREAS.has(area)) continue;
+        for (const name of names) TASK_CATEGORY.set(slug(name), category);
+      }
+    }
+  }
+  return TASK_CATEGORY.get(task.id);
 }
 
 async function main() {
