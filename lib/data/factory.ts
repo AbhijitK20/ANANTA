@@ -1,6 +1,7 @@
 import type { Experience, MediaSeed } from "@/lib/seed";
 import { generatedVideos, type GeneratedVideo } from "@/lib/data/videos.generated";
 import { generatedImages } from "@/lib/data/images.generated";
+import { geocodedPlaces, type GeocodedPlace } from "@/lib/data/geocoded.generated";
 
 /**
  * Dataset factory.
@@ -98,6 +99,11 @@ const DESCRIPTION_PREFIX: Record<string, string> = {
   Family: "A demo family record for",
 };
 
+/** Real OSM coordinates per place id (empty match string = anchor fallback is used). */
+const geocodedById: Map<string, GeocodedPlace> = new Map(
+  geocodedPlaces.map((row) => [row.id, row]),
+);
+
 /**
  * Expand category name-lists into full Experience records. `namesByArea` maps
  * category -> area (must match a ZoneRow area) -> real place names.
@@ -119,6 +125,13 @@ export function buildExperiences(
         const id = slug(name);
         const style = derivedStyle(category, id);
         const image = generatedImages[hash(id) % Math.max(generatedImages.length, 1)];
+        // Exact OSM match when the geocoder found the real feature; otherwise
+        // the area-anchor pin with an honest location-confidence label.
+        const geocoded = geocodedById.get(id);
+        const coordinates = geocoded ? geocoded.coordinates : derivePin(zoneRow.coordinates, zoneRow.waterTo, id);
+        const confidence = geocoded
+          ? "Location matched on OpenStreetMap; visit facts are demo estimates"
+          : "Location is the area center, not the exact venue; facts are demo estimates";
         experiences.push({
           id,
           name,
@@ -135,10 +148,10 @@ export function buildExperiences(
           updated: "Curated",
           description: `${DESCRIPTION_PREFIX[category] ?? "A demo record for"} ${name} in ${zoneRow.area}. Price, duration, and operating facts are demo estimates that need operator confirmation before any visit.`,
           mediaTitle: "Verified local area video",
-          coordinates: derivePin(zoneRow.coordinates, zoneRow.waterTo, id),
+          coordinates,
           source: "Curated record",
           sourceUrl: `https://example.com/sources/${id}`,
-          confidence: "Demo estimate, location verified",
+          confidence,
           lastChecked: "2026-09-08",
           imageUrl: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(image.file)}?width=900`,
           imageCredit: image.credit,

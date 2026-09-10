@@ -3,6 +3,7 @@ import { allExperiences, allMedia, DATASET_CATEGORIES } from "@/lib/data";
 import { approvedMediaFor } from "@/lib/media";
 import { generatedVideos } from "@/lib/data/videos.generated";
 import { generatedImages } from "@/lib/data/images.generated";
+import { zoneRows } from "@/lib/data/zones";
 
 describe("expanded dataset", () => {
   it("has at least 100 records in every traveler category", () => {
@@ -28,6 +29,34 @@ describe("expanded dataset", () => {
       expect(lng, experience.id).toBeLessThan(73.3);
       expect(lat, experience.id).toBeGreaterThan(18.8);
       expect(lat, experience.id).toBeLessThan(19.35);
+    }
+  });
+
+  it("places geocoded records within 3.5 km of their area anchor", () => {
+    const zoneByArea = new Map(zoneRows.map((zone) => [zone.area, zone]));
+    let geocoded = 0;
+    for (const experience of allExperiences) {
+      if (!experience.confidence.startsWith("Location matched on OpenStreetMap")) continue;
+      geocoded += 1;
+      const anchor = zoneByArea.get(experience.area)?.coordinates;
+      expect(anchor, experience.id).toBeTruthy();
+      const dLng = (experience.coordinates[0] - anchor![0]) * 111.32 * Math.cos((experience.coordinates[1] * Math.PI) / 180);
+      const dLat = (experience.coordinates[1] - anchor![1]) * 110.57;
+      const km = Math.sqrt(dLng * dLng + dLat * dLat);
+      expect(km, `${experience.id} sits ${km.toFixed(2)} km from its ${experience.area} anchor`).toBeLessThanOrEqual(3.5);
+    }
+    expect(geocoded).toBeGreaterThan(400);
+  });
+
+  it("pins the Kharghar hills experiences on the hills, not at the station anchor", () => {
+    const anchor: [number, number] = [73.0679, 19.0469]; // Kharghar station area
+    for (const id of ["kharghar-hills-trek", "kharghar-hills-sunrise-hike", "kharghar-waterfall-monsoon-hike"]) {
+      const experience = allExperiences.find((record) => record.id === id);
+      expect(experience, id).toBeTruthy();
+      const dLng = (experience!.coordinates[0] - anchor[0]) * 111.32 * Math.cos((experience!.coordinates[1] * Math.PI) / 180);
+      const dLat = (experience!.coordinates[1] - anchor[1]) * 110.57;
+      const km = Math.sqrt(dLng * dLng + dLat * dLat);
+      expect(km, `${id} must sit away from the station anchor`).toBeGreaterThan(0.8);
     }
   });
 
