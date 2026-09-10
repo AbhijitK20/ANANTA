@@ -404,5 +404,23 @@ export const generatedImages: GeneratedImage[] = [
     "file": "File:Mumbai 03-2016 106 Bandra station surroundings.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Bandra Mumbai"
+  },
+  {
+    "key": "commons-67",
+    "file": "File:KalaGhoda, Fort,Mumbai - panoramio (105).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-68",
+    "file": "File:Mumbai, India, Indian family on the beach, Chowpatty Beach.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-69",
+    "file": "File:Mumbai, India, Family on the beach.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
   }
 ];
