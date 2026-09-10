@@ -325,6 +325,16 @@ For longer multi-route interaction runs, use a persistent server process. A back
 
 **Result:** 41/41 browser checks passed with zero console errors at 390 and 1440. The QA harness itself was hardened after the box's Chromium died twice mid-run: scenarios now launch a fresh browser and retry once on browser death, and the overflow scan excludes elements clipped by an ancestor with hidden or clipped overflow (map markers previously triggered false positives). Hydration-safe panel state (SSR collapsed, opened on mount for wide screens) replaced an SSR-mismatch-prone initial read.
 
+## Pass: expanded catalog explore layout and media embeds (2026-09-10)
+
+**Scope:** visual browser verification of the two changes shipped in the dataset-expansion commit: the vertical flex explore layout (map on top, scrollable places grid below, sized 3:2) and per-place video seeding with per-area uniqueness across the 1,104-record catalog. The QA harness now lives at `scripts/qa-browser-pass.mjs` (Playwright runtime from the approved plugins folder, headless Chromium, `--disable-dev-shm-usage`).
+
+**Routes checked:** `/explore` (all filters cleared) at 1440×900 and 390×844; `/experience/kala-ghoda-art-walk` (hand-written), `/experience/kyani-co` (generated Food), `/experience/kharghar-utsav-chowk-evening` (generated) at 1440×900.
+
+**Result:** 28/28 automated checks pass, zero console errors, zero page errors, zero horizontal overflow at both viewports. Explore geometry measured from the live DOM: map section 1440×386 above the places panel (ratio 0.268, nowhere near elongated), flex column fits the 900px viewport, 24 paged result cards render in the grid, map canvas present. On all three detail pages: no empty media state, exactly one approved YouTube media card with title and creator attribution, and the `i.ytimg.com` thumbnail genuinely decodes (naturalWidth 480, not a broken image). Playback still opens on the platform by click per the media policy.
+
+**Remaining limitation:** thumbnails are static by design; the check verifies real image decode plus attribution, not platform-side playback.
+
 ## Pass: quick filters and nightlife records
 
 **Scope:** a new pure quick-filter engine (`lib/quick-filters.ts`) with four traveler filters on Explore: Hidden gems (resident- or community-sourced records only), Walkable from me (30 minute walk limit measured from the fixed demo position), Free entry, and a Best time select backed by a new optional `bestTime` field with honest per-record guidance (best in the morning, best in daylight, best after sunset, best after dark, best around high tide, best in monsoon). Three real nightlife records were researched and added to support the after-dark option: Prithvi Theatre Evening, NCPA Waterfront Evening, and Parel Mill District Night, each geocoded, snapped to the street network, and photographed from Commons with credits. Every exclusion cites its rule and measured value, and the Explore exclusion panel merges constraint and quick-filter reasons. Leftover demo wording was scrubbed from source fields for consistency with the varied status vocabulary.

@@ -433,7 +433,7 @@ export const generatedVideos: GeneratedVideo[] = [
   {
     "key": "yt-61",
     "id": "KD2LLGeD5RM",
-    "title": "When Ganpati Arrives In Mumbai - Ganpati Maha Aagman 🔥 ",
+    "title": "Experiencing The Biggest Ganpati Aagman Of Mumbai 🤯",
     "creator": "Mumbaikar Sahil",
     "query": ""
   },

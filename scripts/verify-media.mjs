@@ -12,6 +12,9 @@
  * Usage:
  *   node scripts/verify-media.mjs --report    # print current pool sizes
  *   node scripts/verify-media.mjs             # top up pools to targets
+ *   node scripts/verify-media.mjs --refresh   # re-verify every existing entry
+ *                                             # against its live source, drop
+ *                                             # dead ones, then top up
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -42,13 +45,14 @@ async function fetchText(url) {
   }
 }
 
-/** Live Commons check: the file must exist in the api.php imageinfo response. */
+/** Live Commons check, tri-state: "ok", "missing" (confirmed gone), or "unknown" (transient). */
 async function verifyCommonsFile(title) {
   const url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url&titles=" + encodeURIComponent(title);
   const data = await fetchJson(url);
-  const page = data && data.query ? Object.values(data.query.pages)[0] : null;
-  if (!page || page.missing !== undefined || !page.imageinfo || !page.imageinfo[0]) return false;
-  return page.title === title.replace(/_/g, " ") || page.title === title;
+  if (!data || !data.query) return "unknown"; // rate limit or network error: NOT evidence of absence
+  const page = Object.values(data.query.pages)[0] ?? null;
+  if (!page || page.missing !== undefined || !page.imageinfo || !page.imageinfo[0]) return "missing";
+  return page.title === title.replace(/_/g, " ") || page.title === title ? "ok" : "missing";
 }
 
 async function searchCommons(query, limit) {
@@ -65,11 +69,19 @@ async function searchCommons(query, limit) {
     .map((page) => page.title);
 }
 
-/** Live YouTube check: oEmbed 200 with a real title and author. */
+/** Live YouTube check, tri-state: record, "missing" (confirmed gone), or "unknown". */
 async function verifyYouTube(id) {
-  const data = await fetchJson("https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=" + id + "&format=json");
-  if (!data || typeof data.title !== "string" || typeof data.author_name !== "string") return null;
-  return { id, title: data.title, creator: data.author_name };
+  const response = await fetch("https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=" + id + "&format=json", { headers: { "user-agent": UA }, redirect: "follow" });
+  if (response.ok) {
+    const data = await response.json().catch(() => null);
+    if (data && typeof data.title === "string" && typeof data.author_name === "string") {
+      return { id, title: data.title, creator: data.author_name, state: "ok" };
+    }
+    return { state: "unknown" };
+  }
+  // 400/401/403/404 from oEmbed means the id is gone or private: confirmed absence.
+  if ([400, 401, 403, 404].includes(response.status)) return { state: "missing" };
+  return { state: "unknown" }; // 429/5xx: transient, never evidence of absence
 }
 
 /** Scrape candidate video ids + titles off a YouTube results page. */
@@ -176,6 +188,88 @@ const VIDEO_QUERIES = [
   "Seawoods Navi Mumbai walk", "Belapur Navi Mumbai", "Mumbai bakery food", "Mumbai dessert",
 ];
 
+/**
+ * Scheduled refresh: re-verify every pool entry against its live source.
+ *
+ *   - Commons files can be renamed or deleted upstream -> entry dropped.
+ *   - YouTube uploads can be deleted or made private -> oEmbed stops returning
+ *     a title -> entry dropped.
+ *   - A surviving video's title or creator may drift after an upstream edit;
+ *     the record is updated so the dataset keeps stating real facts.
+ *
+ * Pruned pools are written back BEFORE top-up starts, so a mid-run failure can
+ * never resurrect a dead entry. Places that referenced a dropped video are
+ * reassigned deterministically by the factory at build time.
+ */
+async function refreshExisting(images, videos) {
+  // A transient failure must never kill a verified entry, so every ambiguous
+  // result is retried before the entry is kept as-is for the next run.
+  const RETRIES = 2;
+  const droppedImages = [];
+  const droppedVideos = [];
+
+  const keptImages = [];
+  for (const row of images) {
+    let state = await verifyCommonsFile(row.file);
+    for (let attempt = 0; state === "unknown" && attempt < RETRIES; attempt += 1) {
+      await sleep(500);
+      state = await verifyCommonsFile(row.file);
+    }
+    if (state === "missing") {
+      console.log("image dropped: " + row.file);
+      droppedImages.push(row.file);
+      continue;
+    }
+    if (state === "unknown") console.log("image kept unverified this run: " + row.file);
+    keptImages.push(row);
+    await sleep(150);
+  }
+
+  const keptVideos = [];
+  for (const row of videos) {
+    let result = await verifyYouTube(row.id);
+    for (let attempt = 0; result.state === "unknown" && attempt < RETRIES; attempt += 1) {
+      await sleep(500);
+      result = await verifyYouTube(row.id);
+    }
+    if (result.state === "missing") {
+      console.log("video dropped: [" + row.id + "] " + row.title);
+      droppedVideos.push("[" + row.id + "] " + row.title);
+      continue;
+    }
+    if (result.state === "ok" && (result.title !== row.title || result.creator !== row.creator)) {
+      console.log("video updated: [" + row.id + "] " + row.title + " -> " + result.title);
+      row.title = result.title;
+      row.creator = result.creator;
+    }
+    keptVideos.push(row);
+    await sleep(150);
+  }
+
+  images.length = 0;
+  images.push(...keptImages);
+  videos.length = 0;
+  videos.push(...keptVideos);
+  writePool("images.generated.ts", "generatedImages", "GeneratedImage", "{ key: string; file: string; credit: string; query: string }", images);
+  writePool("videos.generated.ts", "generatedVideos", "GeneratedVideo", "{ key: string; id: string; title: string; creator: string; query: string }", videos);
+  console.log("refresh done: " + keptImages.length + " images and " + keptVideos.length + " videos still verified.");
+
+  // CI surface: the workflow reads these from GITHUB_OUTPUT to decide whether
+  // the drop report should fire. Locally they are inert.
+  const outputPath = process.env.GITHUB_OUTPUT;
+  const lines = [
+    "dropped_images=" + droppedImages.length,
+    "dropped_videos=" + droppedVideos.length,
+    "dropped_detail_images=" + droppedImages.join(" | "),
+    "dropped_detail_videos=" + droppedVideos.join(" | "),
+  ];
+  if (outputPath) {
+    fs.appendFileSync(outputPath, lines.join("\n") + "\n");
+  } else {
+    console.log(lines.join("\n"));
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const images = readPool("images.generated.ts", "generatedImages");
@@ -183,6 +277,10 @@ async function main() {
   if (args.includes("--report")) {
     console.log("images: " + images.length + ", videos: " + videos.length);
     return;
+  }
+
+  if (args.includes("--refresh")) {
+    await refreshExisting(images, videos);
   }
 
   const usedImageTitles = new Set(images.map((row) => row.file));

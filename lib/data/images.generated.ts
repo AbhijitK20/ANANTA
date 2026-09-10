@@ -64,180 +64,6 @@ export const generatedImages: GeneratedImage[] = [
     "query": "Sewri Mumbai"
   },
   {
-    "key": "commons-10",
-    "file": "File:Sanjay Gandhi National Park (Lake).jpeg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Borivali Sanjay Gandhi National Park"
-  },
-  {
-    "key": "commons-11",
-    "file": "File:Sanjay Gandhi National Park Borivali.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Borivali Sanjay Gandhi National Park"
-  },
-  {
-    "key": "commons-12",
-    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (1).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-13",
-    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (2).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-14",
-    "file": "File:Antiques being sold on Colaba Causeway.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-15",
-    "file": "File:Colaba Causeway construction, view from Colaba island, 1826.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-16",
-    "file": "File:Marine Drive in Mumbai 20.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Marine Drive Mumbai"
-  },
-  {
-    "key": "commons-17",
-    "file": "File:Marine Lines Mumbai 2021.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Marine Drive Mumbai"
-  },
-  {
-    "key": "commons-18",
-    "file": "File:Vanishing point , seawoods, mumbai - panoramio.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Seawoods Navi Mumbai"
-  },
-  {
-    "key": "commons-19",
-    "file": "File:Sector 44A, Seawoods, Navi Mumbai, Maharashtra 400706, India - panoramio.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Seawoods Navi Mumbai"
-  },
-  {
-    "key": "commons-20",
-    "file": "File:Navi Mumbai India.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Belapur Navi Mumbai"
-  },
-  {
-    "key": "commons-21",
-    "file": "File:Palm Beach Road, Belapur, Navi Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Belapur Navi Mumbai"
-  },
-  {
-    "key": "commons-22",
-    "file": "File:Utsav Chauk, Kharghar Navi Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Kharghar Navi Mumbai"
-  },
-  {
-    "key": "commons-23",
-    "file": "File:Central Park, Kharghar, Navi Mumbai, India.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Kharghar Navi Mumbai"
-  },
-  {
-    "key": "commons-24",
-    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (3).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-25",
-    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (4).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-26",
-    "file": "File:Bagdadi Restaurant, Colaba, Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-27",
-    "file": "File:Colaba Causeway - panoramio (2).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-28",
-    "file": "File:Marine Drive of Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Marine Drive Mumbai"
-  },
-  {
-    "key": "commons-29",
-    "file": "File:SWITCH - Ac Double Decker Bus of BEST, Marine Drive Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Marine Drive Mumbai"
-  },
-  {
-    "key": "commons-30",
-    "file": "File:Cycling through the Borivali National Park.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Borivali Sanjay Gandhi National Park"
-  },
-  {
-    "key": "commons-31",
-    "file": "File:The dense Borivali National Park Jungle View 2.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Borivali Sanjay Gandhi National Park"
-  },
-  {
-    "key": "commons-32",
-    "file": "File:'Road construction' and gradual destruction of the periphery of the 'MANGROVE FORESTS OF VASHI(New Mumbai)'.Sunday(19-4-2009).JPG",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Vashi Navi Mumbai"
-  },
-  {
-    "key": "commons-33",
-    "file": "File:'Vashi Creek and the Mangrove forests'..JPG",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Vashi Navi Mumbai"
-  },
-  {
-    "key": "commons-34",
-    "file": "File:Jama Masjid Nerul, Navi Mumbai, Maharashtra (Nerul Aalami Markaz) 2.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Nerul Navi Mumbai"
-  },
-  {
-    "key": "commons-35",
-    "file": "File:Jama Masjid Nerul, Navi Mumbai, Maharashtra (Nerul Aalami Markaz) 5.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Nerul Navi Mumbai"
-  },
-  {
-    "key": "commons-36",
-    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (5).jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-37",
-    "file": "File:KalaGhoda, Fort,Mumbai - panoramio.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Fort Kala Ghoda"
-  },
-  {
-    "key": "commons-38",
-    "file": "File:Bheed Bhanjan Mahadev Mandir in Colaba, Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
     "key": "commons-39",
     "file": "File:Colaba Causeway,Mumbai - panoramio.jpg",
     "credit": "Wikimedia Commons contributor",
@@ -304,28 +130,202 @@ export const generatedImages: GeneratedImage[] = [
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
-    "key": "commons-50",
+    "key": "commons-21",
+    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (1).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-22",
+    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (2).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-23",
+    "file": "File:Antiques being sold on Colaba Causeway.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-24",
+    "file": "File:Colaba Causeway construction, view from Colaba island, 1826.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-25",
+    "file": "File:Marine Drive in Mumbai 20.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Marine Drive Mumbai"
+  },
+  {
+    "key": "commons-26",
+    "file": "File:Marine Lines Mumbai 2021.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Marine Drive Mumbai"
+  },
+  {
+    "key": "commons-27",
+    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (3).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-28",
+    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (4).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-29",
+    "file": "File:Bagdadi Restaurant, Colaba, Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-30",
+    "file": "File:Colaba Causeway - panoramio (2).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-31",
+    "file": "File:Marine Drive of Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Marine Drive Mumbai"
+  },
+  {
+    "key": "commons-32",
+    "file": "File:SWITCH - Ac Double Decker Bus of BEST, Marine Drive Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Marine Drive Mumbai"
+  },
+  {
+    "key": "commons-33",
+    "file": "File:Girgaum Chowpatty.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-34",
+    "file": "File:Girgaum Chowpatty Sea.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-35",
+    "file": "File:Navi Mumbai India.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Belapur Navi Mumbai"
+  },
+  {
+    "key": "commons-36",
+    "file": "File:Palm Beach Road, Belapur, Navi Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Belapur Navi Mumbai"
+  },
+  {
+    "key": "commons-37",
+    "file": "File:Utsav Chauk, Kharghar Navi Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Kharghar Navi Mumbai"
+  },
+  {
+    "key": "commons-38",
+    "file": "File:Central Park, Kharghar, Navi Mumbai, India.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Kharghar Navi Mumbai"
+  },
+  {
+    "key": "commons-39",
+    "file": "File:Little Cormorant, Airoli, Navi Mumbai, Maharashtra 2.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Airoli Navi Mumbai"
+  },
+  {
+    "key": "commons-40",
+    "file": "File:Little Cormorant, Airoli, Navi Mumbai, Maharashtra 1.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Airoli Navi Mumbai"
+  },
+  {
+    "key": "commons-41",
+    "file": "File:Dhodani,Panvel,Maharashtra - panoramio (2).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Panvel Maharashtra"
+  },
+  {
+    "key": "commons-42",
+    "file": "File:Dhodani,Panvel,Maharashtra - panoramio (16).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Panvel Maharashtra"
+  },
+  {
+    "key": "commons-43",
+    "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (5).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-44",
+    "file": "File:KalaGhoda, Fort,Mumbai - panoramio.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-45",
+    "file": "File:Bheed Bhanjan Mahadev Mandir in Colaba, Mumbai.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-46",
     "file": "File:Colaba Causeway,Mumbai - panoramio (1).jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Mumbai Colaba Causeway"
   },
   {
-    "key": "commons-51",
-    "file": "File:Colaba Causeway, Bombay.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-52",
+    "key": "commons-47",
     "file": "File:Marine Drive Mumbai 2.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Marine Drive Mumbai"
   },
   {
-    "key": "commons-53",
+    "key": "commons-48",
     "file": "File:Taj Hotel Mumbai Marine Drive Photo by Chirag Lad.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Marine Drive Mumbai"
+  },
+  {
+    "key": "commons-49",
+    "file": "File:Girgaum Chowpatty Beach.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-50",
+    "file": "File:Chowpatti Beach (Girgaum Chowpatty).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-51",
+    "file": "File:KalaGhoda, Fort,Mumbai - panoramio (34).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-52",
+    "file": "File:KalaGhoda, Fort,Mumbai - panoramio (78).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-53",
+    "file": "File:Colaba Causeway, Bombay.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-54",
@@ -335,91 +335,73 @@ export const generatedImages: GeneratedImage[] = [
   },
   {
     "key": "commons-55",
-    "file": "File:Taj Mahal Hotel, Colaba, South Bombay, Mumbai.tif",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai Colaba Causeway"
-  },
-  {
-    "key": "commons-56",
-    "file": "File:Marine Drive Sunset, Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Marine Drive Mumbai"
-  },
-  {
-    "key": "commons-57",
     "file": "File:Marine Drive Mumbai (1).jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Marine Drive Mumbai"
   },
   {
-    "key": "commons-58",
-    "file": "File:Girgaum Chowpatty.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Girgaon Chowpatty Mumbai"
-  },
-  {
-    "key": "commons-59",
-    "file": "File:Girgaum Chowpatty Sea.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Girgaon Chowpatty Mumbai"
-  },
-  {
-    "key": "commons-60",
-    "file": "File:Mount Mary Church, Bandra 1.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mount Mary Church Bandra"
-  },
-  {
-    "key": "commons-61",
-    "file": "File:Mount Mary Church, Bandra 3.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mount Mary Church Bandra"
-  },
-  {
-    "key": "commons-62",
-    "file": "File:Bhel Puri at Juhu Beach.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Juhu Beach food Mumbai"
-  },
-  {
-    "key": "commons-63",
-    "file": "File:Juhu's Special Pav Bhaji.JPG",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Juhu Beach food Mumbai"
-  },
-  {
-    "key": "commons-64",
-    "file": "File:Mumbai street scene.jpg",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai street food"
-  },
-  {
-    "key": "commons-65",
-    "file": "File:Terminal food court between terminals 1A and 1C at Mumbai airport (1).JPG",
-    "credit": "Wikimedia Commons contributor",
-    "query": "Mumbai street food"
-  },
-  {
-    "key": "commons-66",
+    "key": "commons-56",
     "file": "File:Marine Drive Mumbai (2).jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Marine Drive Mumbai"
   },
   {
-    "key": "commons-67",
-    "file": "File:Girgaum Chowpatty Beach.jpg",
+    "key": "commons-57",
+    "file": "File:Mumbai, India, Bombay, Chowpatty (Chaupati) Beach.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
-    "key": "commons-68",
-    "file": "File:Chowpatti Beach (Girgaum Chowpatty).jpg",
+    "key": "commons-58",
+    "file": "File:Mumbai, India, Mumbai city skyline.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
-    "key": "commons-69",
+    "key": "commons-59",
     "file": "File:Bandra worli sealinkബാന്ദ്ര-വർളി കടൽപാലം.JPG",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Bandra Mumbai"
+  },
+  {
+    "key": "commons-60",
+    "file": "File:Mumbai 03-2016 104 Bandra station.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Bandra Mumbai"
+  },
+  {
+    "key": "commons-61",
+    "file": "File:KalaGhoda, Fort,Mumbai - panoramio (18).jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Fort Kala Ghoda"
+  },
+  {
+    "key": "commons-62",
+    "file": "File:Taj Mahal Hotel, Colaba, South Bombay, Mumbai.tif",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Mumbai Colaba Causeway"
+  },
+  {
+    "key": "commons-63",
+    "file": "File:Mumbai, India, Chowpatty Beach.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-64",
+    "file": "File:Mumbai, India, Bombay, Mumbai skyline at sunset.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Girgaon Chowpatty Mumbai"
+  },
+  {
+    "key": "commons-65",
+    "file": "File:Mumbai 03-2016 105 Bandra station surroundings.jpg",
+    "credit": "Wikimedia Commons contributor",
+    "query": "Bandra Mumbai"
+  },
+  {
+    "key": "commons-66",
+    "file": "File:Mumbai 03-2016 106 Bandra station surroundings.jpg",
     "credit": "Wikimedia Commons contributor",
     "query": "Bandra Mumbai"
   }

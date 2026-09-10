@@ -1,0 +1,84 @@
+name: Refresh verified media
+
+# Re-verify every generated media entry against its live source on a schedule,
+# so deleted Commons files and delisted YouTube uploads leave the dataset
+# instead of silently rotting in detail pages. Only verified pools are pushed,
+# and only after the dataset invariants still hold in tests.
+
+on:
+  schedule:
+    # Weekly, Monday 03:17 UTC. Off-the-hour minute to avoid top-of-hour load.
+    - cron: "17 3 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    name: Re-verify media pools against live sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Pass 1 re-verifies existing entries: confirmed-dead media is dropped,
+      # drifted titles/creators are updated, transient failures are retried and
+      # never treated as absence. Pruned pools are written back before top-up.
+      # Drop counts are exposed as step outputs for the notification step.
+      - name: Re-verify existing media
+        id: refresh
+        run: node scripts/verify-media.mjs --refresh
+
+      # Pass 2 refills anything the prune removed, using live-verified search.
+      - name: Top up pools to targets
+        run: node scripts/verify-media.mjs
+
+      # The refreshed pools must keep the dataset invariants (>=100 records per
+      # category, one embeddable video per place, same-area uniqueness) before
+      # anything is committed. A failed run pushes nothing.
+      - name: Typecheck and test refreshed dataset
+        run: |
+          npx tsc --noEmit
+          npm test
+
+      - name: Commit refreshed pools
+        id: commit
+        run: |
+          git config user.name "ananta-media-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add lib/data/images.generated.ts lib/data/videos.generated.ts
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Refresh verified media pools against live sources"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push refreshed pools
+        if: steps.commit.outputs.changed == 'true'
+        run: git push
+
+      # Alert when live sources removed verified media. Uses a Slack incoming
+      # webhook (SLACK_WEBHOOK_URL repo secret); silently skipped when the
+      # secret is not configured, and never fails the job itself.
+      - name: Notify Slack when entries were dropped
+        if: always() && ((steps.refresh.outputs.dropped_images || '0') != '0' || (steps.refresh.outputs.dropped_videos || '0') != '0')
+        uses: slackapi/slack-github-action@v2.1.1
+        continue-on-error: true
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "media-refresh dropped verified entries in ${{ github.repository }}"
+            blocks:
+              - type: mrkdwn
+                text: ":warning: *Media refresh dropped verified entries* in ${{ github.repository }}\n*Dropped images:* ${{ steps.refresh.outputs.dropped_images }}\n*Dropped videos:* ${{ steps.refresh.outputs.dropped_videos }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
