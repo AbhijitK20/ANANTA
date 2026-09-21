@@ -629,7 +629,7 @@ export const generatedVideos: GeneratedVideo[] = [
   {
     "key": "yt-89",
     "id": "FPDEnN4Fjbo",
-    "title": "Mumbai Tourist Places EXPOSED 10 Must-Visit Temples for 2026! #mumbai",
+    "title": "Mumbai Tourist Places EXPOSED | 10 Must-Visit Temples for 2026 | #mumbai",
     "creator": "Travel Gaon",
     "query": ""
   },
