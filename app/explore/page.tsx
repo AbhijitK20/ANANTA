@@ -366,7 +366,7 @@ export default function ExplorePage() {
 }
 
 function cheapestLine(label: string, count: number): string {
-  return `The cheapest thing to relax is ${label.toLowerCase()}, which alone would bring back ${count} record${count === 1 ? "" : "s"}.`;
+  return `The cheapest thing to relax is ${label}, which on its own would bring back ${count} record${count === 1 ? "" : "s"}.`;
 }
 
 function applyIntentTo(

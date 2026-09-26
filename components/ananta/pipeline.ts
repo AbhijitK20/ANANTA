@@ -114,8 +114,14 @@ export function inrLabel(value: number): string {
   return `\u20b9${Math.round(value).toLocaleString("en-IN")}`;
 }
 
+/**
+ * Minutes for a leg whose `km` is already the street distance, that is, already
+ * multiplied by `STREET_FACTOR`. Callers must not multiply again: doing so
+ * inflates every travel figure by 30 percent, which is exactly the sort of bug
+ * the two independent objectives exist to catch.
+ */
 function legMinutesFor(km: number, mode: TravelMode, city: CityManifest): number {
-  return Math.max(1, Math.round(km * STREET_FACTOR * WALK_MIN_PER_KM * city.congestion[mode]));
+  return Math.max(1, Math.round(km * WALK_MIN_PER_KM * city.congestion[mode]));
 }
 
 /* ── stage 0: context ───────────────────────────────────────────────────── */
@@ -174,7 +180,7 @@ export function contextFromInput(input: EngineInput, city: CityManifest): Discov
     weights: { ...PRIOR_WEIGHTS },
     bandit: priorBandit(now),
   };
-  const draft: DiscoveryContext = {
+  const base = {
     now,
     origin: {
       coordinates: input.originCoordinates,
@@ -188,7 +194,7 @@ export function contextFromInput(input: EngineInput, city: CityManifest): Discov
     hasToddler: input.hasToddler,
     hasElderly: input.hasElderly,
     raining: input.rainMode,
-    weatherSeverity: input.rainMode ? "rain" : null,
+    weatherSeverity: input.rainMode ? ("rain" as const) : null,
     travelMode: input.travelMode,
     pace: input.pace,
     idealStops: Math.max(1, input.idealStops),
@@ -198,18 +204,31 @@ export function contextFromInput(input: EngineInput, city: CityManifest): Discov
     query: input.query,
     profile,
     city,
-    original: undefined as unknown as DiscoveryContext,
   };
+  const draft = {
+    ...base,
+    original: undefined as unknown as DiscoveryContext,
+  } as DiscoveryContext;
   // The original is frozen once, and every replan diffs against this object.
-  draft.original = deepFreeze(draft);
+  // Assign before freezing, or the assignment itself throws on a frozen object.
+  draft.original = draft;
+  deepFreeze(draft);
   return draft;
 }
 
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === "object") {
-    Object.freeze(value);
-    for (const item of Object.values(value as Record<string, unknown>)) deepFreeze(item);
-  }
+/**
+ * `ctx.original` is the context itself, so the walk needs a seen-set. Without
+ * one this recurses forever, and with a plain `Object.freeze(draft)` after the
+ * assignment it throws on the assignment instead. Both are silent in a
+ * production build and loud here, which is the only reason this function exists.
+ */
+function deepFreeze<T>(value: T, seen: WeakSet<object> = new WeakSet()): T {
+  if (!value || typeof value !== "object") return value;
+  const node = value as unknown as object;
+  if (seen.has(node)) return value;
+  seen.add(node);
+  Object.freeze(node);
+  for (const item of Object.values(node as Record<string, unknown>)) deepFreeze(item, seen);
   return value;
 }
 
@@ -343,7 +362,7 @@ export function retrieve(
     if (facets.communityOnly && record.confidence.name !== "community") return;
     if (facets.bestTimeOfDay && record.bestTimeOfDay !== facets.bestTimeOfDay) return;
 
-    const travel = legMinutesFor(haversineKm(options.origin, record.coordinates), mode, city);
+    const travel = legMinutesFor(haversineKm(options.origin, record.coordinates) * STREET_FACTOR, mode, city);
     if (options.maxTravelMinutes !== undefined && travel > options.maxTravelMinutes) return;
 
     const text = hasQuery ? textHits.get(at) : undefined;
@@ -428,7 +447,9 @@ export function gate(
     if (excluded.has(record.id)) out.push(reject(record, "name", "excluded_by_traveller", true, null, "none"));
     if (planned.has(record.id)) out.push(reject(record, "name", "already_planned", true, null, "none"));
 
-    const km = haversineKm(ctx.origin.coordinates, record.coordinates);
+    // Straight-line km is kept for the `too_far` shortfall; the travel figure
+    // uses the street-adjusted distance so it matches what the packer measures.
+    const km = haversineKm(ctx.origin.coordinates, record.coordinates) * STREET_FACTOR;
     const travel = legMinutesFor(km, ctx.travelMode, ctx.city);
     const { startMin, endMin } = options.windowFor(record);
 
@@ -556,6 +577,41 @@ export type RelaxationOption = {
 };
 
 /**
+ * A noun phrase for each code, so "the cheapest thing to relax" reads as
+ * something a traveller can go and do. The finished sentence from the codes
+ * table is a claim about the record, not an instruction, so it is not reused
+ * here.
+ */
+const RELAX_HINT: Partial<Record<RejectionCode, string>> = {
+  too_far: "your travel window",
+  travel_time_exceeds_budget: "your travel window",
+  duration_exceeds_budget: "how long you can stay",
+  closed_now: "the start time",
+  closed_during_window: "the visit window",
+  over_budget: "your budget cap",
+  over_budget_per_person: "your per-person budget",
+  capacity_exceeded: "the party size",
+  not_step_free: "the step-free requirement",
+  not_stroller_ok: "the stroller requirement",
+  no_accessible_restroom: "the accessible restroom requirement",
+  requires_steps: "the step-free requirement",
+  no_seating: "the seating requirement",
+  not_quiet_enough: "the quiet-space requirement",
+  diet_mismatch: "the dietary requirement",
+  sold_out: "the sold-out slot",
+  requires_booking_not_available: "the booking requirement",
+  lead_time_too_short: "how much notice you give",
+  weather_unsafe: "the weather requirement",
+  already_planned: "what is already in your plan",
+  excluded_by_traveller: "your own exclusions",
+  seasonal_mismatch: "the season requirement",
+  no_route: "the travel mode",
+  duplicate: "the duplicate radius",
+  hours_unverified: "nothing, it is advisory only",
+  unverified_required_fact: "nothing, it is advisory only",
+};
+
+/**
  * The single cheapest constraint to relax, with the number of records it would
  * unlock. A code is a candidate only when it is the sole blocker for a record,
  * which is exactly the set that relaxing that one code would recover.
@@ -580,7 +636,7 @@ export function cheapestRelaxation(
     const sorted = [...bucket.shortfalls].sort((a, b) => a - b);
     const row: RelaxationOption = {
       code,
-      label: bucket.sample.sentence.replace(/\.$/, "").split(/[,.:]/)[0],
+      label: RELAX_HINT[code] ?? bucket.sample.sentence.replace(/\.$/, "").toLowerCase(),
       unlockedCount: bucket.ids.length,
       unlockedNames: bucket.ids.slice(0, 5).map((id) => byId.get(id)?.name ?? id),
       medianShortfall: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
@@ -857,7 +913,9 @@ function composeObjective(
   const crowdLoad = mean(crowd);
   const proximityMean = mean(proximity);
   const redundancy = redundancyPenalty(stops);
-  const pace = paceDeviation(count, ctx);
+  // No stops is not a pace deviation. Charging one made an empty plan score
+  // negative, which reads as a bad plan rather than as no plan.
+  const pace = count === 0 ? 0 : paceDeviation(count, ctx);
 
   components.push({
     id: "travelFriction",
@@ -962,7 +1020,7 @@ export function buildStops(order: string[], ctx: DiscoveryContext, options: Pack
       record,
       arriveBy: elapsed,
       travelMinutes: leg.minutes,
-      travelKm: Number(leg.km.toFixed(2)),
+      travelKm: leg.km,
       visitMinutes: record.durationMinutes,
       bufferMinutes: PLAN_BUFFER_MINUTES,
       costInr: record.priceInr * ctx.partySize,
@@ -1144,7 +1202,7 @@ export function probe(record: ExperienceV2, ctx: DiscoveryContext, options: Pack
     record,
     arriveBy: leg.minutes,
     travelMinutes: leg.minutes,
-    travelKm: Number(leg.km.toFixed(2)),
+    travelKm: leg.km,
     visitMinutes: record.durationMinutes,
     bufferMinutes: PLAN_BUFFER_MINUTES,
     costInr: record.priceInr * ctx.partySize,
@@ -1236,11 +1294,14 @@ export function objectiveNaive(stops: Stop[], ctx: DiscoveryContext, weights: We
       case "reliability":
         return record.providerReliability ?? 0.5;
       case "crowd": {
-        if (record.bestTimeOfDay === "any") return 0.7;
+        // The neutral 0.5 still scales the time-of-day factor. Dropping it
+        // makes an unprofiled record look twice as crowded as a profiled one.
+        const profile = clamp01(record.crowdProfile ?? 0.5);
+        if (record.bestTimeOfDay === "any") return profile * 0.7;
         const here = BUCKETS.indexOf(bucketOf(minutesOfDay(ctx.now)) as (typeof BUCKETS)[number]);
         const there = BUCKETS.indexOf(record.bestTimeOfDay);
         const raw = Math.abs(here - there);
-        return clamp01(record.crowdProfile ?? 0.5) * (1 - 0.3 * Math.min(raw, BUCKETS.length - raw));
+        return profile * (1 - 0.3 * Math.min(raw, BUCKETS.length - raw));
       }
       default:
         return 1 / (1 + Math.max(0, travelKm));
@@ -1474,3 +1535,37 @@ export function runPipeline(input: EngineInput, weights: Weights): PipelineRun {
 }
 
 export { COMPONENT_IDS };
+
+/**
+ * A fixed `EngineInput` for tests. `now` is derived from `startTime`, so the
+ * only thing that moves between runs is what the test chooses to move.
+ */
+export function defaultTestInput(overrides: Partial<EngineInput> = {}): EngineInput {
+  return {
+    query: "",
+    cityId: "mumbai",
+    city: "All",
+    category: "All",
+    zone: "All",
+    availableMinutes: 240,
+    budgetInr: 1500,
+    startTime: "10:00",
+    deadline: null,
+    rainMode: false,
+    freeOnly: false,
+    communityOnly: false,
+    bestTimeOfDay: "any",
+    partySize: 1,
+    hasToddler: false,
+    hasElderly: false,
+    pace: "normal",
+    idealStops: 3,
+    minStops: 1,
+    travelMode: "walk",
+    planIds: [],
+    originCoordinates: [72.82339, 18.93367],
+    originLabel: "Marine Drive promenade",
+    originArea: "Churchgate",
+    ...overrides,
+  };
+}
