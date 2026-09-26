@@ -1,7 +1,14 @@
 import { cloneElement, isValidElement, type ButtonHTMLAttributes, type ReactElement, type ReactNode } from "react";
-import { BookmarkSimple, Compass, House, MapTrifold, UserCircle } from "@phosphor-icons/react/dist/ssr";
-import { PlanBadge } from "@/components/plan-badge";
+import { BottomNavItem } from "@/components/bottom-nav";
 import { UI_STATE_COPY } from "@/components/ananta/tokens";
+
+/**
+ * `BottomNav` is a server component and stays in this file, because the shell is
+ * layout and layout does not need the URL. Only the item reads the pathname, so
+ * only the item is a client component. It used to be defined here with
+ * `aria-current` hardcoded to `index === 0`, which meant every page announced
+ * "Home" and highlighted Home.
+ */
 
 /**
  * The four primitives this app needs, and deliberately not a component library.
@@ -190,14 +197,42 @@ export function StatusLabel({ tone = "blue", children }: { tone?: "blue" | "gree
 }
 
 export function SectionHeading({ eyebrow, title, href }: { eyebrow: string; title: string; href: string }) {
-  return <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">{eyebrow}</p><h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">{title}</h2></div><a href={href} className="flex items-center gap-1 text-sm font-bold text-blue">See all <span aria-hidden="true">→</span></a></div>;
+  return <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">{eyebrow}</p><h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">{title}</h2></div><a href={href} className="flex items-center gap-1 text-sm font-bold text-blue">See all <span aria-hidden="true">&rarr;</span></a></div>;
 }
 
+const BOTTOM_NAV = [
+  { href: "/", label: "Home" },
+  { href: "/explore", label: "Explore" },
+  { href: "/trips", label: "Trips", badge: true },
+  { href: "/saved", label: "Saved" },
+  { href: "/profile", label: "Profile" },
+];
+
 /**
- * The mobile spacer above is not decoration. Without it the fixed bar covers the
- * last row of content at 390px, which is the primary demo viewport.
+ * The mobile navigation, and a desktop bar above `lg` for the pages that never
+ * got a header of their own.
+ *
+ * The spacer above is not decoration. Without it the fixed bar covers the last
+ * row of content at 390px, which is the primary demo viewport.
+ *
+ * `bg-surface` rather than `bg-white`, so the bar follows the theme. It is the
+ * only bar in the app that can, because it is the only one whose colour was a
+ * token to begin with.
  */
 export function BottomNav() {
-  const items = [{ href: "/", label: "Home", Icon: House }, { href: "/explore", label: "Explore", Icon: MapTrifold }, { href: "/trips", label: "Trips", Icon: Compass }, { href: "/saved", label: "Saved", Icon: BookmarkSimple }, { href: "/profile", label: "Profile", Icon: UserCircle }];
-  return <><div className="h-20 lg:hidden" aria-hidden="true" /><nav aria-label="Primary" className="fixed bottom-0 left-0 right-0 z-20 flex border-t border-line bg-white/95 px-3 py-3 backdrop-blur lg:static lg:mx-5 lg:border-t-0 lg:bg-transparent lg:px-8 lg:py-5"><div className="mx-auto flex w-full max-w-md items-center justify-between lg:max-w-none">{items.map(({ href, label, Icon }, index) => <a key={label} href={href} aria-current={index === 0 ? "page" : undefined} className={`flex min-w-[58px] flex-col items-center gap-1 text-xs font-semibold ${index === 0 ? "text-blue" : "text-muted"}`}><span className="relative"><Icon size={21} weight={index === 0 ? "fill" : "regular"} />{label === "Trips" && <span className="absolute -right-2 -top-1"><PlanBadge /></span>}</span>{label}</a>)}</div></nav></>;
+  return (
+    <>
+      <div className="h-20 lg:hidden" aria-hidden="true" />
+      <nav
+        aria-label="Primary"
+        className="fixed bottom-0 left-0 right-0 z-dropdown flex border-t border-line bg-surface/95 px-3 py-3 backdrop-blur lg:static lg:mx-5 lg:border-t-0 lg:bg-transparent lg:px-8 lg:py-5"
+      >
+        <div className="mx-auto flex w-full max-w-md items-center justify-between lg:max-w-none">
+          {BOTTOM_NAV.map((item) => (
+            <BottomNavItem key={item.href} href={item.href} label={item.label} badge={item.badge} />
+          ))}
+        </div>
+      </nav>
+    </>
+  );
 }

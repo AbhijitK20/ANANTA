@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BookmarkSimple, Clock, MapPin, Warning } from "@phosphor-icons/react/dist/ssr";
-import { BottomNav, StatusLabel } from "@/components/ui";
+import { BookmarkSimple, CalendarCheck, CheckCircle, TrendUp } from "@phosphor-icons/react/dist/ssr";
+import { BottomNav } from "@/components/ui";
 import { Footer } from "@/components/footer";
 import type { ExperienceV2 } from "@/lib/engine";
 import { depth, depthShadow } from "@/components/ananta/tokens";
 import { anantaById, DATASET_SIZE } from "@/components/ananta/records";
-import { ProvenanceDetail, ProvenanceStrip } from "@/components/ananta/learning/provenance-strip";
+import { SAVED_STRIP_FIELDS } from "@/components/ananta/learning/provenance-strip";
 import { UiStatePanel } from "@/components/ananta/learning/ui-state";
 import {
   availabilityChange,
@@ -15,22 +15,32 @@ import {
   rememberAvailability,
 } from "@/components/ananta/learning/availability-snapshot";
 import { readSaved, writeSaved } from "@/lib/saved";
+import {
+  BackLink,
+  DashboardFrame,
+  SectionHead,
+  SheetBar,
+  StatGrid,
+  StatTile,
+} from "@/components/workspace/frame";
+import { Notice } from "@/components/workspace/notice";
+import { ShortlistCard } from "@/components/saved/shortlist-card";
 
 /**
- * The traveller's own shortlist, which is the most personal screen in the
- * product, so the honesty bar is highest here.
+ * The traveller's own shortlist, laid out as a dashboard rather than a list.
  *
- * Three things this screen has to get right, and all three were missing:
+ * The structure is a personal dashboard: a header that says what this is, three
+ * counts a reader can act on, then the shortlist as a grid. The counts are the
+ * change, because the previous version opened with a paragraph and made the one
+ * genuinely useful fact on the page, that something changed since you saved it,
+ * something a reader had to hunt for.
  *
- *   1. The provenance strip is visible without a click. A traveller looking at
- *      their own list is checking whether they were misled, and an answer
- *      behind a disclosure is not an answer.
- *   2. Saved is not booked. There are no payments, no commissions, and no
- *      reservations anywhere in this product, so nothing on this page may
- *      imply one. The empty state says it, and every item says it.
- *   3. If the availability facts changed since the item was saved, that is
- *      stated with the record's own timestamp, because it is the single most
- *      useful thing this page could tell someone.
+ * The honesty rules are unchanged and still outrank the layout:
+ *
+ *   1. The provenance strip is visible without a click, on every card.
+ *   2. Saved is not booked. No payment, no commission, no reservation exists in
+ *      this product, and the empty state, every card, and the footer all say so.
+ *   3. A change since saving is stated with the record's own timestamp.
  */
 
 export default function SavedPage() {
@@ -69,173 +79,194 @@ export default function SavedPage() {
   const remove = (id: string) => writeSaved(ids.filter((saved) => saved !== id));
 
   const changes = places.map((record) => availabilityChange(record, new Date().toISOString()));
-  const moved = changes.filter((change) => change.kind === "sold-out" || change.kind === "reopened" || change.kind === "capacity");
+  const moved = changes.filter(
+    (change) => change.kind === "sold-out" || change.kind === "reopened" || change.kind === "capacity",
+  );
+
+  /**
+   * How many of the four facts a saved visit actually turns on are known.
+   *
+   * It is a count of the records in the state, not a count of the catalogue, so
+   * it moves with this list rather than with the data. `ProvenanceStrip` prints
+   * the same split per card; here it is the page's summary of it.
+   */
+  const factsKnown = places.reduce(
+    (total, record) =>
+      total +
+      SAVED_STRIP_FIELDS.filter(
+        (field) => (record.confidence[field] ?? "unverified") !== "unverified",
+      ).length,
+    0,
+  );
+  const factsTotal = places.length * SAVED_STRIP_FIELDS.length;
+  /** How many of these places publish a weekly schedule at all. */
+  const knownHours = places.filter((record) => record.openingHours.confidence !== "unverified").length;
 
   return (
-    <main id="main-content" className="min-h-screen bg-canvas">
-      <div className="mx-auto min-h-screen max-w-[1180px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
-        <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
-          <a href="/" className="flex items-center gap-2 text-sm font-bold">
-            <ArrowLeft size={18} /> Home
-          </a>
-          <h1 className="text-lg font-bold">Saved</h1>
-          <a href="/explore" className="text-sm font-bold text-blue">
-            Explore
-          </a>
-        </header>
+    <DashboardFrame>
+      <SheetBar>
+        <BackLink href="/" label="Home" />
+        <h1 className="text-lg font-bold text-ink">Saved</h1>
+        <a
+          href="/explore"
+          className="text-sm font-bold text-blue transition-colors duration-120 hover:text-ink"
+        >
+          Explore
+        </a>
+      </SheetBar>
 
-        <section className="px-5 pb-28 pt-10 sm:px-8 lg:px-14 lg:pb-14">
+      <section className="px-5 pb-28 pt-8 sm:px-8 lg:px-14 lg:pb-14">
+        <div className="max-w-2xl">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Your shortlist</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Places to revisit.</h2>
-          <p className="mt-4 max-w-[68ch] leading-7 text-muted">
+          <h2 className="mt-3 text-display tracking-[-0.04em] text-ink">Places to revisit.</h2>
+          <p className="mt-4 text-lead text-muted">
             {places.length
               ? `${places.length} of ${DATASET_SIZE} places, stored in this browser. Saving a place is a note to yourself. It is not a reservation, it holds no slot, and nothing here has been paid for.`
               : "A saved place is a note to yourself. It is not a reservation, it holds no slot, and there are no payments anywhere in this product."}
           </p>
+        </div>
 
-          {missing.length > 0 ? (
-            <div className="mt-6">
-              <UiStatePanel state="broken">
-                <p className="mt-3 text-sm leading-6">
-                  {missing.length} saved id{missing.length === 1 ? "" : "s"} no longer resolve to a place in the
-                  catalogue, which happens when the dataset is regenerated. The rest of your list is fine.
-                  Remove {missing.length === 1 ? "that entry" : "those entries"} to clear the warning.
-                </p>
-              </UiStatePanel>
-            </div>
-          ) : null}
+        <div className="mt-8">
+          <StatGrid>
+            <StatTile
+              icon={BookmarkSimple}
+              label="Saved"
+              value={ready ? places.length : 0}
+              note="Stored in this browser only"
+            />
+            <StatTile
+              icon={TrendUp}
+              label="Changed since you saved"
+              value={moved.length}
+              note={
+                moved.length
+                  ? "The availability fact moved after you saved it"
+                  : "Nothing on this list has moved since you saved it"
+              }
+            />
+            <StatTile
+              icon={CheckCircle}
+              label="Facts on record"
+              value={places.length ? `${factsKnown} of ${factsTotal}` : 0}
+              note="Price, duration, hours and rating, across this list"
+            />
+            <StatTile
+              icon={CalendarCheck}
+              label="Opening hours on record"
+              value={knownHours}
+              note={
+                knownHours === places.length && places.length > 0
+                  ? "Every place on this list publishes a schedule"
+                  : "A place with no published schedule is carved into the page"
+              }
+            />
+          </StatGrid>
+        </div>
 
-          {moved.length > 0 ? (
-            <div className="mt-6 border border-amber bg-amberSoft/40 p-4" role="status">
-              <p className="text-xs font-bold uppercase tracking-[0.1em] text-amber">
-                {moved.length} saved place{moved.length === 1 ? " has" : "s have"} a different availability fact
-                than when you saved {moved.length === 1 ? "it" : "them"}
+        {missing.length > 0 ? (
+          <div className="mt-6">
+            <UiStatePanel state="broken">
+              <p className="mt-3 text-sm leading-6">
+                {missing.length} saved id{missing.length === 1 ? "" : "s"} no longer resolve to a place in the
+                catalogue, which happens when the dataset is regenerated. The rest of your list is fine.
+                Remove {missing.length === 1 ? "that entry" : "those entries"} to clear the warning.
               </p>
-              <ul className="mt-2 space-y-1 text-sm leading-6">
+            </UiStatePanel>
+          </div>
+        ) : null}
+
+        {moved.length > 0 ? (
+          <div className="mt-6">
+            <Notice
+              tone="info"
+              title={`${moved.length} saved place${moved.length === 1 ? " has" : "s have"} a different availability fact than when you saved ${moved.length === 1 ? "it" : "them"}`}
+            >
+              <ul className="mt-1 grid gap-1">
                 {moved.map((change) => {
                   const record = places.find((place) => place.id === change.id);
                   return (
                     <li key={change.id}>
-                      <span className="font-bold">{record?.name ?? change.id}</span>: {change.sentence}
+                      <span className="font-bold text-ink">{record?.name ?? change.id}</span>: {change.sentence}
                     </li>
                   );
                 })}
               </ul>
-              <a href="/trips" className="mt-3 inline-flex min-h-[44px] items-center border border-amber bg-white px-4 py-2 text-sm font-bold text-amber">
+              <a
+                href="/trips"
+                className="mt-3 inline-flex min-h-[44px] items-center border border-blue px-4 py-2 text-sm font-bold text-blue"
+              >
                 Re-plan around the change
               </a>
-            </div>
-          ) : null}
+            </Notice>
+          </div>
+        ) : null}
 
-          {!ready ? (
-            <div className="mt-8">
-              <UiStatePanel state="solving" />
-            </div>
-          ) : places.length === 0 ? (
-            <div className="mt-8">
-              <UiStatePanel
-                state="nothing-retrieved"
-                action={{ href: "/explore", label: "Browse the catalogue" }}
-              >
-                <p className="mt-3 max-w-[68ch] text-sm leading-6">
-                  Nothing is saved on this device yet. The catalogue holds {DATASET_SIZE} places across
-                  Mumbai and Navi Mumbai, and saving one puts it here with its provenance visible so you can
-                  check whether we were honest about it.
-                </p>
-              </UiStatePanel>
-            </div>
-          ) : (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                {places.map((record, index) => {
-                  const change = changes[index];
-                  const isSoldOut = change?.kind === "sold-out";
-                  // Depth is status only, never recency and never position in the
-                  // list. A recency value is a value, and values do not get depth.
-                  // What decides this is one thing: whether the record publishes a
-                  // weekly schedule. An unverified-hours record is carved into the
-                  // page, which is exactly what "we do not know when it is open"
-                  // should look like, and it also desaturates and goes dashed so
-                  // depth is never the only channel.
-                  const hoursKnown = record.openingHours.confidence !== "unverified";
-                  return (
-                    <article
-                      key={record.id}
-                      className={`flex flex-col border border-line p-5 ${
-                        hoursKnown
-                          ? `${depth.raised} ${depthShadow.raised}`
-                          : `${depth.recessed} ${depthShadow.recessed} border-dashed`
-                      }`}
-                    >
-                    <div className="flex items-start justify-between gap-3">
-                      <StatusLabel tone={record.statusTone}>{record.status}</StatusLabel>
-                      <button
-                        type="button"
-                        onClick={() => remove(record.id)}
-                        aria-label={`Remove ${record.name} from your saved list`}
-                        className="min-h-[44px] min-w-[44px] text-blue"
-                      >
-                        <BookmarkSimple size={20} weight="fill" />
-                      </button>
-                    </div>
+        <div className="mt-10">
+          <SectionHead
+            eyebrow="The list"
+            title="Every place you saved, with what we actually know"
+            description="A card you have not opened is still telling you whether to open it. The strip on each one is the answer, and it is not behind a disclosure."
+          />
+        </div>
 
-                    {isSoldOut ? (
-                      <p className="mt-4 flex items-start gap-2 border border-amber bg-amberSoft/50 p-3 text-sm leading-6 text-amber">
-                        <Warning size={16} className="mt-0.5 shrink-0" />
-                        <span>
-                          <span className="font-bold">Sold out</span> since you saved this, marked at{" "}
-                          {record.availability.soldOutAt}. Saving it did not hold anything.
-                        </span>
-                      </p>
-                    ) : null}
+        {!ready ? (
+          <div className="mt-6">
+            <UiStatePanel state="solving" />
+          </div>
+        ) : places.length === 0 ? (
+          <div className="mt-6">
+            <UiStatePanel
+              state="nothing-retrieved"
+              action={{ href: "/explore", label: "Browse the catalogue" }}
+            >
+              <p className="mt-3 max-w-[68ch] text-sm leading-6">
+                Nothing is saved on this device yet. The catalogue holds {DATASET_SIZE} places across
+                Mumbai and Navi Mumbai, and saving one puts it here with its provenance visible so you can
+                check whether we were honest about it.
+              </p>
+            </UiStatePanel>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {places.map((record, index) => {
+              const change = changes[index];
+              // Depth is status only, never recency and never position in the
+              // list. A recency value is a value, and values do not get depth.
+              // What decides this is one thing: whether the record publishes a
+              // weekly schedule. An unverified-hours record is carved into the
+              // page, which is exactly what "we do not know when it is open"
+              // should look like, and it also desaturates and goes dashed so
+              // depth is never the only channel.
+              const hoursKnown = record.openingHours.confidence !== "unverified";
+              const depthClass = hoursKnown
+                ? `${depth.raised} ${depthShadow.raised}`
+                : `${depth.recessed} ${depthShadow.recessed} border-dashed`;
+              return (
+                <ShortlistCard
+                  key={record.id}
+                  record={record}
+                  change={change}
+                  depthClass={depthClass}
+                  onRemove={remove}
+                />
+              );
+            })}
+          </div>
+        )}
 
-                    <h3 className="mt-4 text-xl font-bold">{record.name}</h3>
-                    <p className="mt-2 text-sm text-muted">
-                      {record.area} · {record.category}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-muted">
-                      <span>
-                        <Clock size={14} className="mr-1 inline" aria-hidden="true" />
-                        {record.durationMinutes} min
-                      </span>
-                      <span>
-                        <MapPin size={14} className="mr-1 inline" aria-hidden="true" />
-                        {record.station}
-                      </span>
-                      <span>checked {record.updated}</span>
-                    </div>
-
-                    <ProvenanceStrip record={record} />
-
-                    <p className="mt-3 text-xs leading-5 text-muted">{change?.sentence}</p>
-
-                    <ProvenanceDetail record={record} />
-
-                    <a
-                      href={`/experience/${record.id}`}
-                      className="mt-5 inline-flex min-h-[44px] items-center gap-2 text-sm font-bold text-blue"
-                    >
-                      View details <ArrowRight size={16} aria-hidden="true" />
-                      <span className="sr-only">for {record.name}</span>
-                    </a>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-
-          <p className="mt-8 max-w-[68ch] border border-line bg-canvas p-4 text-xs leading-5 text-muted">
-            This list is stored in this browser and nowhere else. There is no account, no payment, and no
-            reservation behind it. Use the clear control on the{" "}
+        <Notice tone="quiet" title="Where this list lives" className="mt-8 max-w-2xl">
+          <p>
+            This list is stored in this browser and nowhere else. There is no account, no payment, and
+            no reservation behind it. Use the clear control on the{" "}
             <a href="/profile" className="font-bold text-blue">
               profile page
             </a>{" "}
             to remove all of it.
           </p>
-        </section>
-        <Footer />
-        <BottomNav />
-      </div>
-    </main>
+        </Notice>
+      </section>
+      <Footer />
+      <BottomNav />
+    </DashboardFrame>
   );
 }

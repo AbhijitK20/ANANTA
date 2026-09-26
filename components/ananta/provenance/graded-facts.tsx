@@ -6,7 +6,8 @@ import {
   TONE_TEXT,
   typeScale,
 } from "@/components/ananta/tokens";
-import { ProvenanceBadge, accessLabel } from "@/components/ananta/provenance-badge";
+import { ConfidenceChip } from "@/components/experience/confidence-chip";
+import { accessLabel } from "@/components/ananta/provenance-badge";
 import {
   ABSENT_LABEL,
   accessRecordedCount,
@@ -26,6 +27,13 @@ import {
  * record. A record with OpenStreetMap coordinates and a hash-derived price has
  * two different stories to tell, and a single badge at the top of the page can
  * only tell one of them.
+ *
+ * The badge is `ConfidenceChip` from `components/experience/confidence-chip.tsx`,
+ * so it is keyed on confidence (verified, community, estimate, unverified) and
+ * carries a distinct icon per state. `ProvenanceBadge` in
+ * `components/ananta/provenance-badge.tsx` is the provenance-keyed reading and
+ * is untouched; the two axes are independent and the detail page now shows the
+ * confidence one on every row.
  *
  * The absence row is the one that matters. It reads as a designed answer, not as
  * a failure: a dashed chip, the words "Not recorded", and a sentence saying what
@@ -64,7 +72,7 @@ function GradedRowItem({ record, row }: { record: ExperienceV2; row: GradedRow }
         <ValueCell row={row} />
       </dd>
       <dd className="m-0 shrink-0">
-        <ProvenanceBadge record={record} field={row.field} />
+        <ConfidenceChip record={record} field={row.field} />
       </dd>
     </div>
   );
@@ -152,7 +160,7 @@ export function GradedAccess({ record }: { record: ExperienceV2 }) {
           would read as a no, and a no is a claim about a building.
         </p>
         <div className="mt-3">
-          <ProvenanceBadge record={record} field="accessibility" />
+          <ConfidenceChip record={record} field="accessibility" />
         </div>
       </div>
 
@@ -204,7 +212,7 @@ export function ProvenanceStrip({ record }: { record: ExperienceV2 }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       {(["price", "duration", "coordinates", "openingHours"] as const).map((field) => (
-        <ProvenanceBadge key={field} record={record} field={field} />
+        <ConfidenceChip key={field} record={record} field={field} />
       ))}
     </div>
   );

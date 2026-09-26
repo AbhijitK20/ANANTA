@@ -23,6 +23,17 @@ import {
  *     own bounds, and which is what makes this a posterior rather than a number
  *   - the prior and the observation count, so "unchanged" and "unchanged because
  *     you never touched it" are different sentences
+ *
+ * Two controls, one value. A slider is good at coarse movement and bad at
+ * landing on a number, so there is a number field beside it, and both write
+ * through the same `onChange`, which is the only path to the store. There is no
+ * apply button and no second copy of the truth.
+ *
+ * The track sits in a recessed well because a bare range input on a white page
+ * has no edge to grip and reads as a stray line. The thumb, the fill and the
+ * focus ring stay native: the blue `accent` is the one cross-browser lever, and
+ * hand-rolling `::-webkit-slider-thumb` would style Chrome and leave Firefox on
+ * something else.
  */
 
 export type WeightKey = keyof Weights;
@@ -34,6 +45,20 @@ export function weightLabel(key: WeightKey): string {
   if (key === "travelPenalty") return "Travel penalty";
   if (key === "pacePenalty") return "Pace penalty";
   return COMPONENT_LABEL[key] ?? key;
+}
+
+/**
+ * Snap a typed number onto the weight's own step grid, inside its own bounds.
+ *
+ * A number field lets someone type 0.37 into a weight whose step is 0.25, and
+ * without this the stored value would sit between two reachable values, so the
+ * slider and the number would disagree the moment either was touched.
+ */
+function snapToStep(raw: number, bounds: { min: number; max: number; step: number }, fallback: number) {
+  if (!Number.isFinite(raw)) return fallback;
+  const clamped = Math.min(bounds.max, Math.max(bounds.min, raw));
+  const steps = Math.round((clamped - bounds.min) / bounds.step);
+  return Number((bounds.min + steps * bounds.step).toFixed(4));
 }
 
 export function WeightRow({
@@ -56,6 +81,8 @@ export function WeightRow({
   const moved = value !== prior;
   const state_ = identification(pulls);
   const decimals = bounds.step >= 1 ? 0 : bounds.step >= 0.1 ? 2 : 3;
+  const rangeId = `weight-${weightKey}`;
+  const valueId = `weight-${weightKey}-value`;
 
   // Depth encodes epistemic status and never a number. There are two independent
   // things to say here, so there are three states, and the middle one is the
@@ -64,8 +91,8 @@ export function WeightRow({
   //     it, is `depth-raised`: this is what the bandit actually learned
   //   - a row still sitting on the prior, or moved with too few observations to be
   //     identifiable, is `depth-flush`: our starting arithmetic, or a guess
-  //   - a row is never `depth-lifted`, because lifted means "act on this" and no
-  //     individual weight is a call to action. Only the radar's rescue gets that
+  //   - a row is never raised above flush, because the top step means "act on this"
+  //     and no individual weight is a call to action
   // An `estimate`-confidence component therefore cannot masquerade as learned: too
   // few pulls and it stays flush no matter what the point value says.
   const identifiable = pulls >= 4;
@@ -73,48 +100,60 @@ export function WeightRow({
   const rowShadow = moved && identifiable ? depthShadow.raised : depthShadow.flush;
 
   return (
-    <li className={`border-t border-line px-3 pb-4 pt-4 ${rowDepth} ${rowShadow}`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <label htmlFor={`weight-${weightKey}`} className="text-sm font-bold">
+    <li className={`rounded border border-line p-4 ${rowDepth} ${rowShadow}`}>
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <label htmlFor={rangeId} className="text-sm font-bold text-ink">
           {weightLabel(weightKey)}
         </label>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-muted">
-          <span className="font-bold text-ink">
-            now {value.toFixed(decimals)}
-          </span>
-          <span aria-hidden="true">·</span>
-          <span>prior {prior.toFixed(decimals)}</span>
-          <span aria-hidden="true">·</span>
-          <span>{pulls} obs</span>
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-muted">now</span>
+          <input
+            id={valueId}
+            type="number"
+            inputMode="decimal"
+            min={bounds.min}
+            max={bounds.max}
+            step={bounds.step}
+            value={Number(value.toFixed(decimals))}
+            onChange={(event) => onChange(weightKey, snapToStep(Number(event.target.value), bounds, value))}
+            aria-label={`${weightLabel(weightKey)}, current value`}
+            className="w-24 rounded border border-line bg-canvas px-2 py-1.5 text-right text-sm font-bold tabular-nums text-ink"
+          />
+        </div>
       </div>
 
-      <input
-        id={`weight-${weightKey}`}
-        type="range"
-        min={bounds.min}
-        max={bounds.max}
-        step={bounds.step}
-        value={value}
-        onChange={(event) => onChange(weightKey, Number(event.target.value))}
-        aria-describedby={`weight-${weightKey}-range weight-${weightKey}-state`}
-        className="mt-2 w-full accent-[#175CD3]"
-      />
+      <div className="mt-3 rounded border border-line bg-canvas px-3 py-1 shadow-recessed">
+        <input
+          id={rangeId}
+          type="range"
+          min={bounds.min}
+          max={bounds.max}
+          step={bounds.step}
+          value={value}
+          onChange={(event) => onChange(weightKey, Number(event.target.value))}
+          aria-describedby={`${rangeId}-range ${rangeId}-state`}
+          className="w-full accent-[#175CD3]"
+        />
+      </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-muted">
+        <span className="tabular-nums">{bounds.min}</span>
+        <span className="tabular-nums">prior {prior.toFixed(decimals)}</span>
+        <span className="tabular-nums">{bounds.max}</span>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <span
-          className={`inline-flex items-center rounded-sm px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${
-            state_ === "usable" ? CONFIDENCE_TONE.community : CONFIDENCE_TONE[state_ === "unobserved" ? "unverified" : "estimate"]
-          }`}
+          className={`chip ${CONFIDENCE_TONE[state_ === "unobserved" ? "unverified" : state_ === "usable" ? "community" : "estimate"]}`}
         >
           {state_ === "unobserved" ? "prior" : state_ === "barely" ? "barely observed" : state_ === "weak" ? "weakly observed" : "observed"}
         </span>
-        <span id={`weight-${weightKey}-state`} className="text-xs leading-5 text-muted">
+        <span id={`${rangeId}-state`} className="text-xs leading-5 text-muted">
           {IDENTIFICATION_COPY[state_]}
         </span>
       </div>
 
-      <p id={`weight-${weightKey}-range`} className="mt-1 text-xs leading-5 text-muted">
+      <p id={`${rangeId}-range`} className="mt-2 text-xs leading-5 text-muted">
         Plausible range {roundWeight(range.low, bounds.step)} to {roundWeight(range.high, bounds.step)}, from{" "}
         {Math.round(range.coverage * 100)}% of the Beta posterior behind this arm.{" "}
         {moved

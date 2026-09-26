@@ -4,37 +4,53 @@ import { typeScale } from "@/components/ananta/tokens";
 import { soldOutStops } from "@/components/ananta/replan/states";
 
 /**
- * The feasibility meter. `activity ▸ travel ▸ buffer` as one proportional bar
- * measured against `ctx.availableMinutes`, with the overflow drawn past the end
- * of the track in the alarm colour.
+ * The feasibility meter, as a gauge.
  *
- * Buffer gets its own segment and its own number, because `plan.ts` computed
- * `bufferMinutes` for every stop and the old page merged it into a single
- * "Travel and buffer" tile. Knowing that 40 of your 200 minutes are slack is
- * the difference between a plan and a guess.
+ * The previous shape was a single proportional bar. It was correct and it was
+ * unreadable: a filled bar beside a paragraph is a decoration unless you can
+ * name the number it is showing, and the reader had to add the three segments
+ * up themselves. A ring answers the one question a traveller actually opens
+ * this screen with, "how much of my day is gone", before they read anything.
  *
- * This revision adds four things and changes nothing else:
+ * Three properties the gauge has to keep, all of which the bar had:
  *
- *  - The headline is the screen's one `text-display`. It was `text-xl`, so the
- *    page h2 was quietly the largest thing here.
- *  - The bar's `aria-label` no longer lists zero segments. "Activity 0 minutes,
- *    travel 0 minutes" is a true sentence nobody can read. It now names only the
- *    segments that exist and always names the window, and an all-zero plan says
- *    so outright instead of reading as an empty bar.
- *  - Each segment carries its own label as visually hidden text, so the bar is
- *    self-describing rather than four unlabelled blocks below 480px, and the
- *    track has a floor width so it cannot collapse on a narrow phone.
- *  - A sold-out stop is surfaced here rather than silently included. A slot the
- *    provider has marked gone is still in the totals, because pretending otherwise
- *    would understate the plan, but the meter says so and hands off to the replan
- *    section, which is session 9's.
+ *  - **The overflow is drawn, not summarised.** A plan longer than the window
+ *    cannot fit inside the ring, so the ring fills and a second, outer arc in the
+ *    alarm colour carries the excess. Both arcs are labelled in the `aria-label`,
+ *    because a ring that silently saturates is a lie with a rounded corner.
+ *  - **Buffer keeps its own segment and its own number.** `plan.ts` computed
+ *    `bufferMinutes` for every stop, and merging it into a "travel and buffer"
+ *    tile is how a plan becomes a guess. Knowing that 40 of your 200 minutes are
+ *    slack is the difference between the two.
+ *  - **Travel is labelled an estimate everywhere it appears**, because it is a
+ *    straight-line distance at the manifest congestion multiplier and not a route.
+ *
+ * Pure SVG and Tailwind. No chart library, no animation library, and no new
+ * dependency: the package list is frozen at five and `spatial-primitives.test.ts`
+ * fails the build on a sixth. The colours are not re-declared here either. Each
+ * arc is a `currentColor` stroke on an element carrying a `text-blue`,
+ * `text-green`, `text-amber` or `text-line` class, so the gauge reads the same
+ * four tokens as every chip on the site and cannot drift from them.
+ *
+ * The gauge is flat, like the radar. Depth on a value axis makes a high number
+ * read as a near one and a low number as a far one, which is the ambiguity the
+ * spatial contract warns about. The panel gets a raised frame instead.
  */
 
 const SEGMENTS = [
-  { key: "activity", label: "Activity", colour: "bg-blue", text: "text-blue" },
-  { key: "travel", label: "Travel", colour: "bg-green", text: "text-green" },
-  { key: "buffer", label: "Buffer", colour: "bg-amber", text: "text-amber" },
+  { key: "activity", label: "Activity", tone: "text-blue", swatch: "bg-blue" },
+  { key: "travel", label: "Travel", tone: "text-green", swatch: "bg-green" },
+  { key: "buffer", label: "Buffer", tone: "text-amber", swatch: "bg-amber" },
 ] as const;
+
+const SIZE = 220;
+const CENTRE = SIZE / 2;
+const STROKE = 20;
+/** The overflow arc sits one stroke further out, so the two never overlap. */
+const RADIUS = CENTRE - STROKE - 2;
+const OVERFLOW_RADIUS = RADIUS + STROKE + 6;
+const RING = 2 * Math.PI * RADIUS;
+const OVERFLOW_RING = 2 * Math.PI * OVERFLOW_RADIUS;
 
 /** Segments that exist, in bar order. A zero segment is not drawn and not named. */
 function present(totals: ReturnType<typeof stopTotals>) {
@@ -43,8 +59,24 @@ function present(totals: ReturnType<typeof stopTotals>) {
   );
 }
 
-/** One sentence, no zeros, always the window. */
-function barSentence(
+type Arc = { key: string; length: number; offset: number; tone: string };
+
+/** One arc per present segment, measured against the window and offset along the ring. */
+function arcsFor(drawn: readonly { key: string; value: number; tone: string }[], track: number, within: number): Arc[] {
+  return drawn.reduce<Arc[]>((list, segment) => {
+    const last = list[list.length - 1];
+    list.push({
+      key: segment.key,
+      length: (Math.min(segment.value, within) / track) * RING,
+      offset: last ? last.offset + last.length : 0,
+      tone: segment.tone,
+    });
+    return list;
+  }, []);
+}
+
+/** One sentence, no zeros, always the window and always the overflow. */
+function gaugeSentence(
   segments: readonly { label: string; value: number }[],
   availableMinutes: number,
   over: number,
@@ -52,9 +84,9 @@ function barSentence(
 ) {
   const parts = segments.map((segment) => `${segment.label} ${segment.value} minutes`);
   const window = `against a window of ${availableMinutes} minutes`;
-  if (!parts.length) return `Time bar, nothing allocated yet, ${window}.`;
-  const over_ = over > 0 ? ` Over by ${over} minutes.` : ` ${remaining} minutes free.`;
-  return `Time bar. ${parts.join(", ")}, ${window}.${over_}`;
+  if (!parts.length) return `Time gauge, nothing allocated yet, ${window}.`;
+  const tail = over > 0 ? ` Over by ${over} minutes.` : ` ${remaining} minutes free.`;
+  return `Time gauge. ${parts.join(", ")}, ${window}.${tail}`;
 }
 
 export function FeasibilityMeter({
@@ -80,8 +112,8 @@ export function FeasibilityMeter({
   const over = Math.max(0, totals.total - availableMinutes);
   const withinTrack = Math.min(totals.total, availableMinutes);
   const remaining = Math.max(0, availableMinutes - totals.total);
-  const fill = (value: number) => `${(value / track) * 100}%`;
   const drawn = present(totals);
+  const arcs = arcsFor(drawn, track, withinTrack);
 
   const startMin = minutesOfDay(now);
   const deadlineMin = deadline === null ? null : minutesOfDay(deadline);
@@ -90,8 +122,11 @@ export function FeasibilityMeter({
   const overBudget = Math.max(0, cost - budget);
   const soldOut = soldOutStops(stops);
 
+  const usedPercent = track > 0 ? Math.round((totals.total / track) * 100) : 0;
+  const overPercent = Math.min(100, (over / track) * 100);
+
   return (
-    <section className="border border-line p-5" aria-labelledby="meter-heading">
+    <section className="border border-line bg-white p-5" aria-labelledby="meter-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className={`${typeScale.micro} font-bold uppercase tracking-[0.14em] text-blue`}>
@@ -108,62 +143,113 @@ export function FeasibilityMeter({
         </p>
       </div>
 
-      <div className="mt-4 min-w-[220px]">
-        <div
-          className="flex h-8 w-full overflow-hidden rounded border border-line bg-canvas"
-          role="img"
-          aria-label={barSentence(drawn, availableMinutes, over, remaining)}
-        >
-          {drawn.map((segment) => (
-            <div
-              key={segment.key}
-              className={`${segment.colour} h-full`}
-              style={{ width: fill(Math.min(segment.value, withinTrack)) }}
-            >
-              <span className="sr-only">{`${segment.label}: ${segment.value} minutes`}</span>
-            </div>
-          ))}
-          {over > 0 && (
-            <div
-              className="h-full border-l-2 border-ink bg-amberSoft"
-              style={{ width: `${(over / track) * 100}%` }}
-            >
-              <span className="sr-only">{`Overflow: ${over} minutes past the window`}</span>
-            </div>
-          )}
-        </div>
-        {drawn.length === 0 && (
-          <p className="mt-2 text-xs text-muted">No time allocated yet, so the bar is empty by design.</p>
-        )}
-      </div>
-
-      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {SEGMENTS.map((segment) => (
-          <div key={segment.key}>
-            <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-              <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-sm ${segment.colour}`} />
-              {segment.label}
-            </dt>
-            <dd className="mt-1 text-lg font-bold">
-              {totals[segment.key]} min
-              {segment.key === "buffer" && (
-                <span className="ml-1 text-xs font-semibold text-muted">{PLAN_BUFFER_MINUTES} per stop</span>
-              )}
-            </dd>
-          </div>
-        ))}
-        <div>
-          <dt className="text-xs font-semibold text-muted">Total</dt>
-          <dd className={`mt-1 text-lg font-bold ${over > 0 ? "text-amber" : ""}`}>
-            {totals.total} min
-            {deadlineMin !== null && (
-              <span className="ml-1 text-xs font-semibold text-muted">
-                {lateBy > 0 ? `${lateBy} min past your return time` : `back by your return time`}
+      <div className="mt-5 grid gap-6 sm:grid-cols-[220px_1fr] sm:items-center">
+        <div className="relative mx-auto w-full max-w-[220px]">
+          <svg
+            viewBox={`0 0 ${SIZE} ${SIZE}`}
+            className="h-auto w-full"
+            role="img"
+            aria-label={gaugeSentence(drawn, availableMinutes, over, remaining)}
+          >
+            <circle
+              cx={CENTRE}
+              cy={CENTRE}
+              r={RADIUS}
+              fill="none"
+              strokeWidth={STROKE}
+              className="text-line"
+              stroke="currentColor"
+            />
+            {over > 0 && (
+              <circle
+                cx={CENTRE}
+                cy={CENTRE}
+                r={OVERFLOW_RADIUS}
+                fill="none"
+                strokeWidth={4}
+                className="text-amber"
+                stroke="currentColor"
+                strokeDasharray={`${(overPercent / 100) * OVERFLOW_RING} ${OVERFLOW_RING}`}
+                transform={`rotate(-90 ${CENTRE} ${CENTRE})`}
+              />
+            )}
+            {arcs.map((arc) => (
+              <circle
+                key={arc.key}
+                cx={CENTRE}
+                cy={CENTRE}
+                r={RADIUS}
+                fill="none"
+                strokeWidth={STROKE}
+                className={arc.tone}
+                stroke="currentColor"
+                strokeLinecap="butt"
+                strokeDasharray={`${arc.length} ${RING - arc.length}`}
+                strokeDashoffset={-arc.offset}
+                transform={`rotate(-90 ${CENTRE} ${CENTRE})`}
+              />
+            ))}
+          </svg>
+          <p className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+            {over > 0 ? (
+              <span className="text-[30px] font-bold leading-none tracking-[-0.04em] text-amber">
+                {hoursLabel(over)}
+              </span>
+            ) : (
+              <span className="text-[34px] font-bold leading-none tracking-[-0.04em] text-ink">
+                {usedPercent}%
               </span>
             )}
-          </dd>
+            <span className="mt-1 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">
+              {over > 0 ? "past your window" : "of your window"}
+            </span>
+          </p>
         </div>
-      </dl>
+
+        <div>
+          {drawn.length === 0 ? (
+            <p className="text-sm leading-6 text-muted">
+              No time is allocated yet, so the gauge is empty by design. Widen the window or shorten
+              the list and it fills.
+            </p>
+          ) : (
+            <dl className="grid grid-cols-2 gap-3">
+              {SEGMENTS.map((segment) => (
+                <div key={segment.key}>
+                  <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+                    <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-sm ${segment.swatch}`} />
+                    {segment.label}
+                  </dt>
+                  <dd className="mt-1 text-lg font-bold">
+                    {totals[segment.key]} min
+                    {segment.key === "buffer" && (
+                      <span className="ml-1 text-xs font-semibold text-muted">{PLAN_BUFFER_MINUTES} per stop</span>
+                    )}
+                  </dd>
+                </div>
+              ))}
+              <div>
+                <dt className="text-xs font-semibold text-muted">Total</dt>
+                <dd className={`mt-1 text-lg font-bold ${over > 0 ? "text-amber" : ""}`}>
+                  {totals.total} min
+                  {deadlineMin !== null && (
+                    <span className="ml-1 text-xs font-semibold text-muted">
+                      {lateBy > 0 ? `${lateBy} min past your return time` : `back by your return time`}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          )}
+          {over > 0 && (
+            <p className="mt-3 border-l-4 border-amber bg-amberSoft/50 px-3 py-2 text-sm font-semibold leading-6">
+              The outer arc is the {over} minute{over === 1 ? "" : "s"} beyond your window. The gauge
+              cannot grow past a full ring, so the excess is drawn outside it rather than folded into the
+              number.
+            </p>
+          )}
+        </div>
+      </div>
 
       {overBudget > 0 && (
         <p className="mt-4 border border-amber bg-amberSoft/40 px-3 py-2 text-sm font-semibold">
@@ -187,9 +273,10 @@ export function FeasibilityMeter({
       )}
 
       <p className="mt-4 text-xs leading-5 text-muted">
-        Travel and buffer are straight-line estimates at the city congestion multiplier in the manifest,
-        not live routing. Buffer is {PLAN_BUFFER_MINUTES} minutes per stop for walking, parking, and queueing.
-        The window you see here is the one you set; nothing here is a live availability claim.
+        The gauge is measured against the window you set. Travel and buffer are straight-line estimates at
+        the city congestion multiplier in the manifest, not live routing. Buffer is{" "}
+        {PLAN_BUFFER_MINUTES} minutes per stop for walking, parking, and queueing. Nothing here is a live
+        availability claim.
       </p>
     </section>
   );

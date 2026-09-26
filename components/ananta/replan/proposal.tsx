@@ -235,9 +235,29 @@ export function AcceptedReplan({
 }
 
 /**
- * The six one-click controls. Exported so session 5 can place it on Trips without
- * editing this file, and so the two surfaces cannot drift apart.
+ * The six one-click controls, as a chip bar.
+ *
+ * Exported so session 5 can place it on Trips without editing this file, and so
+ * the two surfaces cannot drift apart.
+ *
+ * The previous shape was a two column grid of cards, one per trigger, each
+ * carrying the full `simulates` sentence. That was honest and it was a wall: six
+ * paragraphs of similar length above the proposal, so the one control a reader
+ * wanted was as hard to find as the five they did not. Chips carry the label
+ * and the first sentence of the same engine-written `simulates` string, and the
+ * full text for all six sits in one disclosure underneath, so nothing is
+ * shortened out of existence and every control still states what it will do
+ * before it is pressed.
+ *
+ * The first sentence is taken rather than written. `triggers.ts` is the owner of
+ * that copy, and a hand-written summary beside it would be the second place the
+ * same claim lives, which is how a button and a proposal end up disagreeing.
  */
+function headline(sentences: string): string {
+  const [first] = sentences.split(". ");
+  return first ? first.replace(/\.$/, "") + "." : sentences;
+}
+
 export function TriggerRail({
   disabled,
   onFire,
@@ -246,28 +266,56 @@ export function TriggerRail({
   onFire: (trigger: TriggerId) => void;
 }) {
   return (
-    <section className="border border-line p-5" aria-label="Replan triggers">
+    <section className="border border-line bg-white p-5" aria-label="Replan triggers">
       <p className={`${typeScale.micro} font-bold uppercase tracking-[0.14em] text-blue`}>Something changed</p>
       <h2 className={`mt-2 ${typeScale.title}`}>Replan, on your say so</h2>
       <p className={`mt-2 max-w-[68ch] ${typeScale.body} text-muted`}>
-        Each control simulates one real change to the trip and re-solves the plan against it. Nothing is
-        applied until you accept the proposal. Every one states what it will simulate before you press it.
+        Six changes we can simulate against this plan. Each one re-solves the day and shows you the
+        proposal first. Nothing is applied until you accept it, and keeping the original is a real
+        answer rather than a dismiss.
       </p>
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+
+      <ul className="mt-4 flex flex-wrap gap-2">
         {TRIGGER_CONTROLS.map((control) => (
           <li key={control.id}>
             <button
               type="button"
               disabled={disabled}
               onClick={() => onFire(control.id)}
-              className="block w-full border border-line p-3 text-left transition-colors hover:border-blue disabled:cursor-not-allowed disabled:opacity-50"
+              aria-describedby={`trigger-${control.id}-what`}
+              className="flex min-h-[44px] w-full max-w-[280px] flex-col items-start gap-0.5 rounded border border-line bg-white px-3 py-2 text-left transition-colors hover:border-blue hover:bg-blueSoft disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="block text-sm font-bold">{control.label}</span>
-              <span className="mt-1 block text-xs leading-5 text-muted">{control.simulates}</span>
+              <span className="text-sm font-bold">{control.label}</span>
+              <span
+                id={`trigger-${control.id}-what`}
+                className="text-[11px] font-semibold leading-4 text-muted"
+              >
+                {headline(control.simulates)}
+              </span>
             </button>
           </li>
         ))}
       </ul>
+
+      {disabled && (
+        <p className={`mt-3 ${typeScale.meta} text-muted`}>
+          There is nothing to replan yet. These controls need at least one stop in the plan above.
+        </p>
+      )}
+
+      <details className="mt-4 border-t border-line pt-3">
+        <summary className={`cursor-pointer ${typeScale.meta} font-bold text-blue`}>
+          What each of these will actually change
+        </summary>
+        <dl className="mt-3 space-y-2">
+          {TRIGGER_CONTROLS.map((control) => (
+            <div key={control.id} className="text-xs leading-5">
+              <dt className="font-bold text-ink">{control.label}</dt>
+              <dd className="text-muted">{control.simulates}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
     </section>
   );
 }

@@ -1,18 +1,140 @@
 /* Ananta · quiet utility · royal blue anchor · map-and-list workspace */
+
+/*
+ * ============================================================================
+ * DESIGN TOKENS
+ * ============================================================================
+ *
+ * Everything visual resolves to a custom property on `:root`. The Tailwind
+ * utilities read the same properties through `rgb(var(--x-rgb) / <alpha-value>)`,
+ * so a colour is declared once here and used by the stylesheet, by every
+ * utility class, and by any inline style a page needs.
+ *
+ * TWO THEMES, ONE SET OF NAMES. `:root` holds the light theme and the
+ * `prefers-color-scheme: dark` block below re-points the same names. Nothing
+ * else changes between them, which is why no page needs a `dark:` variant to
+ * be readable in the dark.
+ *
+ * THE NAMES
+ *
+ *   Raw triplets, one per colour role. Bare `R, G, B` so they compose with
+ *   Tailwind's slash opacity, and so a shadow can be mixed from the same ink
+ *   the palette declares.
+ *
+ *     --ink-rgb      primary text              --canvas-rgb   page background
+ *     --muted-rgb    secondary text           --surface-rgb  cards, page frame
+ *     --line-rgb     hairline borders         --blue-rgb     the accent
+ *     --blue-soft-rgb  accent wash            --green-rgb    verified
+ *     --green-soft-rgb verified wash          --amber-rgb    degraded
+ *     --amber-soft-rgb degraded wash
+ *
+ *   Semantic aliases, the names a component should reach for. They are written
+ *   as functions of the triplets, so they follow the theme automatically.
+ *
+ *     var(--color-bg)        the page behind everything
+ *     var(--color-surface)   a card, or the page frame
+ *     var(--color-border)    a hairline
+ *     var(--color-fg)        body text
+ *     var(--color-fg-muted)  secondary text, the 12px explanatory line
+ *     var(--color-accent)    the royal blue the contract requires
+ *     var(--color-accent-soft)  the accent as a wash behind accent text
+ *     var(--color-positive)  a fact we can source
+ *     var(--color-caution)   a fact that is degraded, never a danger red
+ *     var(--color-on-accent) text ON an accent or status fill. White in the
+ *                            light theme, near-black in the dark one, because
+ *                            a dark theme needs a lighter accent and white on a
+ *                            light accent measures 2.46 to 1.
+ *
+ *   Shape, depth and motion
+ *
+ *     --radius-chip / -input / -card / -shell    2, 4, 6 and 28px. The
+ *                            contract bans pill buttons as the default, so the
+ *                            scale tops out at the page frame.
+ *     --shadow-z-* , --shadow-inset              six ambient occlusion steps and
+ *                            the one inset. Mirrored in `tailwind.config.ts` and
+ *                            asserted equal by `lib/ui-guard`.
+ *     --motion-hover / -state / -scene           120, 200 and 320ms. Nothing
+ *                            else is a duration in this app.
+ *     --ease-out-soft / --ease-inout            two curves.
+ *
+ *   Spacing is Tailwind's 4px scale plus `13` and `17`, which exist so the
+ *   arbitrary `p-[13px]` values stop appearing. There is no spacing variable
+ *   here on purpose: a second source for a scale that already has one is a
+ *   number that can disagree with itself.
+ *
+ * TYPOGRAPHY. One stack, `--font-sans`, leading with `Inter` and falling
+ * through the platform UI font. No webfont is downloaded: `next/font` fetches
+ * at build time and the build has to work with no network.
+ *
+ * WHAT IS STILL A LITERAL. `bg-white` appears 79 times and `text-white` 23
+ * times, and the two do not mean the same thing: `bg-white` is a surface and
+ * `text-white` is either on-accent text or a caption on a photograph. Neither
+ * can be re-pointed at a token without reading all 102 call sites, which belong
+ * to other sessions. New code says `bg-surface` and `text-onAccent`. The
+ * remaining white surfaces are the one visible gap in the dark theme.
+ */
+
 @import "maplibre-gl/dist/maplibre-gl.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-ink: #18202b;
-  --color-muted: #667085;
-  --color-canvas: #f4f6f8;
-  --color-surface: #ffffff;
-  --color-line: #dde3ea;
-  --color-blue: #175cd3;
-  --color-blue-soft: #e8f0ff;
-  --font-sans: Arial, Helvetica, sans-serif;
+  /*
+   * The light theme, and the ratified one. `docs/05-design/DESIGN-CONTRACT.md`
+   * lines 32 to 35 name the royal blue, the white and light-gray surfaces, the
+   * charcoal text and the muted secondary, and
+   * `lib/ui-guard/a11y-primitives.test.ts` computes the contrast of six pairs
+   * out of these values. `tailwind.config.ts` declares the same ten as
+   * `RATIFIED_LIGHT`, so the two cannot drift without a test failing.
+   */
+  color-scheme: light;
+
+  --ink-rgb: 24, 32, 43;
+  --muted-rgb: 102, 112, 133;
+  --line-rgb: 221, 227, 234;
+  --canvas-rgb: 244, 246, 248;
+  --surface-rgb: 255, 255, 255;
+  --blue-rgb: 23, 92, 211;
+  --blue-soft-rgb: 232, 240, 255;
+  --green-rgb: 8, 116, 67;
+  --green-soft-rgb: 232, 245, 238;
+  --amber-rgb: 161, 92, 7;
+  --amber-soft-rgb: 255, 244, 214;
+
+  /* On a saturated fill. The accent is dark enough in this theme to take white. */
+  --color-on-accent: #ffffff;
+  --color-accent-hover: #1348a8;
+
+  /* The semantic aliases, as functions of the triplets. */
+  --color-bg: rgb(var(--canvas-rgb));
+  --color-surface: rgb(var(--surface-rgb));
+  --color-border: rgb(var(--line-rgb));
+  --color-fg: rgb(var(--ink-rgb));
+  --color-fg-muted: rgb(var(--muted-rgb));
+  --color-accent: rgb(var(--blue-rgb));
+  --color-accent-soft: rgb(var(--blue-soft-rgb));
+  --color-positive: rgb(var(--green-rgb));
+  --color-caution: rgb(var(--amber-rgb));
+
+  /*
+   * The names the rest of this stylesheet already used, kept so the rules
+   * below did not have to change. Same values, one indirection.
+   */
+  --color-ink: rgb(var(--ink-rgb));
+  --color-muted: rgb(var(--muted-rgb));
+  --color-canvas: rgb(var(--canvas-rgb));
+  --color-line: rgb(var(--line-rgb));
+  --color-blue: rgb(var(--blue-rgb));
+  --color-blue-soft: rgb(var(--blue-soft-rgb));
+
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --radius-chip: 2px;
+  --radius-input: 4px;
+  --radius-card: 6px;
+  --radius-shell: 28px;
 
   /*
    * Ambient occlusion. One flat shadow reads as a sticker, stacked shadows read
@@ -24,11 +146,13 @@
    * friends work without a stylesheet load order dependency, and
    * `lib/ui-guard/spatial-primitives.test.ts` asserts the two agree, so the
    * duplication cannot drift.
+   *
+   * Not themed, and that is a decision rather than an oversight. A shadow mixed
+   * from a near-black ink is already invisible against a near-black canvas, so
+   * the dark theme takes its elevation cue back from the border instead. The
+   * alternative is a second copy of all seven stacks that no guard reads.
    */
-  --ink-rgb: 24, 32, 43;
-
   --shadow-z-flush: 0 1px 2px rgba(var(--ink-rgb), 0.04);
-  --shadow-z-recessed: inset 0 2px 4px rgba(var(--ink-rgb), 0.05), inset 0 1px 1px rgba(var(--ink-rgb), 0.04);
   --shadow-z-raised: 0 1px 2px rgba(var(--ink-rgb), 0.05), 0 2px 4px rgba(var(--ink-rgb), 0.04),
     0 4px 8px rgba(var(--ink-rgb), 0.03);
   --shadow-z-lifted: 0 1px 2px rgba(var(--ink-rgb), 0.05), 0 2px 6px rgba(var(--ink-rgb), 0.05),
@@ -43,7 +167,7 @@
   /* The recession shadow. Named separately because it is the only inset one. */
   --shadow-inset: inset 0 2px 4px rgba(var(--ink-rgb), 0.05), inset 0 1px 1px rgba(var(--ink-rgb), 0.04);
 
-  /* Motion. Two durations for interaction, one for a scene change, three curves. */
+  /* Motion. Two durations for interaction, one for a scene change, two curves. */
   --motion-hover: 120ms;
   --motion-state: 200ms;
   --motion-scene: 320ms;
@@ -51,12 +175,54 @@
   --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/*
+ * The dark theme. Re-points the same thirteen names and nothing else, so a
+ * component that reads a token needs no dark variant and a page that reads
+ * `bg-canvas` gets the dark canvas for free.
+ *
+ * The accent lightens from #175CD3 to #6BA6FF. Holding the light-theme accent
+ * would leave `text-blue`, which is every link and every eyebrow in the app, at
+ * 3.23 to 1 on a dark canvas. Lightening it takes `text-blue` to 7.85 and costs
+ * white button text, which is what `--color-on-accent` and the fill rules at the
+ * bottom of this file exist to pay for.
+ *
+ * Every pair below was computed, not eyeballed. Against `--canvas-rgb`:
+ * ink 16.4, muted 7.9, accent 7.9. Against `--surface-rgb`: ink 15.1, muted 7.3,
+ * accent 7.2. Accent on its own wash 6.3, positive on its wash 7.8, caution on
+ * its wash 7.6, on-accent on the accent 7.9. The floor the light theme holds
+ * itself to is 4.5.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --ink-rgb: 230, 237, 247;
+    --muted-rgb: 154, 167, 184;
+    --line-rgb: 48, 59, 74;
+    --canvas-rgb: 10, 14, 20;
+    --surface-rgb: 18, 24, 33;
+    --blue-rgb: 107, 166, 255;
+    --blue-soft-rgb: 22, 36, 58;
+    --green-rgb: 78, 203, 141;
+    --green-soft-rgb: 16, 38, 28;
+    --amber-rgb: 227, 168, 87;
+    --amber-soft-rgb: 42, 33, 19;
+
+    /* The accent is light here, so its text is near-black. */
+    --color-on-accent: #0a0e14;
+    /* Lighter, not darker. The light theme darkens on hover because white text
+       sits on it; a dark theme carries near-black text, so hover has to go the
+       other way or the button loses its label. */
+    --color-accent-hover: #8fbaff;
+  }
+}
+
 * { box-sizing: border-box; }
-html { background: var(--color-canvas); }
+html { background: var(--color-bg); scroll-behavior: smooth; }
 body {
   margin: 0;
-  color: var(--color-ink);
-  background: var(--color-canvas);
+  color: var(--color-fg);
+  background: var(--color-bg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
@@ -65,7 +231,56 @@ button, input { font: inherit; }
 button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
-::selection { color: #fff; background: var(--color-blue); }
+::selection { color: var(--color-on-accent); background: var(--color-accent); }
+
+@layer base {
+  /*
+   * The global transition. Four properties on the four things that change
+   * state, so a hover, a focus and a toggle all arrive at the same speed
+   * without any of them being animated on a per-component basis.
+   *
+   * `transform` is deliberately absent. It belongs to the depth scale and the
+   * tilt scale, both of which set their own transition, and a global one here
+   * would reach every card on every hover.
+   *
+   * Reduced motion sets every duration to 0.01ms further down, so this whole
+   * block costs a visitor who asked for none of it nothing.
+   */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: var(--motion-state);
+    transition-timing-function: var(--ease-out-soft);
+  }
+}
+
+/*
+ * The chrome surface. A translucent panel over scrolling content, so the
+ * content reads through it and the panel does not jump when it arrives.
+ *
+ * This is the functional kind and not the decorative kind the design contract
+ * bans. There is no gradient, no tinted glow and no floating orb: a solid
+ * colour at 72 percent, a 12px blur, and a hairline. The blur is here because a
+ * sticky bar over a list is unreadable without it, and the translucency is here
+ * because a solid bar over a list hides the list.
+ */
+@layer components {
+  .glass {
+    background-color: rgb(var(--surface-rgb) / 0.72);
+    border-bottom: 1px solid rgb(var(--line-rgb) / 0.9);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    backdrop-filter: blur(12px) saturate(1.4);
+  }
+
+  /* The page frame. One radius, so nine pages cannot each pick their own. */
+  .shell {
+    border-radius: var(--radius-shell);
+  }
+}
 
 .map-grid {
   background-color: #e8edf0;
@@ -81,6 +296,12 @@ a { color: inherit; text-decoration: none; }
 .map-pin { position: absolute; width: 30px; height: 30px; border: 3px solid white; border-radius: 50%; background: var(--color-blue); box-shadow: 0 5px 14px rgba(23,92,211,.32); }
 .map-pin::after { content: ""; position: absolute; width: 8px; height: 8px; left: 8px; top: 8px; border-radius: 50%; background: white; }
 
+/*
+ * The schematic map keeps its light palette in both themes, and that is a
+ * deliberate ceiling rather than an oversight. It is a diagram of geography
+ * drawn in greys, and a second inverted copy of it would be a second thing to
+ * keep true. The pins inherit `--color-accent`, so they do follow the theme.
+ */
 .cluster-badge {
   display: flex;
   align-items: center;
@@ -90,14 +311,14 @@ a { color: inherit; text-decoration: none; }
   padding: 0 8px;
   border: 3px solid #fff;
   border-radius: 999px;
-  background: var(--color-blue);
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   font-size: 12px;
   font-weight: 700;
   box-shadow: 0 5px 14px rgba(23,92,211,.32);
 }
-.cluster-badge:hover { background: #1249ad; }
-.cluster-badge:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; }
+.cluster-badge:hover { background: var(--color-accent-hover); }
+.cluster-badge:focus-visible { outline: 3px solid var(--color-fg); outline-offset: 2px; }
 
 /* Individual place pin. A real button so it is tabbable and announced. */
 .place-pin {
@@ -106,7 +327,7 @@ a { color: inherit; text-decoration: none; }
   padding: 0;
   border: 3px solid #fff;
   border-radius: 999px;
-  background: var(--pin, #175CD3);
+  background: var(--pin, var(--color-accent));
   box-shadow: 0 4px 12px rgba(24, 32, 43, 0.28);
   cursor: pointer;
 }
@@ -128,7 +349,7 @@ a { color: inherit; text-decoration: none; }
   height: 14px;
   border: 2px solid #fff;
   border-radius: 999px;
-  background: var(--color-blue);
+  background: var(--color-accent);
   box-shadow: 0 3px 8px rgba(23, 92, 211, 0.45);
 }
 
@@ -142,7 +363,7 @@ a { color: inherit; text-decoration: none; }
   top: 0;
   bottom: 0;
   width: 2px;
-  background-image: linear-gradient(to bottom, var(--color-blue) 55%, transparent 45%);
+  background-image: linear-gradient(to bottom, var(--color-accent) 55%, transparent 45%);
   background-size: 2px 10px;
 }
 .travel-connector-dot {
@@ -152,7 +373,7 @@ a { color: inherit; text-decoration: none; }
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--color-blue);
+  background: var(--color-accent);
   animation: travel-slide 1.6s linear infinite;
 }
 @keyframes travel-slide {
@@ -205,8 +426,8 @@ a { color: inherit; text-decoration: none; }
   left: -9999px;
   top: 0;
   z-index: 50;
-  background: var(--color-blue);
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
   padding: 10px 16px;
   font-weight: 700;
 }
@@ -214,25 +435,25 @@ a { color: inherit; text-decoration: none; }
 
 /*
  * A real focus ring on everything. Before this the only focus rule in the file
- * was `.skip-link:focus`, every input paired `outline-none` with a border-colour
+ * was the skip link, every input paired `outline-none` with a border-colour
  * shift, and buttons and links had nothing at all, which `DESIGN-CONTRACT.md:42`
  * mandates and `ACCESSIBILITY.md:4` requires. Pointer focus stays quiet so a
  * mouse click does not draw a ring, but a keyboard focus always does.
  */
 :focus-visible {
-  outline: 3px solid var(--color-blue);
+  outline: 3px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
-/* The blue ring disappears on the blue surfaces, so invert there. */
+/* The accent ring disappears on the accent surfaces, so invert there. */
 .bg-blue:focus-visible,
 .cluster-badge:focus-visible {
-  outline-color: var(--color-ink);
+  outline-color: var(--color-fg);
 }
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid var(--color-blue);
+  outline: 3px solid var(--color-accent);
   outline-offset: 1px;
 }
 .sr-only {
@@ -348,7 +569,7 @@ textarea:focus-visible {
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-z-raised);
 }
 .chip {
@@ -356,7 +577,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: var(--radius-chip);
   font-size: 11px;
   line-height: 16px;
   font-weight: 600;
@@ -365,7 +586,7 @@ textarea:focus-visible {
 .prose-note {
   font-size: 12px;
   line-height: 20px;
-  color: var(--color-muted);
+  color: var(--color-fg-muted);
 }
 .hairline {
   border-top: 1px solid var(--color-line);
@@ -373,4 +594,27 @@ textarea:focus-visible {
 
 @media (max-width: 768px) {
   .hide-mobile { display: none; }
+}
+
+/*
+ * The one place the dark theme needs a decision the tokens cannot make.
+ *
+ * Twenty call sites fill a control with the accent and set its text to white,
+ * for example `bg-blue text-white`. White on the light-theme accent is 5.99 to
+ * 1. White on the dark-theme accent is 2.46 to 1, which is unreadable, and the
+ * fix is not a new colour at twenty call sites: it is one rule here.
+ *
+ * This is deliberately outside every `@layer`. An unlayered rule outranks a
+ * layered one whatever its specificity, so it beats `text-white` and
+ * `hover:bg-[#1249ad]` from the utilities layer without either of them being
+ * edited. `:disabled` is excluded because a disabled control takes a grey
+ * background and grey text, and near-black on that grey is the same problem
+ * this block exists to fix.
+ */
+@media (prefers-color-scheme: dark) {
+  .bg-blue,
+  .bg-green { color: var(--color-on-accent); }
+  .bg-blue:hover { background-color: var(--color-accent-hover); }
+  .bg-blue:disabled,
+  .bg-green:disabled { color: var(--color-fg-muted); }
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowSquareOut, Funnel, MapPin, NavigationArrow, X } from "@phosphor-icons/react/dist/ssr";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowSquareOut, Funnel, MapPin, NavigationArrow } from "@phosphor-icons/react/dist/ssr";
 import { ExperienceMap } from "@/components/map";
 import { BottomNav, StatusLabel } from "@/components/ui";
 import { Footer } from "@/components/footer";
@@ -14,17 +14,26 @@ import { UiStatePanel } from "@/components/ananta/learning/ui-state";
 import { ResultCard } from "@/components/ananta/explore/result-card";
 import { PipelineStrip } from "@/components/ananta/explore/pipeline-strip";
 import { ExclusionPanel } from "@/components/ananta/explore/exclusion-panel";
+import { ActiveChip } from "@/components/ananta/explore/controls";
+import {
+  BEST_TIME_OPTIONS,
+  BUDGET_LABELS,
+  DEFAULT_WALK_MINUTES,
+  FilterPanel,
+  WALK_LABELS,
+  type BestTime,
+  type CityChoice,
+} from "@/components/ananta/explore/filter-panel";
 import { DEMO_ORIGIN, defaultEngineInput, useLearner, usePipeline, usePlanIds } from "@/components/ananta/use-ananta";
 import type { ExperienceV2 } from "@/lib/engine";
 import { inrLabel, type PipelineRun } from "@/components/ananta/pipeline";
 import { parseDiscoveryIntent } from "@/lib/discovery";
 import { formatDistance } from "@/lib/location";
 import { fetchStreetRoute, type StreetRoute } from "@/lib/routing";
-import { allExperiences, DATASET_CATEGORIES } from "@/lib/data";
-import { zones as dataZones } from "@/lib/seed";
+import { DATASET_CATEGORIES } from "@/lib/data";
 
 /**
- * Explore, on the engine.
+ * Explore, on the engine, as a map and list workspace.
  *
  * The pipeline order is retrieve, gate, score, and the score is never thrown
  * away. The old page gated and scored in one loop, then ran the quick filters as
@@ -37,53 +46,33 @@ import { zones as dataZones } from "@/lib/seed";
  * facets they carried are now either retrieve facets (category, city, zone,
  * free, community sourced, best time) or hard gates with a typed `Rejection`
  * (budget, window, weather, travel). The second, post-ranking gate is gone.
+ *
+ * **The layout is a workspace, not a page.** On a wide screen the map holds the
+ * left column and stays put while the ranked list scrolls beside it, which is the
+ * only arrangement where a pin and its card are ever visible at the same time.
+ * Below `lg` the two stack, the map keeps a usable height, and the filter panel
+ * becomes a sheet the traveller opens over it.
+ *
+ * The map column is sticky and the results column is not, so there is exactly one
+ * scroll context on a phone and no nested scrollbar on a desktop.
  */
 
-const categories = ["All", ...DATASET_CATEGORIES] as const;
-const zones = ["All", ...dataZones] as const;
+const CATEGORY_OPTIONS = ["All", ...DATASET_CATEGORIES] as const;
 const PAGE_SIZE = 24;
-const BULK_CAP = 12;
 
-type City = "All" | "Mumbai" | "Navi Mumbai";
-type Category = (typeof categories)[number];
-type Zone = (typeof zones)[number];
+type Category = (typeof CATEGORY_OPTIONS)[number];
 type SortKey = "rank" | "price" | "duration" | "name";
-type BestTime = "any" | "morning" | "afternoon" | "evening" | "night";
 
-const BEST_TIME_OPTIONS: { value: BestTime; label: string }[] = [
-  { value: "any", label: "Any time of day" },
-  { value: "morning", label: "Best in the morning" },
-  { value: "afternoon", label: "Best in daylight" },
-  { value: "evening", label: "Best after sunset" },
-  { value: "night", label: "Best after dark" },
-];
-
-const BUDGET_OPTIONS = [
-  { label: "Any budget", value: undefined },
-  { label: "Under ₹300", value: 300 },
-  { label: "Under ₹500", value: 500 },
-  { label: "Under ₹800", value: 800 },
-  { label: "Under ₹1200", value: 1200 },
-] as const;
-
-const TIME_OPTIONS = [
-  { label: "Any time I have", value: undefined },
-  { label: "Up to 60 min", value: 60 },
-  { label: "Up to 90 min", value: 90 },
-  { label: "Up to 2 hours", value: 120 },
-  { label: "Up to 3 hours", value: 180 },
-] as const;
-
-const BUDGET_LABELS: Record<number, string> = { 300: "Under ₹300", 500: "Under ₹500", 800: "Under ₹800", 1200: "Under ₹1200" };
-const TIME_LABELS: Record<number, string> = { 60: "Up to 60 min", 90: "Up to 90 min", 120: "Up to 2 hours", 180: "Up to 3 hours" };
+/** One applied constraint, with the control that undoes it. */
+type ActiveFilter = { key: string; label: string; onClear: () => void };
 
 export default function ExplorePage() {
   const [learner] = useLearner();
   const [planIds, , hasInPlan, togglePlan] = usePlanIds();
   const [query, setQuery] = useState("");
-  const [city, setCity] = useState<City>("All");
+  const [city, setCity] = useState<CityChoice>("All");
   const [category, setCategory] = useState<Category>("All");
-  const [zone, setZone] = useState<Zone>("All");
+  const [zone, setZone] = useState("All");
   const [maxPrice, setMaxPrice] = useState<number>();
   const [availableMinutes, setAvailableMinutes] = useState<number>();
   const [rainMode, setRainMode] = useState(false);
@@ -96,6 +85,7 @@ export default function ExplorePage() {
   const [route, setRoute] = useState<StreetRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeFailed, setRouteFailed] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Typing in a filter must not block the main thread, so the solve runs
   // against a deferred copy of the input.
@@ -118,7 +108,13 @@ export default function ExplorePage() {
     if (matched) setBestTime(matched.value);
     const cityParam = params.get("city");
     if (cityParam === "Mumbai" || cityParam === "Navi Mumbai") setCity(cityParam);
+    // Collapsed in the server render so there is no hydration mismatch, then
+    // opened on mount for wide screens, where the panel has room to sit open
+    // beside the map rather than covering it.
+    setFiltersOpen(window.innerWidth >= 1024);
   }, []);
+
+  const walkMinutes = deferredMinutes ?? DEFAULT_WALK_MINUTES;
 
   const input = useMemo(
     () =>
@@ -128,14 +124,14 @@ export default function ExplorePage() {
         category,
         zone,
         budgetInr: maxPrice ?? 1500,
-        availableMinutes: deferredMinutes ?? 240,
+        availableMinutes: walkMinutes,
         rainMode,
         freeOnly,
         communityOnly,
         bestTimeOfDay: bestTime,
         planIds,
       }),
-    [bestTime, category, city, communityOnly, deferredMinutes, deferredQuery, freeOnly, maxPrice, planIds, rainMode, zone],
+    [bestTime, category, city, communityOnly, deferredQuery, freeOnly, maxPrice, planIds, rainMode, walkMinutes, zone],
   );
 
   const run = usePipeline(input, learner.weights);
@@ -169,7 +165,6 @@ export default function ExplorePage() {
   }, [ranked, selectedId]);
 
   const visibleRecords = useMemo(() => paged.map((row) => row.record), [paged]);
-  const excludedCount = (run?.retrievalCount ?? 0) - (run?.gated.passed.length ?? 0);
   // Refused records, so their map pins recede. Only the ones the gate actually
   // dropped, read from the run, never re-derived here.
   const rejectedIds = useMemo(
@@ -188,6 +183,42 @@ export default function ExplorePage() {
   );
 
   const selectExperience = useCallback((id: string) => setSelectedId(id), []);
+
+  const filters: ActiveFilter[] = useMemo(() => {
+    const chips: ActiveFilter[] = [];
+    if (city !== "All") chips.push({ key: "city", label: city, onClear: () => setCity("All") });
+    if (zone !== "All") chips.push({ key: "zone", label: zone, onClear: () => setZone("All") });
+    if (category !== "All") chips.push({ key: "category", label: category, onClear: () => setCategory("All") });
+    if (maxPrice !== undefined) {
+      chips.push({
+        key: "budget",
+        label: BUDGET_LABELS[maxPrice] ?? `Under ₹${maxPrice}`,
+        onClear: () => setMaxPrice(undefined),
+      });
+    }
+    // Only when the traveller actually chose it. The engine default of four hours
+    // is a real number the gate uses, but printing it as an applied filter would
+    // claim they asked for it.
+    if (availableMinutes !== undefined) {
+      chips.push({
+        key: "walk",
+        label: WALK_LABELS[walkMinutes] ?? `${walkMinutes} min walk`,
+        onClear: () => setAvailableMinutes(undefined),
+      });
+    }
+    if (bestTime !== "any") {
+      chips.push({
+        key: "bestTime",
+        label: BEST_TIME_OPTIONS.find((option) => option.value === bestTime)?.label ?? bestTime,
+        onClear: () => setBestTime("any"),
+      });
+    }
+    if (rainMode) chips.push({ key: "rain", label: "It is raining", onClear: () => setRainMode(false) });
+    if (freeOnly) chips.push({ key: "free", label: "Free entry", onClear: () => setFreeOnly(false) });
+    if (communityOnly) chips.push({ key: "community", label: "Community sourced", onClear: () => setCommunityOnly(false) });
+    return chips;
+  }, [availableMinutes, bestTime, category, city, communityOnly, freeOnly, maxPrice, rainMode, walkMinutes, zone]);
+
   const clear = useCallback(() => {
     setCity("All");
     setCategory("All");
@@ -202,10 +233,6 @@ export default function ExplorePage() {
     setVisibleCount(PAGE_SIZE);
   }, []);
 
-  const hasConstraints =
-    city !== "All" || category !== "All" || zone !== "All" || maxPrice !== undefined ||
-    availableMinutes !== undefined || rainMode || freeOnly || communityOnly || bestTime !== "any" || Boolean(query);
-
   // The real walking route from the fixed demo position to the selection. A
   // rejected fetch and a straight-line fallback are different states, so the
   // failure is tracked rather than collapsed into "no route".
@@ -216,17 +243,16 @@ export default function ExplorePage() {
       setRouteFailed(false);
       return;
     }
-    const target = allExperiences.find((place) => place.id === id);
-    if (!target) {
-      setRoute(null);
-      setRouteFailed(false);
-      return;
-    }
+    // The records come from one module-level table, so a re-render with the same
+    // selection hands this effect the same coordinate array and no route is
+    // refetched. The id is in the list as well so a different record at the same
+    // point still refetches.
+    const target = selected?.record.coordinates;
     let cancelled = false;
     setRouteLoading(true);
     setRoute(null);
     setRouteFailed(false);
-    fetchStreetRoute(DEMO_ORIGIN.coordinates, target.coordinates)
+    fetchStreetRoute(DEMO_ORIGIN.coordinates, target)
       .then((result) => {
         if (!cancelled) {
           setRoute(result);
@@ -242,14 +268,17 @@ export default function ExplorePage() {
     return () => {
       cancelled = true;
     };
-  }, [selected?.record.id]);
+  }, [selected?.record.coordinates, selected?.record.id]);
 
   return (
     <main id="main-content" className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-[1480px] bg-white lg:my-5 lg:rounded-[28px] lg:shadow-card">
-        <Header city={city} setCity={setCity} />
-        <div className="flex flex-col">
-          <section className="relative h-[540px] overflow-hidden sm:h-[620px] lg:h-[720px]">
+      <div className="mx-auto max-w-[1600px] bg-white lg:my-5 lg:rounded-[28px] lg:shadow-card">
+        <Header />
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_29rem]">
+          {/* The map column. Sticky on a wide screen, so a pin and its card are
+              on screen together, and a fixed height everywhere, because a map
+              with no height is a blank rectangle. */}
+          <section className="relative h-[23rem] sm:h-[27rem] lg:sticky lg:top-5 lg:my-5 lg:h-[calc(100vh_-_2.5rem)] lg:min-h-[32rem] lg:self-start lg:rounded-l-[28px]">
             <ExperienceMap
               records={visibleRecords}
               selectedId={selected?.record.id}
@@ -258,77 +287,93 @@ export default function ExplorePage() {
               rejectedIds={rejectedIds}
               weather={weather}
             />
-            <SearchOverlay
+            <SearchBar
               query={query}
               setQuery={setQuery}
               applyIntent={(text) => applyIntentTo(text, { setCity, setCategory, setMaxPrice, setAvailableMinutes, setRainMode })}
+              filtersOpen={filtersOpen}
+              setFiltersOpen={setFiltersOpen}
+              activeCount={filters.length}
+              resultCount={ranked.length}
+            />
+            <FilterPanel
+              open={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+              activeCount={filters.length}
+              onClear={clear}
               city={city}
               setCity={setCity}
               category={category}
               setCategory={setCategory}
               zone={zone}
               setZone={setZone}
-              maxPrice={maxPrice}
-              setMaxPrice={setMaxPrice}
-              availableMinutes={availableMinutes}
-              setAvailableMinutes={setAvailableMinutes}
+              budget={maxPrice}
+              setBudget={setMaxPrice}
+              walkMinutes={walkMinutes}
+              setWalkMinutes={setAvailableMinutes}
+              bestTime={bestTime}
+              setBestTime={setBestTime}
               rainMode={rainMode}
               setRainMode={setRainMode}
               freeOnly={freeOnly}
               setFreeOnly={setFreeOnly}
               communityOnly={communityOnly}
               setCommunityOnly={setCommunityOnly}
-              bestTime={bestTime}
-              setBestTime={setBestTime}
+              inRadius={run?.retrieved.totalConsidered ?? 0}
+              originLabel={DEMO_ORIGIN.label}
+              solving={!run}
             />
           </section>
 
-          <aside className="border-t border-line bg-white p-5 sm:p-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
+          <aside className="border-t border-line bg-white p-4 sm:p-6 lg:border-l lg:border-t-0 lg:rounded-r-[28px]">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Engine output</p>
-                <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">Ranked matches</h2>
-                <div className="mt-2 max-w-[68ch]">
-                  <PipelineStrip run={run} />
-                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue">Engine output</p>
+                <h2 className="mt-1.5 text-xl font-bold tracking-[-0.03em]">Ranked matches</h2>
               </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-muted">
-                  Sort
-                  <select
-                    aria-label="Sort results"
-                    value={sort}
-                    onChange={(event) => setSort(event.target.value as SortKey)}
-                    className="rounded-lg border border-line bg-white px-2 py-1.5 text-sm font-bold normal-case tracking-normal text-ink"
-                  >
-                    <option value="rank">Best match</option>
-                    <option value="price">Price: low to high</option>
-                    <option value="duration">Shortest time</option>
-                    <option value="name">Name A to Z</option>
-                  </select>
-                </label>
-                <span className="text-sm font-semibold text-muted">{ranked.length} results</span>
-              </div>
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
+                Sort
+                <select
+                  aria-label="Sort results"
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value as SortKey)}
+                  className="rounded border border-line bg-white px-2 py-1.5 text-xs font-bold normal-case tracking-normal text-ink hover:border-blue"
+                >
+                  <option value="rank">Best match</option>
+                  <option value="price">Price: low to high</option>
+                  <option value="duration">Shortest time</option>
+                  <option value="name">Name A to Z</option>
+                </select>
+              </label>
             </div>
 
-            {hasConstraints && (
-              <ConstraintSummary
-                city={city}
-                category={category}
-                zone={zone}
-                maxPrice={maxPrice}
-                availableMinutes={availableMinutes}
-                rainMode={rainMode}
-                freeOnly={freeOnly}
-                communityOnly={communityOnly}
-                bestTime={bestTime}
-                clear={clear}
-              />
+            <div className="mt-2">
+              <PipelineStrip run={run} />
+            </div>
+
+            {filters.length > 0 && (
+              <div className="mt-4 border-t border-line pt-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Applied</p>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {filters.map((filter) => (
+                    <ActiveChip key={filter.key} label={filter.label} onClear={filter.onClear} />
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="mt-2 text-[11px] font-bold text-blue hover:underline"
+                >
+                  Clear everything
+                </button>
+              </div>
             )}
 
-            <ProvenanceLegend />
-            <div className="mt-3">
-              <LearnerSummary learner={learner} />
+            <div className="mt-4 border-t border-line pt-4">
+              <ProvenanceLegend />
+              <div className="mt-3">
+                <LearnerSummary learner={learner} />
+              </div>
             </div>
 
             {advisoryCount > 0 && (
@@ -348,13 +393,14 @@ export default function ExplorePage() {
                 shared vanishing point. Without the shared stage each card would
                 establish its own and the grid would read as a wobble rather than
                 a surface. Exactly one card is lifted: the top result. */}
-            <div className="stage mt-6">
-              <div className="stage-3d grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="stage mt-5">
+              <div className="stage-3d space-y-3">
                 {paged.map((row, index) => (
                   <ResultCard
                     key={row.record.id}
                     row={row}
-                    isTop={index === 0}
+                    rank={index + 1}
+                    isTop={sort === "rank" && index === 0}
                     inPlan={hasInPlan(row.record.id)}
                     onTogglePlan={togglePlan}
                     onSelect={selectExperience}
@@ -367,7 +413,7 @@ export default function ExplorePage() {
             {visibleCount < rows.length && (
               <button
                 onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                className="mt-4 w-full border border-line py-3 text-sm font-bold text-blue transition-colors hover:border-blue"
+                className="mt-4 w-full rounded border border-line py-3 text-sm font-bold text-blue transition-colors hover:border-blue"
               >
                 Show more ({rows.length - visibleCount} remaining)
               </button>
@@ -375,30 +421,32 @@ export default function ExplorePage() {
 
             {!ranked.length && run && <EmptyState run={run} onClear={clear} />}
 
-            {run && run.gated.rejected.length > 0 && (
-              <ExclusionPanel rows={run.gated.rejected} cheapest={run.cheapest} cap={BULK_CAP} />
-            )}
+            {run && <ExclusionPanel run={run} cheapest={run.cheapest} />}
 
             {selected && (
-              <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                <WhyNotThat
-                  recordName={selected.record.name}
-                  rejections={selected.advisory}
-                  cheapest={run?.cheapest ?? null}
-                  retrievalNote={`${selected.record.name} passed the gate. The list below is what we do not know about it.`}
-                  bulkCount={excludedCount}
-                />
+              <div className="mt-6 space-y-4 border-t border-line pt-5">
                 <WhyThis
                   components={selected.components}
                   total={selected.objective.value}
                   limit={7}
                   note="This is the ranking score, so a low number can still be the best on offer."
                 />
+                <WhyNotThat
+                  recordName={selected.record.name}
+                  rejections={selected.advisory}
+                  cheapest={run?.cheapest ?? null}
+                  retrievalNote={`${selected.record.name} passed the gate. The list below is what we do not know about it.`}
+                  bulkCount={run ? run.gated.rejected.length : 0}
+                />
+                <Selection
+                  record={selected.record}
+                  inPlan={hasInPlan(selected.record.id)}
+                  onToggle={togglePlan}
+                  planCount={planIds.length}
+                />
+                <DirectionsPanel route={route} loading={routeLoading} failed={routeFailed} />
               </div>
             )}
-
-            {selected && <Selection record={selected.record} inPlan={hasInPlan(selected.record.id)} onToggle={togglePlan} planCount={planIds.length} />}
-            {selected && <DirectionsPanel route={route} loading={routeLoading} failed={routeFailed} />}
           </aside>
         </div>
         <Footer />
@@ -411,7 +459,7 @@ export default function ExplorePage() {
 function applyIntentTo(
   text: string,
   setters: {
-    setCity: (value: City) => void;
+    setCity: (value: CityChoice) => void;
     setCategory: (value: Category) => void;
     setMaxPrice: (value: number | undefined) => void;
     setAvailableMinutes: (value: number | undefined) => void;
@@ -420,210 +468,89 @@ function applyIntentTo(
 ) {
   const intent = parseDiscoveryIntent(text);
   if (intent.city) setters.setCity(intent.city);
-  if (intent.category && categories.includes(intent.category as Category)) setters.setCategory(intent.category as Category);
+  if (intent.category && CATEGORY_OPTIONS.includes(intent.category as Category)) setters.setCategory(intent.category as Category);
   setters.setMaxPrice(intent.maxPrice);
   setters.setAvailableMinutes(intent.availableMinutes);
   if (intent.weather) setters.setRainMode(true);
 }
 
-function Header({ city, setCity }: { city: City; setCity: (city: City) => void }) {
+function Header() {
   return (
-    <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
+    <header className="flex items-center justify-between border-b border-line px-4 py-3 sm:px-6">
       <a href="/" className="flex items-center gap-2 text-sm font-bold">
         <ArrowLeft size={18} /> Home
       </a>
-      <h1 className="text-lg font-bold">Explore</h1>
-      <button
-        onClick={() => setCity(city === "Navi Mumbai" ? "Mumbai" : "Navi Mumbai")}
-        className="rounded-lg border border-line px-3 py-2 text-sm font-semibold"
-      >
-        {city === "Navi Mumbai" ? "Show Mumbai" : "Show Navi Mumbai"}
-      </button>
+      <h1 className="text-lg font-bold tracking-[-0.03em]">Explore</h1>
+      <p className="w-[4.5rem] text-right text-[11px] font-semibold leading-4 text-muted">
+        Map and list
+      </p>
     </header>
   );
 }
 
-function SearchOverlay({
-  query, setQuery, applyIntent,
-  city, setCity, category, setCategory, zone, setZone,
-  maxPrice, setMaxPrice, availableMinutes, setAvailableMinutes, rainMode, setRainMode,
-  freeOnly, setFreeOnly, communityOnly, setCommunityOnly, bestTime, setBestTime,
+/**
+ * The one control that sits over the map at every width.
+ *
+ * It carries the query, the filter toggle and the live result count, because a
+ * traveller changing a filter needs to see the count move without scrolling to
+ * find it. The count is read off the run, so it is never a number typed here.
+ */
+function SearchBar({
+  query,
+  setQuery,
+  applyIntent,
+  filtersOpen,
+  setFiltersOpen,
+  activeCount,
+  resultCount,
 }: {
   query: string;
   setQuery: (value: string) => void;
   applyIntent: (value: string) => void;
-  city: City;
-  setCity: (value: City) => void;
-  category: Category;
-  setCategory: (value: Category) => void;
-  zone: Zone;
-  setZone: (value: Zone) => void;
-  maxPrice?: number;
-  setMaxPrice: (value: number | undefined) => void;
-  availableMinutes?: number;
-  setAvailableMinutes: (value: number | undefined) => void;
-  rainMode: boolean;
-  setRainMode: (value: boolean) => void;
-  freeOnly: boolean;
-  setFreeOnly: (value: boolean) => void;
-  communityOnly: boolean;
-  setCommunityOnly: (value: boolean) => void;
-  bestTime: BestTime;
-  setBestTime: (value: BestTime) => void;
+  filtersOpen: boolean;
+  setFiltersOpen: (value: boolean) => void;
+  activeCount: number;
+  resultCount: number;
 }) {
-  // Collapsed in the server render so there is no hydration mismatch, then
-  // opened on mount for wide screens.
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    setOpen(window.innerWidth >= 1024);
-  }, []);
-  const activeCount =
-    (city !== "All" ? 1 : 0) + (category !== "All" ? 1 : 0) + (zone !== "All" ? 1 : 0) +
-    (maxPrice !== undefined ? 1 : 0) + (availableMinutes !== undefined ? 1 : 0) +
-    (rainMode ? 1 : 0) + (freeOnly ? 1 : 0) + (communityOnly ? 1 : 0) + (bestTime !== "any" ? 1 : 0);
-
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         applyIntent(query);
       }}
-      className="absolute left-5 right-5 top-5 sm:left-8 sm:right-8 sm:top-8"
+      className="absolute left-4 right-4 top-4 z-20 lg:left-5 lg:right-auto lg:w-[26rem]"
     >
-      <div className="flex items-center gap-3 rounded-xl border border-white/80 bg-white px-4 py-3 shadow-card">
-        <MapPin size={18} className="shrink-0 text-blue" weight="fill" />
+      <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white/90 px-3 py-2 shadow-floating backdrop-blur-md">
+        <MapPin size={17} className="shrink-0 text-blue" weight="fill" aria-hidden="true" />
+        <label htmlFor="explore-query" className="sr-only">
+          Search experiences
+        </label>
         <input
-          aria-label="Search experiences"
-          className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
+          id="explore-query"
+          className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-muted"
           placeholder="Food under ₹800 in Mumbai"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        {/* The funnel toggles the panel below it. It used to have no handler. */}
+        <span aria-live="polite" className="shrink-0 text-[11px] font-bold text-muted">
+          {resultCount.toLocaleString("en-IN")}
+        </span>
         <button
           type="button"
-          aria-label={open ? "Hide filters" : "Show filters"}
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          className="text-muted"
+          aria-label={filtersOpen ? "Hide filters" : "Show filters"}
+          aria-expanded={filtersOpen}
+          aria-controls="explore-filters"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className={`flex shrink-0 items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-bold ${
+            activeCount > 0 ? "border-blue bg-blueSoft/70 text-blue" : "border-line text-ink"
+          }`}
         >
-          <Funnel size={18} weight={open ? "fill" : "regular"} />
-        </button>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold ${activeCount > 0 ? "border-blue bg-blueSoft/60 text-blue" : "border-line text-ink"}`}
-        >
-          <Funnel size={14} /> Filters{activeCount > 0 ? ` · ${activeCount}` : ""}
+          <Funnel size={14} weight={filtersOpen || activeCount > 0 ? "fill" : "regular"} aria-hidden="true" />
+          Filters
+          {activeCount > 0 ? ` ${activeCount}` : ""}
         </button>
       </div>
-      {open && (
-        <div className="mt-3 max-h-[62vh] space-y-4 overflow-y-auto rounded-xl border border-white/80 bg-white/95 p-4 shadow-card backdrop-blur-sm">
-          <FilterGroup label="Where">
-            <FilterButton active={city === "All"} onClick={() => setCity("All")}>All cities</FilterButton>
-            <FilterButton active={city === "Mumbai"} onClick={() => setCity("Mumbai")}>Mumbai</FilterButton>
-            <FilterButton active={city === "Navi Mumbai"} onClick={() => setCity("Navi Mumbai")}>Navi Mumbai</FilterButton>
-            <select aria-label="Filter by zone" value={zone} onChange={(event) => setZone(event.target.value as Zone)} className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold">
-              <option value="All">All zones</option>
-              {zones.slice(1).map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-          </FilterGroup>
-          <FilterGroup label="What">
-            <FilterButton active={category === "All"} onClick={() => setCategory("All")}>Everything</FilterButton>
-            {categories.slice(1).map((item) => (
-              <FilterButton key={item} active={category === item} onClick={() => setCategory(category === item ? "All" : item)}>
-                {item}
-              </FilterButton>
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Budget and time">
-            <select aria-label="Filter by budget" value={maxPrice ?? ""} onChange={(event) => setMaxPrice(event.target.value === "" ? undefined : Number(event.target.value))} className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold">
-              {BUDGET_OPTIONS.map((item) => (
-                <option key={item.label} value={item.value ?? ""}>{item.label}</option>
-              ))}
-            </select>
-            <select aria-label="Filter by time available" value={availableMinutes ?? ""} onChange={(event) => setAvailableMinutes(event.target.value === "" ? undefined : Number(event.target.value))} className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold">
-              {TIME_OPTIONS.map((item) => (
-                <option key={item.label} value={item.value ?? ""}>{item.label}</option>
-              ))}
-            </select>
-            <FilterButton active={rainMode} onClick={() => setRainMode(!rainMode)}>Rain-ready (indoor)</FilterButton>
-          </FilterGroup>
-          <FilterGroup label="When">
-            <select aria-label="Filter by best time" value={bestTime} onChange={(event) => setBestTime(event.target.value as BestTime)} className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold">
-              {BEST_TIME_OPTIONS.map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </FilterGroup>
-          <FilterGroup label="Vibe">
-            <FilterButton active={communityOnly} onClick={() => setCommunityOnly(!communityOnly)}>Community sourced</FilterButton>
-            <FilterButton active={freeOnly} onClick={() => setFreeOnly(!freeOnly)}>Free entry</FilterButton>
-            <FilterButton active={availableMinutes === 30} onClick={() => setAvailableMinutes(availableMinutes === 30 ? undefined : 30)}>
-              Walkable in 30 min
-            </FilterButton>
-          </FilterGroup>
-        </div>
-      )}
     </form>
-  );
-}
-
-function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </div>
-  );
-}
-
-function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
-  return (
-    <button type="button" onClick={onClick} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-bold ${active ? "bg-blue text-white" : "border border-line bg-white"}`}>
-      {children}
-    </button>
-  );
-}
-
-function ConstraintSummary({
-  city, category, zone, maxPrice, availableMinutes, rainMode, freeOnly, communityOnly, bestTime, clear,
-}: {
-  city: City;
-  category: Category;
-  zone: Zone;
-  maxPrice?: number;
-  availableMinutes?: number;
-  rainMode: boolean;
-  freeOnly: boolean;
-  communityOnly: boolean;
-  bestTime: BestTime;
-  clear: () => void;
-}) {
-  const labels = [
-    city !== "All" && city,
-    category !== "All" && category,
-    zone !== "All" && zone,
-    maxPrice !== undefined && (BUDGET_LABELS[maxPrice] ?? `Under ₹${maxPrice}`),
-    availableMinutes !== undefined && (TIME_LABELS[availableMinutes] ?? `${availableMinutes} minutes`),
-    rainMode && "Rain-ready",
-    communityOnly && "Community sourced",
-    freeOnly && "Free entry",
-    bestTime !== "any" && BEST_TIME_OPTIONS.find((option) => option.value === bestTime)?.label,
-  ].filter(Boolean);
-  return (
-    <div className="mt-5 border border-line bg-canvas p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Applied constraints</p>
-        <button aria-label="Clear filters" onClick={clear}>
-          <X size={16} />
-        </button>
-      </div>
-      <p className="mt-2 text-sm leading-6">{labels.join(" · ") || "Search text only"}</p>
-    </div>
   );
 }
 
@@ -644,12 +571,12 @@ function ConstraintSummary({
 function EmptyState({ run, onClear }: { run: PipelineRun; onClear: () => void }) {
   if (run.retrievalCount === 0) {
     return (
-      <div className="mt-6">
+      <div className="mt-5">
         <UiStatePanel state="nothing-retrieved">
           <p className="mt-2 max-w-[68ch] text-sm leading-6">
             {run.dominant
               ? run.dominant.sentence
-              : "The search terms matched nothing inside your travel window. Widen the time filter or clear the category to see more."}
+              : "The search terms matched nothing inside your travel window. Widen the walking radius or clear the category to see more."}
           </p>
         </UiStatePanel>
       </div>
@@ -657,7 +584,7 @@ function EmptyState({ run, onClear }: { run: PipelineRun; onClear: () => void })
   }
 
   return (
-    <div className="mt-6 space-y-3">
+    <div className="mt-5 space-y-3">
       <UiStatePanel state="nothing-fits">
         {run.cheapest ? (
           <p className="mt-2 max-w-[68ch] text-sm leading-6">
@@ -674,7 +601,7 @@ function EmptyState({ run, onClear }: { run: PipelineRun; onClear: () => void })
         <button
           type="button"
           onClick={onClear}
-          className="mt-4 inline-flex min-h-[44px] items-center border border-blue px-4 py-2 text-sm font-bold text-blue"
+          className="mt-4 inline-flex min-h-[44px] items-center rounded border border-blue px-4 py-2 text-sm font-bold text-blue"
         >
           Clear the filters
         </button>
@@ -711,22 +638,25 @@ function Selection({
   planCount: number;
 }) {
   return (
-    <div className="mt-6 border-t border-line pt-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Current selection</p>
+    <div className="rounded border border-line p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-blue">Selected from the map or the list</p>
           <p className="mt-1 font-bold">{record.name}</p>
         </div>
-        <span className="text-sm font-bold">{record.priceInr === 0 ? "Free" : inrLabel(record.priceInr)}</span>
+        <span className="shrink-0 text-sm font-bold">{record.priceInr === 0 ? "Free" : inrLabel(record.priceInr)}</span>
       </div>
       {/* One add-to-plan implementation, the same toggle the detail page uses. */}
       <div className="mt-4">
         <AddToPlanButton experienceId={record.id} onToggle={onToggle} forced={inPlan} />
       </div>
-      <a href={`/experience/${record.id}`} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-bold text-blue transition-colors hover:border-blue">
+      <a
+        href={`/experience/${record.id}`}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded border border-line px-4 py-3 text-sm font-bold text-blue transition-colors hover:border-blue"
+      >
         Open the full place page <ArrowSquareOut size={16} />
       </a>
-      <p className="mt-2 text-center text-xs text-muted">
+      <p className="mt-2 text-center text-[11px] leading-4 text-muted">
         Photos, video, About, field-by-field provenance, and turn-by-turn directions live there.
       </p>
       {planCount > 0 && (
@@ -754,13 +684,13 @@ function DirectionsPanel({
   const noRoute = !loading && !route && !failed;
 
   return (
-    <section className="mt-6 border border-line p-5" aria-live="polite">
-      <div className="flex items-center justify-between">
+    <section className="rounded border border-line p-4" aria-live="polite">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Directions</p>
-          <h3 className="mt-2 text-lg font-bold">Walking from {DEMO_ORIGIN.label}</h3>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue">Directions</p>
+          <h3 className="mt-1.5 text-base font-bold">Walking from {DEMO_ORIGIN.label}</h3>
         </div>
-        <NavigationArrow size={20} className="text-blue" />
+        <NavigationArrow size={20} className="shrink-0 text-blue" aria-hidden="true" />
       </div>
       {loading && <p className="mt-3 text-sm text-muted">Finding the walking route on the map...</p>}
       {failed && (
@@ -802,7 +732,7 @@ function DirectionsPanel({
               </UiStatePanel>
             </div>
           )}
-          <p className="mt-2 text-xs leading-5 text-muted">{route.note}</p>
+          <p className="mt-2 text-[11px] leading-5 text-muted">{route.note}</p>
           {route.steps.length > 0 && (
             <ol className="mt-4 space-y-2 border-t border-line pt-4">
               {route.steps.map((step, index) => (
@@ -825,4 +755,3 @@ function DirectionsPanel({
     </section>
   );
 }
-

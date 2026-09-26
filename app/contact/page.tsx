@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Flag, MapPin, Storefront, Wrench } from "@phosphor-icons/react/dist/ssr";
-import { StateNote, buttonClass } from "@/components/ui";
+import { ArrowRight, MapPin, Storefront, Wrench } from "@phosphor-icons/react/dist/ssr";
+import { LegalCaveat, LegalDocument, LegalSection } from "@/components/legal/document";
+import { Notice } from "@/components/workspace/notice";
 
 /**
  * Contact, without inventing a contact.
@@ -15,6 +16,10 @@ import { StateNote, buttonClass } from "@/components/ui";
  * to `localStorage` via `lib/reports.ts` and appears in the operator queue at
  * `/admin/operations`. That is a real feedback loop with a real limitation, and
  * both halves of that sentence are on this page.
+ *
+ * The first draft of this page put that in an amber flag box, which read as a
+ * warning about something broken. It is not broken. It is the design, stated
+ * once, calmly, and then the rest of the page is three working routes.
  */
 const ROUTES = [
   {
@@ -39,94 +44,79 @@ const ROUTES = [
 
 export default function ContactPage() {
   return (
-    <main id="main-content" className="min-h-screen bg-canvas">
-      <article className="mx-auto max-w-3xl bg-white px-6 py-12 sm:px-10 lg:my-8 lg:rounded-2xl lg:px-16 lg:py-16 lg:shadow-card">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-blue">
-          <ArrowLeft size={16} /> Ananta
-        </Link>
-
-        <p className="mt-12 text-xs font-bold uppercase tracking-[0.14em] text-blue">Contact</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-[-0.05em]">How to reach us, honestly</h1>
-
-        <div className="mt-6 flex items-start gap-3 border border-line bg-[#fbfcfd] p-4">
-          <Flag size={18} className="mt-0.5 shrink-0 text-amber" />
-          <p className="text-sm leading-6 text-muted">
-            This product has no server and no operator on call. There is no support
-            inbox, so we have not printed an email address that nobody would read.
-            Everything below is a real mechanism in the app, with its real
-            limitation stated. If you expected a mailbox, this is the honest
-            version of one.
+    <LegalDocument
+      kicker="Contact"
+      title="How to reach us, honestly"
+      lead="There is no support inbox on this product, so there is no email address to print here. What follows is the real mechanism for each kind of message, and the real limitation of each one."
+      aside={
+        <LegalCaveat>
+          If you came here for a mailbox, this is the honest version of one. An address that nobody
+          reads is worse than no address, and printing one would be the kind of claim this
+          application exists to avoid.
+        </LegalCaveat>
+      }
+      closing="The routes above are the only ones that exist. A future version with a real support address will say so on this page rather than in a changelog."
+    >
+      {ROUTES.length === 0 ? (
+        /* A real failure, not a hypothetical one. `ROUTES` is the data this page
+           exists to render, and an empty table would otherwise leave a blank
+           section under a confident heading. */
+        <Notice tone="info" title="The contact routes failed to load" className="mt-10">
+          <p>
+            The three paths below could not be listed. The report mechanism they point at still
+            works: open any place from Explore and use Report incorrect information on its page.
           </p>
-        </div>
+        </Notice>
+      ) : (
+        ROUTES.map((route, index) => {
+          const Icon = route.icon;
+          return (
+            <LegalSection key={route.href} index={index + 1} title={route.title}>
+              <div className="card flex items-start gap-3 p-4">
+                <Icon size={20} className="mt-0.5 shrink-0 text-blue" aria-hidden="true" />
+                <div>
+                  <p className="text-sm leading-6 text-muted">{route.body}</p>
+                  <Link
+                    href={route.href}
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold text-blue"
+                  >
+                    Open {route.href}
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            </LegalSection>
+          );
+        })
+      )}
 
-        <div className="mt-10 space-y-4">
-          {ROUTES.length === 0 ? (
-            /* A real failure, not a hypothetical one. `ROUTES` is the data this
-               page exists to render, and an empty table would otherwise leave a
-               blank section under a confident heading. `broken` is the only state
-               allowed to look like a failure, and even here it names what broke
-               and what still works. */
-            <StateNote state="broken">
-              <p className="text-xs leading-5 text-muted">
-                The contact routes failed to load, so the three paths below could not be
-                listed. The report mechanism they point at still works: open any place from
-                Explore and use Report incorrect information on its page.
-              </p>
-            </StateNote>
-          ) : (
-            ROUTES.map((route) => {
-              const Icon = route.icon;
-              return (
-                <section key={route.href} className="border border-line p-5">
-                  <div className="flex items-start gap-3">
-                    <Icon size={20} className="mt-0.5 shrink-0 text-blue" />
-                    <div>
-                      <h2 className="text-lg font-bold">{route.title}</h2>
-                      <p className="mt-2 text-sm leading-6 text-muted">{route.body}</p>
-                      <Link
-                        href={route.href}
-                        className="mt-3 inline-block text-sm font-bold text-blue underline"
-                      >
-                        Open {route.href}
-                      </Link>
-                    </div>
-                  </div>
-                </section>
-              );
-            })
-          )}
-        </div>
-
-        <section className="mt-10 border-t border-line pt-6">
-          <h2 className="text-xl font-bold">What a report actually does</h2>
-          <p className="mt-3 leading-7 text-muted">
-            A report carries the record id, the reason you picked and your note into
-            the operator queue at /admin/operations, where an admin can verify a
-            record or mark it stale. It is read by whoever is operating this build,
-            which today means anyone who loads that page, because no operator is
-            on call. It is not emailed anywhere and it does not leave your browser.
-          </p>
-          <Link href="/explore" className={buttonClass("secondary", "mt-4")}>
+      <LegalSection index={ROUTES.length + 1} title="What a report actually does">
+        <p>
+          A report carries the record id, the reason you picked and your note into the operator
+          queue at /admin/operations, where an admin can verify a record or mark it stale. It is
+          read by whoever is operating this build, which today means anyone who loads that page,
+          because no operator is on call. It is not emailed anywhere and it does not leave your
+          browser.
+        </p>
+        <div>
+          <Link
+            href="/explore"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded border border-blue px-4 py-2 text-sm font-bold text-blue transition-colors duration-120 hover:bg-blueSoft"
+          >
             Open a place to report it
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
-        </section>
+        </div>
+      </LegalSection>
 
-        <section className="mt-10 border-t border-line pt-6">
-          <h2 className="text-xl font-bold">What this product is not</h2>
-          <p className="mt-3 leading-7 text-muted">
-            Ananta is a local discovery demo built as a static application. It has
-            no accounts, no payments, no bookings that complete anywhere, and no
-            way for us to receive anything you type unless you press a button that
-            writes it to your own browser. We would rather say that plainly than
-            print a contact form that quietly discards what you wrote.
-          </p>
-        </section>
-
-        <Link href="/" className="mt-12 inline-block text-sm font-bold text-blue">
-          Return to Ananta
-        </Link>
-      </article>
-    </main>
+      <LegalSection index={ROUTES.length + 2} title="What this product is not">
+        <p>
+          Ananta is a local discovery demo built as a static application. It has no accounts, no
+          payments, no bookings that complete anywhere, and no way for us to receive anything you
+          type unless you press a button that writes it to your own browser. We would rather say
+          that plainly than print a contact form that quietly discards what you wrote.
+        </p>
+      </LegalSection>
+    </LegalDocument>
   );
 }

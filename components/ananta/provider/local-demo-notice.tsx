@@ -1,5 +1,4 @@
-import { ShieldWarning } from "@phosphor-icons/react/dist/ssr";
-import { typeScale } from "@/components/ananta/tokens";
+import { Notice } from "@/components/workspace/notice";
 
 /**
  * The sentence that tells a visitor what this surface is not.
@@ -13,32 +12,31 @@ import { typeScale } from "@/components/ananta/tokens";
  * Two facts belong on this notice and no more: there are no accounts, and
  * clearing site data erases everything. Anything longer would be a privacy
  * policy pretending to be a tooltip, and there is a real privacy page.
+ *
+ * It used to be an amber border with a shield glyph, which read as a security
+ * warning about a threat that does not exist here. There is no threat model on a
+ * device that already holds the only copy of the data. What there is, is a scope
+ * note, and `Notice` is what a scope note looks like.
  */
 export function LocalDemoNotice({
   variant = "provider",
   className = "",
 }: {
   /** Which surface, so the sentence names what the buttons on it do. */
-  variant?: "provider" | "admin" | "legal";
+  variant?: "provider" | "admin";
   className?: string;
 }) {
   const consequence =
     variant === "admin"
       ? "Every button on this page writes to this browser. Anyone who loads it can press them, and there is no way to tell who did."
-      : variant === "provider"
-        ? "Everything you type is written to this browser, and anyone with this device can read or change it."
-        : "This page describes a local application. Nothing you enter is transmitted.";
+      : "Everything you type is written to this browser, and anyone with this device can read or change it.";
 
   return (
-    <div className={`flex items-start gap-3 border border-line bg-canvas p-4 ${className}`}>
-      <ShieldWarning size={18} className="mt-0.5 shrink-0 text-amber" aria-hidden="true" />
-      <div>
-        <p className="text-sm font-bold text-ink">A local demo, with no accounts and no server</p>
-        <p className={`mt-1 ${typeScale.body} text-muted`}>
-          {consequence} Clearing this browser&apos;s site data erases everything on this page,
-          permanently and with no recovery.
-        </p>
-      </div>
-    </div>
+    <Notice title="A local demo, with no accounts and no server" className={className}>
+      <p>
+        {consequence} Clearing this browser&apos;s site data erases everything on this page,
+        permanently and with no recovery.
+      </p>
+    </Notice>
   );
 }

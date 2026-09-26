@@ -60,6 +60,16 @@ import type { DiscoveryContext, ExperienceV2, Plan, Rejection, ReplanResult, Sto
  * The engine's own `relax` decides the rung and writes the note. This page never
  * writes a relaxation sentence, and where the note disagrees with the measured
  * hard checks it says so rather than picking one.
+ *
+ * What the visual redesign changed, and what it deliberately did not:
+ *
+ *  - The traveller's own inputs moved into two cards above the evidence, because
+ *    they were interleaved with it and a reader could not tell where their own
+ *    decisions ended and the engine's answers began.
+ *  - The feasibility meter is a gauge now. See `ananta/feasibility-meter.tsx`.
+ *  - The six replan triggers are a chip bar. See `ananta/replan/proposal.tsx`.
+ *  - Nothing below the fold moved out of the order above, and no number on this
+ *    page is typed into a string: every one is read from the run or the context.
  */
 
 const WINDOWS = [60, 90, 120, 180, 240, 360, 480];
@@ -300,100 +310,109 @@ export default function TripsPage() {
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 border-y border-line py-5 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-sm font-semibold">
-              Available time
-              <select
-                value={availableMinutes}
-                onChange={(event) => setAvailableMinutes(Number(event.target.value))}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-              >
-                {WINDOWS.map((minutes) => (
-                  <option key={minutes} value={minutes}>{minutes >= 60 ? `${minutes / 60} h` : `${minutes} min`}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold">
-              Hard budget
-              <input
-                inputMode="numeric"
-                value={budget}
-                onChange={(event) => setBudget(Number(event.target.value) || 0)}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-                aria-label="Hard budget in rupees"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Start time
-              <input
-                type="time"
-                value={startTime}
-                onChange={(event) => setStartTime(event.target.value)}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-                aria-describedby="start-time-basis"
-              />
-            </label>
-            <label className="text-sm font-semibold">
-              Return by, optional
-              <input
-                type="time"
-                value={deadline}
-                onChange={(event) => setDeadline(event.target.value)}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-                aria-label="Return by, optional"
-              />
-            </label>
-          </div>
-          <p id="start-time-basis" className="mt-2 text-xs leading-5 text-muted">
-            Every clock on this page starts at {startTime || "the start time you set"} and is computed from
-            the leg estimates above. Travel is straight-line at the manifest congestion multiplier, so a
-            clock here is a plan and not a promise from a routing service.
-          </p>
-
-          <div className="mt-4 grid gap-4 border-b border-line pb-5 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-sm font-semibold">
-              Stops you want
-              <select
-                value={idealStops}
-                onChange={(event) => setIdealStops(Number(event.target.value))}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-              >
-                {IDEAL_STOPS.map((count) => (
-                  <option key={count} value={count}>{count}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold">
-              Pace
-              <select
-                value={pace}
-                onChange={(event) => setPace(event.target.value as (typeof PACES)[number])}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-              >
-                {PACES.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold">
-              People
-              <input
-                inputMode="numeric"
-                value={partySize}
-                onChange={(event) => setPartySize(Math.max(1, Number(event.target.value) || 1))}
-                className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
-                aria-label="Party size"
-              />
-            </label>
-            <fieldset className="text-sm font-semibold">
-              <legend>Who is coming</legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Toggle on={hasToddler} onClick={() => setHasToddler(!hasToddler)}>A toddler</Toggle>
-                <Toggle on={hasElderly} onClick={() => setHasElderly(!hasElderly)}>An elderly traveller</Toggle>
-                <Toggle on={rainMode} onClick={() => setRainMode(!rainMode)}>It is raining</Toggle>
-              </div>
-            </fieldset>
-          </div>
+          {/*
+            The traveller's own inputs, in one place, before any of the evidence.
+            They were previously interleaved with the results, which made it
+            impossible to see where a decision ended and an answer began.
+          */}
+          <section className="mt-8 border border-line bg-canvas p-5" aria-labelledby="your-limits-heading">
+            <h3 id="your-limits-heading" className="text-sm font-bold uppercase tracking-[0.1em] text-muted">
+              What you are asking for
+            </h3>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="text-sm font-semibold">
+                Available time
+                <select
+                  value={availableMinutes}
+                  onChange={(event) => setAvailableMinutes(Number(event.target.value))}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                >
+                  {WINDOWS.map((minutes) => (
+                    <option key={minutes} value={minutes}>{minutes >= 60 ? `${minutes / 60} h` : `${minutes} min`}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm font-semibold">
+                Hard budget
+                <input
+                  inputMode="numeric"
+                  value={budget}
+                  onChange={(event) => setBudget(Number(event.target.value) || 0)}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                  aria-label="Hard budget in rupees"
+                />
+              </label>
+              <label className="text-sm font-semibold">
+                Start time
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                  aria-describedby="start-time-basis"
+                />
+              </label>
+              <label className="text-sm font-semibold">
+                Return by, optional
+                <input
+                  type="time"
+                  value={deadline}
+                  onChange={(event) => setDeadline(event.target.value)}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                  aria-label="Return by, optional"
+                />
+              </label>
+            </div>
+            <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="text-sm font-semibold">
+                Stops you want
+                <select
+                  value={idealStops}
+                  onChange={(event) => setIdealStops(Number(event.target.value))}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                >
+                  {IDEAL_STOPS.map((count) => (
+                    <option key={count} value={count}>{count}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm font-semibold">
+                Pace
+                <select
+                  value={pace}
+                  onChange={(event) => setPace(event.target.value as (typeof PACES)[number])}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                >
+                  {PACES.map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm font-semibold">
+                People
+                <input
+                  inputMode="numeric"
+                  value={partySize}
+                  onChange={(event) => setPartySize(Math.max(1, Number(event.target.value) || 1))}
+                  className="mt-2 block min-h-[44px] w-full rounded border border-line bg-white px-3 py-2 font-bold"
+                  aria-label="Party size"
+                />
+              </label>
+              <fieldset className="text-sm font-semibold">
+                <legend>Who is coming</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Toggle on={hasToddler} onClick={() => setHasToddler(!hasToddler)}>A toddler</Toggle>
+                  <Toggle on={hasElderly} onClick={() => setHasElderly(!hasElderly)}>An elderly traveller</Toggle>
+                  <Toggle on={rainMode} onClick={() => setRainMode(!rainMode)}>It is raining</Toggle>
+                </div>
+              </fieldset>
+            </div>
+            <p id="start-time-basis" className="mt-4 border-t border-line pt-3 text-xs leading-5 text-muted">
+              Every clock on this page starts at {startTime || "the start time you set"} and is computed from
+              the leg estimates above. Travel is straight-line at the manifest congestion multiplier, so a
+              clock here is a plan and not a promise from a routing service.
+            </p>
+          </section>
 
           {/* 1. The signature element. */}
           <div className="mt-6">
@@ -484,7 +503,7 @@ export default function TripsPage() {
             )}
           </section>
 
-          {/* 6. Six one-click controls. */}
+          {/* 6. Six one-click controls, then the proposal once one has fired. */}
           <div className="mt-6 space-y-5" id="replan">
             <TriggerRail disabled={!solved.stops.length} onFire={fire} />
             {/* 7. The proposal, only once a trigger has fired. */}

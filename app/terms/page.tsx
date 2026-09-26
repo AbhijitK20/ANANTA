@@ -1,4 +1,9 @@
-import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import {
+  LegalCaveat,
+  LegalContents,
+  LegalDocument,
+  LegalSection,
+} from "@/components/legal/document";
 
 /**
  * Terms, written to describe what the code does and nothing more.
@@ -91,66 +96,51 @@ const SECTIONS: { title: string; points: Point[] }[] = [
 ];
 
 export default function TermsPage() {
+  const contents = SECTIONS.map((section, index) => ({
+    href: `#section-${index + 1}`,
+    label: section.title,
+  })).concat([{ href: `#section-${SECTIONS.length + 1}`, label: "Contact and jurisdiction" }]);
+
   return (
-    <main id="main-content" className="min-h-screen bg-canvas">
-      <article className="mx-auto max-w-[760px] bg-white px-6 py-12 sm:px-10 lg:my-8 lg:rounded-2xl lg:px-16 lg:py-16 lg:shadow-card">
-        <a href="/" className="inline-flex items-center gap-2 text-sm font-bold text-blue">
-          <ArrowLeft size={16} aria-hidden="true" /> Ananta
-        </a>
+    <LegalDocument
+      kicker="Terms"
+      title="What using this application does and does not mean"
+      lead="Ananta is a demonstration of a fit-first local discovery engine. These terms describe what it actually does. Where it does not do something, that is said rather than left for you to discover."
+      aside={
+        <LegalCaveat>
+          This page is a product draft. It must receive legal review before any public launch. It
+          names no jurisdiction, no data controller and no compliance standard, because none has
+          been decided. Inventing them would be a false claim in the one document a reader checks
+          before trusting you.
+        </LegalCaveat>
+      }
+      closing="Last reviewed against the source on the commit that introduced this page."
+    >
+      <LegalContents items={contents} />
 
-        <p className="mt-12 text-xs font-bold uppercase tracking-[0.14em] text-blue">Terms</p>
-        <h1 className="mt-3 text-[28px] font-bold leading-[34px] tracking-[-0.04em]">
-          What using this application does and does not mean
-        </h1>
-        <p className="mt-5 text-[17px] leading-7 text-muted">
-          Ananta is a demonstration of a fit-first local discovery engine. These terms describe what
-          it actually does. Where it does not do something, that is said rather than left for you
-          to discover.
+      {SECTIONS.map((section, index) => (
+        <LegalSection key={section.title} index={index + 1} title={section.title}>
+          {section.points.map((point) => (
+            <div key={point.term}>
+              <p className="font-bold text-ink">{point.term}</p>
+              <p className="mt-1">{point.body}</p>
+            </div>
+          ))}
+        </LegalSection>
+      ))}
+
+      <LegalSection index={SECTIONS.length + 1} title="Contact and jurisdiction">
+        <p>
+          No support address is printed here because none exists. A contact address, a governing
+          jurisdiction and an entity responsible for a deployment have to be settled before a
+          public launch. The{" "}
+          <a href="/contact" className="font-bold text-blue">
+            contact page
+          </a>{" "}
+          routes each kind of message to the mechanism in the application that genuinely handles
+          it, including reporting a record that is wrong.
         </p>
-
-        <p className="mt-5 border border-line bg-canvas p-4 text-sm leading-6 text-muted">
-          <span className="font-bold text-ink">This page is a product draft.</span> It must receive
-          legal review before any public launch. It names no jurisdiction, no data controller and no
-          compliance standard, because none has been decided. Inventing them would be a false claim
-          in the one document a reader checks before trusting you.
-        </p>
-
-        {SECTIONS.map((section) => (
-          <section key={section.title} className="mt-10 border-t border-line pt-6">
-            <h2 className="text-xl font-bold tracking-[-0.03em]">{section.title}</h2>
-            <dl className="mt-4 grid gap-5">
-              {section.points.map((point) => (
-                <div key={point.term}>
-                  <dt className="text-sm font-bold text-ink">{point.term}</dt>
-                  <dd className="mt-1 text-sm leading-7 text-muted">{point.body}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
-
-        <section className="mt-10 border-t border-line pt-6">
-          <h2 className="text-xl font-bold tracking-[-0.03em]">Contact and jurisdiction</h2>
-          <p className="mt-3 text-sm leading-7 text-muted">
-            No support address is printed here because none exists. A contact address, a governing
-            jurisdiction and an entity responsible for a deployment have to be settled before a
-            public launch. The{" "}
-            <a href="/contact" className="font-bold text-blue underline">
-              contact page
-            </a>{" "}
-            routes each kind of message to the mechanism in the application that genuinely handles
-            it, including reporting a record that is wrong.
-          </p>
-        </section>
-
-        <p className="mt-10 border-t border-line pt-6 text-xs leading-5 text-muted">
-          Last reviewed against the source on the commit that introduced this page.
-        </p>
-
-        <a href="/" className="mt-10 inline-block text-sm font-bold text-blue">
-          Return to Ananta
-        </a>
-      </article>
-    </main>
+      </LegalSection>
+    </LegalDocument>
   );
 }

@@ -1,4 +1,9 @@
-import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import {
+  LegalCaveat,
+  LegalContents,
+  LegalDocument,
+  LegalSection,
+} from "@/components/legal/document";
 import { typeScale } from "@/components/ananta/tokens";
 
 /**
@@ -108,171 +113,161 @@ const THIRD_PARTIES = [
   },
 ];
 
+/** The section titles, once, so the contents list cannot fall out of step. */
+const SECTIONS = [
+  "There is no server and no account",
+  "What is stored on this device",
+  "What leaves your device",
+  "Location",
+  "Deleting everything",
+  "Children",
+  "Contact and jurisdiction",
+] as const;
+
 export default function PrivacyPage() {
   return (
-    <main id="main-content" className="min-h-screen bg-canvas">
-      <article className="mx-auto max-w-[760px] bg-white px-6 py-12 sm:px-10 lg:my-8 lg:rounded-2xl lg:px-16 lg:py-16 lg:shadow-card">
-        <a href="/" className="inline-flex items-center gap-2 text-sm font-bold text-blue">
-          <ArrowLeft size={16} aria-hidden="true" /> Ananta
-        </a>
+    <LegalDocument
+      kicker="Privacy"
+      title="What this application stores, and what it sends"
+      lead="Ananta is a local discovery demo that runs entirely in your browser. It has no account system, no server of its own, and no database. Everything it knows about you is in this browser, and clearing your browsing data deletes all of it."
+      aside={
+        <LegalCaveat>
+          This page is a product draft. It describes what the code actually does today, and it must
+          receive legal review before any public launch. It does not name a jurisdiction, a data
+          controller or a compliance standard, because none of those has been decided and inventing
+          them would be a false claim.
+        </LegalCaveat>
+      }
+      closing="Last reviewed against the source on the commit that introduced this page. The key list is generated from the repository, so a new stored key without a line here is a defect in this page rather than a new privacy practice."
+    >
+      <LegalContents
+        items={SECTIONS.map((title, index) => ({ href: `#section-${index + 1}`, label: title }))}
+      />
 
-        <p className="mt-12 text-xs font-bold uppercase tracking-[0.14em] text-blue">Privacy</p>
-        <h1 className="mt-3 text-[28px] font-bold leading-[34px] tracking-[-0.04em]">
-          What this application stores, and what it sends
-        </h1>
-        <p className="mt-5 text-[17px] leading-7 text-muted">
-          Ananta is a local discovery demo that runs entirely in your browser. It has no account
-          system, no server of its own, and no database. Everything it knows about you is in this
-          browser, and clearing your browsing data deletes all of it.
+      <LegalSection index={1} title={SECTIONS[0]}>
+        <p>
+          There is nowhere for your data to go. Opening this page does not create an account,
+          identify you, or start a session. There is no cookie that identifies a visitor, and no
+          analytics, tracking or advertising script of any kind.
         </p>
-
-        <p className="mt-5 border border-line bg-canvas p-4 text-sm leading-6 text-muted">
-          <span className="font-bold text-ink">This page is a product draft.</span> It describes what
-          the code actually does today, and it must receive legal review before any public launch.
-          It does not name a jurisdiction, a data controller or a compliance standard, because none
-          of those has been decided and inventing them would be a false claim.
+        <p>
+          The consequence, stated plainly: because there is no server, an operator of a
+          deployment of this application cannot see anything you do. A provider whose listing you
+          view sees nothing. Your saved places and your draft plan exist on this device and on no
+          other.
         </p>
+      </LegalSection>
 
-        <Section title="There is no server and no account">
-          <p>
-            There is nowhere for your data to go. Opening this page does not create an account,
-            identify you, or start a session. There is no cookie that identifies a visitor, and no
-            analytics, tracking or advertising script of any kind.
-          </p>
-          <p>
-            The consequence, stated plainly: because there is no server, an operator of a
-            deployment of this application cannot see anything you do. A provider whose listing you
-            view sees nothing. Your saved places and your draft plan exist on this device and on no
-            other.
-          </p>
-        </Section>
-
-        <Section title="What is stored on this device">
-          <p>
-            The twelve keys below are every place this application writes to browser storage. The
-            list was read out of the source, not written by hand, so it cannot drift from what the
-            code does.
-          </p>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-line">
-                  <th scope="col" className="py-2 pr-3 text-xs font-bold uppercase tracking-[0.08em] text-muted">
-                    Key
-                  </th>
-                  <th scope="col" className="py-2 pr-3 text-xs font-bold uppercase tracking-[0.08em] text-muted">
-                    What it holds
-                  </th>
+      <LegalSection index={2} title={SECTIONS[1]}>
+        <p>
+          The {STORED.length} keys below are every place this application writes to browser
+          storage. The list was read out of the source, not written by hand, so it cannot drift
+          from what the code does.
+        </p>
+        <div className="mt-2 overflow-x-auto rounded border border-line">
+          <table className="w-full border-collapse text-left">
+            <caption className="sr-only">Every browser storage key, what it holds, and how long it lives</caption>
+            <thead>
+              <tr className="border-b border-line bg-canvas">
+                <th scope="col" className="px-4 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-muted">
+                  Key
+                </th>
+                <th scope="col" className="px-4 py-2.5 text-xs font-bold uppercase tracking-[0.08em] text-muted">
+                  What it holds
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {STORED.map((row) => (
+                <tr key={row.key} className="border-b border-line align-top last:border-b-0">
+                  <td className="w-[38%] px-4 py-3">
+                    <code className="text-[13px] font-bold text-ink">{row.key}</code>
+                    <span className={`mt-1 block ${typeScale.micro} text-muted`}>{row.life}</span>
+                  </td>
+                  <td className="px-4 py-3 text-body leading-6 text-muted">{row.what}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {STORED.map((row) => (
-                  <tr key={row.key} className="border-b border-line align-top">
-                    <td className="py-3 pr-3">
-                      <code className="text-[13px] font-bold text-ink">{row.key}</code>
-                      <span className={`mt-1 block ${typeScale.micro} text-muted`}>{row.life}</span>
-                    </td>
-                    <td className="py-3 pr-3 text-sm leading-6 text-muted">{row.what}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-4">
-            <span className="font-bold text-ink">Two more, held only for the tab.</span>{" "}
-            A street route you asked for is cached under a key beginning{" "}
-            <code className="text-[13px] font-bold">ananta-route-</code>, one per origin,
-            destination and travel mode, so the same route is not fetched twice. It sits in
-            session storage, which the browser discards when you close the tab, and it never
-            includes anything about you beyond the two coordinates you selected.
-          </p>
-        </Section>
-
-        <Section title="What leaves your device">
-          <p>
-            Nothing you type, save, plan or report is transmitted. The application makes no
-            requests carrying anything you entered. What it does request is map and routing data
-            from four public services, and those requests necessarily reveal your approximate
-            location and your browser&apos;s IP address to the operator of each one.
-          </p>
-          <ul className="mt-4 grid gap-3">
-            {THIRD_PARTIES.map((party) => (
-              <li key={party.who} className="border border-line p-4">
-                <p className="text-sm font-bold text-ink">{party.who}</p>
-                <p className="mt-1 text-sm leading-6 text-muted">{party.what}</p>
-                <p className="mt-1 text-xs leading-5 text-muted">When: {party.when}</p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4">
-            None of these four is a data processor for anything you do in the application. They
-            receive a map tile request or a pair of coordinates and nothing about your plan, your
-            saves or your identity.
-          </p>
-        </Section>
-
-        <Section title="Location">
-          <p>
-            This application never asks for your location permission. The map shows a fixed
-            starting point that is part of the demo, and the origin used for travel-time estimates
-            is a constant in the code rather than a reading from you. If a future version asks for
-            real location, that is a change that would need to be described here first.
-          </p>
-        </Section>
-
-        <Section title="Deleting everything">
-          <p>
-            Clearing this site&apos;s data in your browser removes all twelve keys above, and
-            nothing is retained anywhere else because nothing was transmitted. There is no account
-            to close and no unsubscribe, because there is no server to ask.
-          </p>
-          <p>
-            Your browser&apos;s own storage inspection tools will show the same twelve keys, which
-            you can delete individually or all at once.
-          </p>
-        </Section>
-
-        <Section title="Children">
-          <p>
-            This is a demonstration application built to show a decision engine. It is not directed
-            at children, it collects nothing from anyone, and it has no mechanism to identify a
-            user of any age.
-          </p>
-        </Section>
-
-        <Section title="Contact and jurisdiction">
-          <p>
-            No contact address is printed here because none exists yet. A support address, a data
-            controller and a governing jurisdiction all have to be settled before a public launch,
-            and printing invented ones would be the same kind of claim this page exists to avoid.
-            The{" "}
-            <a href="/contact" className="font-bold text-blue underline">
-              contact page
-            </a>{" "}
-            routes every kind of message to the mechanism in the application that actually handles
-            it, and says which is which.
-          </p>
-        </Section>
-
-        <p className="mt-10 border-t border-line pt-6 text-xs leading-5 text-muted">
-          Last reviewed against the source on the commit that introduced this page. The key list is
-          generated from the repository, so a new stored key without a line here is a defect in
-          this page rather than a new privacy practice.
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>
+          <span className="font-bold text-ink">Two more, held only for the tab.</span> A street
+          route you asked for is cached under a key beginning <code className="text-[13px] font-bold">ananta-route-</code>,
+          one per origin, destination and travel mode, so the same route is not fetched twice. It
+          sits in session storage, which the browser discards when you close the tab, and it never
+          includes anything about you beyond the two coordinates you selected.
         </p>
+      </LegalSection>
 
-        <a href="/" className="mt-10 inline-block text-sm font-bold text-blue">
-          Return to Ananta
-        </a>
-      </article>
-    </main>
-  );
-}
+      <LegalSection index={3} title={SECTIONS[2]}>
+        <p>
+          Nothing you type, save, plan or report is transmitted. The application makes no
+          requests carrying anything you entered. What it does request is map and routing data
+          from four public services, and those requests necessarily reveal your approximate
+          location and your browser&apos;s IP address to the operator of each one.
+        </p>
+        <ul className="m-0 grid list-none gap-3 p-0">
+          {THIRD_PARTIES.map((party) => (
+            <li key={party.who} className="rounded border border-line p-4">
+              <p className="text-sm font-bold text-ink">{party.who}</p>
+              <p className="mt-1 text-body leading-6 text-muted">{party.what}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">When: {party.when}</p>
+            </li>
+          ))}
+        </ul>
+        <p>
+          None of these four is a data processor for anything you do in the application. They
+          receive a map tile request or a pair of coordinates and nothing about your plan, your
+          saves or your identity.
+        </p>
+      </LegalSection>
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-10 border-t border-line pt-6">
-      <h2 className="text-xl font-bold tracking-[-0.03em]">{title}</h2>
-      <div className="mt-3 grid gap-3 text-sm leading-7 text-muted">{children}</div>
-    </section>
+      <LegalSection index={4} title={SECTIONS[3]}>
+        <p>
+          This application never asks for your location permission. The map shows a fixed
+          starting point that is part of the demo, and the origin used for travel-time estimates
+          is a constant in the code rather than a reading from you. If a future version asks for
+          real location, that is a change that would need to be described here first.
+        </p>
+      </LegalSection>
+
+      <LegalSection index={5} title={SECTIONS[4]}>
+        <p>
+          Clearing this site&apos;s data in your browser removes all {STORED.length} keys above,
+          and nothing is retained anywhere else because nothing was transmitted. There is no
+          account to close and no unsubscribe, because there is no server to ask.
+        </p>
+        <p>
+          Your browser&apos;s own storage inspection tools will show the same {STORED.length} keys,
+          which you can delete individually or all at once. The{" "}
+          <a href="/profile" className="font-bold text-blue">
+            profile page
+          </a>{" "}
+          has a control that names each key it removes.
+        </p>
+      </LegalSection>
+
+      <LegalSection index={6} title={SECTIONS[5]}>
+        <p>
+          This is a demonstration application built to show a decision engine. It is not directed
+          at children, it collects nothing from anyone, and it has no mechanism to identify a
+          user of any age.
+        </p>
+      </LegalSection>
+
+      <LegalSection index={7} title={SECTIONS[6]}>
+        <p>
+          No contact address is printed here because none exists yet. A support address, a data
+          controller and a governing jurisdiction all have to be settled before a public launch,
+          and printing invented ones would be the same kind of claim this page exists to avoid.
+          The{" "}
+          <a href="/contact" className="font-bold text-blue">
+            contact page
+          </a>{" "}
+          routes every kind of message to the mechanism in the application that actually handles
+          it, and says which is which.
+        </p>
+      </LegalSection>
+    </LegalDocument>
   );
 }

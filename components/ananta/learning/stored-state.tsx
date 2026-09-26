@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
 import { LEARNER_KEY, resetLearner } from "@/components/ananta/learning";
 import { AVAILABILITY_SNAPSHOT_KEY } from "@/components/ananta/learning/availability-snapshot";
-import { depth, depthShadow } from "@/components/ananta/tokens";
+import { CONFIDENCE_TONE, depth, depthShadow } from "@/components/ananta/tokens";
 import { readSaved } from "@/lib/saved";
 import { readPlan, PLAN_STORAGE_KEY } from "@/lib/plan";
 import { readReports, REPORTS_KEY } from "@/lib/reports";
@@ -106,11 +106,11 @@ export function StoredStateControl() {
 
   return (
     <section
-      className={`mt-6 border border-line p-5 ${depth.raised} ${depthShadow.raised}`}
+      className={`mt-6 rounded-card border border-line bg-white p-5 sm:p-6 ${depth.raised} ${depthShadow.raised}`}
       aria-labelledby="stored-heading"
     >
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">What you can delete</p>
-      <h2 id="stored-heading" className="mt-2 text-xl font-bold tracking-[-0.03em]">
+      <h2 id="stored-heading" className="mt-2 text-title tracking-[-0.03em] text-ink">
         Everything this app stored on this device
       </h2>
       <p className="mt-2 max-w-[68ch] text-sm leading-6 text-muted">
@@ -119,16 +119,20 @@ export function StoredStateControl() {
         reports. Nothing is sent anywhere, because there is nowhere to send it.
       </p>
 
-      <ul className="mt-4 space-y-2">
+      {/* A list, not a paragraph, because the reader is checking one thing per
+          line: is this key present or not. The key is printed because a delete
+          that does not name what it deletes is not auditable. */}
+      <ul className="mt-5 divide-y divide-line border border-line">
         {STORED_KEYS.map((entry) => {
           const present = stored.some((item) => item.key === entry.key);
           return (
-            <li key={entry.key} className="flex items-start gap-2 text-sm leading-6">
-              <span aria-hidden="true" className={present ? "text-green" : "text-muted"}>
-                {present ? "stored" : "empty"}
-              </span>
-              <span className={present ? "" : "text-muted"}>
-                {entry.label}: {present ? "present on this device" : "nothing stored"}
+            <li key={entry.key} className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">{entry.label}</p>
+                <code className="text-[11px] text-muted">{entry.key}</code>
+              </div>
+              <span className={`chip ${present ? CONFIDENCE_TONE.verified : CONFIDENCE_TONE.unverified}`}>
+                {present ? "Stored" : "Empty"}
               </span>
             </li>
           );
@@ -148,7 +152,7 @@ export function StoredStateControl() {
           type="button"
           onClick={clearAll}
           disabled={stored.length === 0}
-          className="inline-flex min-h-[44px] items-center gap-2 border border-amber bg-amberSoft px-4 py-2 text-sm font-bold text-amber disabled:cursor-not-allowed disabled:border-line disabled:bg-canvas disabled:text-muted"
+          className="inline-flex min-h-[44px] items-center gap-2 border border-amber px-4 py-2 text-sm font-bold text-amber transition-colors duration-120 hover:bg-amberSoft disabled:cursor-not-allowed disabled:border-line disabled:text-muted"
         >
           <Trash size={16} /> Clear everything stored here
         </button>
@@ -161,7 +165,7 @@ export function StoredStateControl() {
 
       {outcome ? (
         <p
-          className="mt-3 border border-line bg-canvas p-3 text-sm leading-6"
+          className="mt-4 border border-line border-l-blue bg-canvas p-3 text-sm leading-6"
           role="status"
           aria-live="polite"
         >

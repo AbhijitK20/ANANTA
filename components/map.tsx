@@ -9,23 +9,118 @@ import { depth } from "@/components/ananta/tokens";
 import type { ExperienceV2 } from "@/lib/engine";
 
 /**
- * Map, in the spatial round. The map stays 2D: a tilted basemap is a navigation
- * hazard and MapLibre owns its own render loop. Depth here is pin state only,
- * per contracts section 7.
+ * The explore map. 2D basemap, spatial markers, and nothing else.
  *
- * The one thing to be careful about: the MapLibre container and its controls are
- * NOT inside the 3D `.stage` container. A `perspective` or `preserve-3d` on an
- * ancestor of the canvas transforms the canvas itself and the navigation
- * controls drift out of alignment. Only the marker elements, which MapLibre
- * positions in its own absolutely-placed marker pane, carry a depth class, and
- * the pane is already outside the canvas transform.
+ * The map stays 2D: a tilted basemap is a navigation hazard and MapLibre owns its
+ * own render loop, per `UI-UX-Fix-Prompts/00-CONTRACTS.md` section 7.
  *
- * Rain desaturates the map, and heavy rain and storm blur it, because that is
- * what rain does to distance perception and it makes the straight-line estimate
- * label feel necessary rather than pedantic.
+ * **Where the lift actually comes from.** A MapLibre marker element carries an
+ * inline `transform` for positioning, so a depth class on that same element is
+ * inert: the inline value wins. Every marker is therefore built as three nested
+ * nodes. The outer div is the one MapLibre positions. The middle div does the
+ * centring with negative margins rather than a transform, again so it does not
+ * fight the inline positioning. The button on the inside is the only element
+ * that carries a depth class, and its parent holds `perspective: 1200px`, so
+ * `translateZ` is the button's own transform and nothing in the canvas is
+ * transformed. No MapLibre canvas or control is inside a 3D container.
+ *
+ * At a 1200px perspective an 8px lift is a 0.7 percent scale change, so the
+ * shadow and the border are what a reader actually sees. That is deliberate: the
+ * depth classes are class names, so the reduced-motion block in
+ * `app/globals.css` neutralises the transform and the shadow, the ring and the
+ * wording all survive without it.
+ *
+ * **Marker styling lives here, in one scoped block, rather than in
+ * `app/globals.css`.** Two reasons. The stylesheet is session 1's, and the
+ * explore marker skin is this screen's. And the colours are the ratified palette
+ * either way: the surfaces and ink are the `--color-*` custom properties, and
+ * the status tone is a real Tailwind utility so it reads from `tailwind.config.ts`
+ * instead of a hex typed here.
  */
 
 const MAX_MARKERS = 250;
+
+/** The status tone as a real utility, so the colour comes from the config. */
+const PIN_TONE: Record<ExperienceV2["statusTone"], string> = {
+  blue: "bg-blue",
+  green: "bg-green",
+  amber: "bg-amber",
+};
+
+/** A cluster at this size reads as a headline number rather than a count. */
+const WIDE_CLUSTER = 25;
+
+const MARKER_CSS = `
+/*
+ * MapLibre centres the element it is given with translate(-50%,-50%) and writes
+ * that as an inline transform, so the anchor is a real 46px box and does no
+ * centring of its own. The offset div is what the depth projects inside, and the
+ * button inside that is the only node carrying a depth class.
+ */
+.ananta-anchor { width: 46px; height: 46px; }
+.ananta-offset {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+.ananta-cluster {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border: 2.5px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-blue);
+  color: var(--color-surface);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.ananta-cluster[data-size="wide"] { min-width: 44px; height: 44px; font-size: 13px; }
+.ananta-cluster:hover { background: var(--color-ink); }
+.ananta-cluster::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--color-blue);
+  opacity: 0.16;
+}
+.ananta-cluster[data-size="wide"]::after { inset: -8px; }
+.ananta-pin {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 3px solid var(--color-surface);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ananta-pin[data-selected="true"] { width: 20px; height: 20px; border-width: 3.5px; }
+.ananta-pin[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 2px solid var(--color-blue);
+  border-radius: 999px;
+  opacity: 0.4;
+}
+.ananta-pin[data-refused="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border: 1.5px dashed var(--color-muted);
+  border-radius: 999px;
+}
+`;
 
 type Props = {
   records: ExperienceV2[];
@@ -113,19 +208,34 @@ export function ExperienceMap({ records, selectedId, onSelect, route, rejectedId
       zoom,
     )
       .map((entry) => {
+        const anchor = document.createElement("div");
+        anchor.className = "ananta-anchor";
+        // MapLibre gives the element it positions `role="button"` and an
+        // `aria-label` of "Marker", and `setPopup` makes it a tab stop. All three
+        // are wrong once the real control is a button inside it, so the anchor is
+        // taken out of the accessibility tree and the tab order. Clicks still
+        // bubble to it, so the popup toggle keeps working.
+        anchor.setAttribute("role", "presentation");
+        const offset = document.createElement("div");
+        offset.className = "ananta-offset";
+        anchor.appendChild(offset);
+
         if (entry.kind === "cluster") {
           const element = document.createElement("button");
           element.type = "button";
           // A cluster already means "a group at one place", so elevation
           // reinforces a meaning that exists rather than inventing one.
-          element.className = `cluster-badge ${depth.raised}`;
-          element.textContent = String(entry.ids.length);
+          element.className = `ananta-cluster ${depth.raised}`;
+          element.dataset.size = entry.ids.length >= WIDE_CLUSTER ? "wide" : "small";
+          element.textContent = entry.ids.length.toLocaleString("en-IN");
           element.setAttribute("aria-label", `${entry.ids.length} experiences in this area. Zoom in to expand.`);
           element.addEventListener("click", () =>
             map.flyTo({ center: entry.coordinates, zoom: Math.min(zoom + 2.5, 15), duration: 650 }),
           );
-          return new maplibregl.Marker({ element }).setLngLat(entry.coordinates).addTo(map);
+          offset.appendChild(element);
+          return new maplibregl.Marker({ element: anchor }).setLngLat(entry.coordinates).addTo(map);
         }
+
         const record = byId.get(entry.id);
         if (!record) return null;
 
@@ -143,14 +253,29 @@ export function ExperienceMap({ records, selectedId, onSelect, route, rejectedId
           : isRefused
             ? depth.recessed
             : depth.raised;
-        element.className = `place-pin ${depthClass}`;
-        element.style.setProperty("--pin", record.statusTone === "amber" ? "#A15C07" : record.statusTone === "green" ? "#087443" : "#175CD3");
+        // The tone is a real utility so the colour comes from the config. The
+        // fallback is unreachable on typed data and exists so a record with an
+        // unexpected tone still gets a visible pin rather than a transparent one.
+        element.className = `ananta-pin ${PIN_TONE[record.statusTone] ?? "bg-blue"} ${depthClass}`;
+        element.dataset.selected = isSelected ? "true" : "false";
+        element.dataset.refused = isRefused ? "true" : "false";
         const refusedNote = isRefused ? " The gate did not select this." : "";
-        element.setAttribute("aria-label", `${record.name}, ${record.area}, ${record.priceInr === 0 ? "free" : `₹${record.priceInr}`}.${refusedNote} Select to see why it ranks here.`);
-        const popup = new maplibregl.Popup({ offset: 18, closeButton: true }).setDOMContent(
-          popupBody(record.name, `${record.area} · ${record.priceInr === 0 ? "Free" : `₹${record.priceInr.toLocaleString("en-IN")}`} · ${record.durationMinutes} min visit`),
+        element.setAttribute(
+          "aria-label",
+          `${record.name}, ${record.area}, ${record.priceInr === 0 ? "free" : `₹${record.priceInr}`}.${refusedNote} Select to see why it ranks here.`,
         );
-        const marker = new maplibregl.Marker({ element }).setLngLat(record.coordinates).setPopup(popup).addTo(map);
+        const popup = new maplibregl.Popup({ offset: 18, closeButton: true }).setDOMContent(
+          popupBody(
+            record.name,
+            `${record.area} · ${record.priceInr === 0 ? "Free" : `₹${record.priceInr.toLocaleString("en-IN")}`} · ${record.durationMinutes} min visit`,
+          ),
+        );
+        offset.appendChild(element);
+        const marker = new maplibregl.Marker({ element: anchor })
+          .setLngLat(record.coordinates)
+          .setPopup(popup)
+          .addTo(map);
+        anchor.removeAttribute("tabindex");
         const select = () => onSelectRef.current(record.id);
         element.addEventListener("click", select);
         return marker;
@@ -249,18 +374,28 @@ export function ExperienceMap({ records, selectedId, onSelect, route, rejectedId
 
   return (
     <div className="absolute inset-0">
+      <style>{MARKER_CSS}</style>
       {/* The MapLibre container and its navigation control stay OUTSIDE the 3D
           stage. A perspective on this element would transform the canvas and
           drift the zoom controls. Only the marker elements carry depth. */}
       <div ref={containerRef} className={`absolute inset-0 ${weatherClass}`} />
-      <p className="pointer-events-none absolute bottom-3 left-3 max-w-[280px] rounded-md border border-line bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-muted shadow-card">
-        The ranked list below is the accessible path. Every pin here is also a labelled button you can tab to.
-      </p>
-      {dropped > 0 && (
-        <p className="pointer-events-none absolute left-3 top-3 rounded-md border border-amber bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-amber shadow-card">
-          Showing the top {MAX_MARKERS} of {records.length} passing records. {dropped} more are in the list and the show-more control.
+      {/* A scrim, so the floating glass controls above the map keep their
+          contrast over whatever tile happens to be under them. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/85 to-transparent" />
+      {/* Both notes live in one bottom-left column, so the floating filter panel
+          can never sit on top of a disclosure. */}
+      <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex max-w-[21rem] flex-col items-start gap-2">
+        {dropped > 0 && (
+          <p className="rounded-md border border-amber bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-amber shadow-card">
+            Showing the top {MAX_MARKERS} of {records.length} passing records. {dropped} more are in the list and the
+            show-more control.
+          </p>
+        )}
+        <p className="rounded-md border border-line bg-white/90 px-3 py-2 text-[11px] font-semibold leading-4 text-muted shadow-card backdrop-blur-sm">
+          The ranked list beside the map is the accessible path. Every pin here is also a labelled button you can
+          tab to.
         </p>
-      )}
+      </div>
       {tilesFailed && (
         <div role="status" className="absolute right-5 top-5 z-10 border border-amber bg-white p-3 text-xs font-semibold text-ink shadow-card">
           Map tiles could not load right now. The ranked list beside the map stays available, and results are unaffected.
