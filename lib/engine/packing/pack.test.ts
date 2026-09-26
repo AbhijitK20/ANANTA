@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import type { DiscoveryContext } from "@/lib/engine/contracts";
 import { DEFAULT_BUFFER_MINUTES } from "@/lib/engine/feasibility";
 import { localMinutesOfDay, objectiveFast } from "@/lib/engine/scoring";
 import { parsePrice } from "@/lib/plan";
@@ -10,6 +11,44 @@ import { buildStops, pack, travelWindowMinutes, type PackOptions } from "./pack"
 const ctx = makeContext();
 const records = makeRecords();
 const options = makeOptions(records, ctx);
+
+/** Every order of `size` distinct ids. 7 taken 3 at a time is 210 orders. */
+function allOrders(pool: string[], size: number): string[][] {
+  const out: string[][] = [];
+  const walk = (prefix: string[], rest: string[]) => {
+    if (prefix.length === size) {
+      out.push([...prefix]);
+      return;
+    }
+    for (let i = 0; i < rest.length; i += 1) {
+      walk([...prefix, rest[i]], [...rest.slice(0, i), ...rest.slice(i + 1)]);
+    }
+  };
+  walk([], pool);
+  return out;
+}
+
+/**
+ * Whether an order fits both halves of the traveller's constraint pair. Read off
+ * the same `buildStops` the packer builds from, which enforces neither the
+ * window nor the budget, so every reference in this file filters on this.
+ */
+function fits(order: string[], context: DiscoveryContext, packOptions: PackOptions): boolean {
+  const stops = buildStops(order, context, packOptions);
+  const minutes = stops.reduce((sum, stop) => sum + stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes, 0);
+  const cost = stops.reduce((sum, stop) => sum + stop.costInr, 0);
+  return minutes <= context.availableMinutes && cost <= context.budgetInr;
+}
+
+/** Best objective over the orders of `size` ids that actually fit. */
+function bestFeasible(pool: string[], size: number, context: DiscoveryContext, packOptions: PackOptions): number {
+  let best = Number.NEGATIVE_INFINITY;
+  for (const order of allOrders(pool, size)) {
+    if (!fits(order, context, packOptions)) continue;
+    best = Math.max(best, objectiveFast(buildStops(order, context, packOptions), context).value);
+  }
+  return best;
+}
 
 describe("buildStops", () => {
   it("assigns arriveBy in strictly increasing order", () => {
@@ -113,9 +152,13 @@ describe("pack", () => {
       `${Math.round(minutesOf(result))} of your ${ctx.availableMinutes} minutes`,
     );
     expect(result.relaxationNote).toContain(`about ${Math.round(costOf(result))} of ${ctx.budgetInr}`);
-    // And the trim is on the record rather than hidden behind a sentence about
-    // relaxing, because the traveller is losing stops they asked for.
-    expect(result.relaxationNote).toMatch(/\d+ later stops? (was|were) dropped to fit\./);
+    // The minutes the note reports are the plan's own minutes, and they are
+    // inside the window the note names. That is the whole honest contract: the
+    // search fits the plan itself, so there is usually no trim left to report,
+    // and a note that claimed a trim had happened would be inventing it. The
+    // fixture that does get trimmed asserts the clause, in the pin test below.
+    expect(result.relaxationNote).not.toMatch(/dropped to fit/);
+    expect(Math.round(minutesOf(result))).toBeLessThanOrEqual(ctx.availableMinutes);
     // The old note read "Nothing was relaxed. All hard constraints held for N
     // stops inside the M minute window". `pack` runs no hard check at all, so
     // that sentence asserted the output of a computation that does not exist in
@@ -126,9 +169,9 @@ describe("pack", () => {
   });
 
   it("reports non zero search stats so the debug view is not all zeros", () => {
-    // A tight grid of 16 candidates with room for 4 stops. The cluster peel and the
-    // beam cannot nail the optimum here, so LAHC genuinely finds better plans and
-    // the count of accepted improvements is real work rather than a decoration.
+    // A tight grid of 16 candidates with room for 4 stops. The cluster peel and
+    // the beam cannot nail the optimum here, so the instance is worth packing
+    // several times over to show the counters are driven by real work.
     const pool = makeGrid(16, 0.03);
     const searchCtx = makeContext({ idealStops: 4, minStops: 2, availableMinutes: 600 });
     const improvements = [1, 7, 1026, 4242, 31337, 55].map(
@@ -137,7 +180,11 @@ describe("pack", () => {
     for (const stats of improvements) {
       expect(stats.candidates).toBe(16);
       expect(stats.evaluated).toBeGreaterThan(100);
-      expect(stats.acceptedImprovements).toBeGreaterThan(0);
+      // Not a specific count, and not a floor. The search is window aware now,
+      // so on an instance it can solve it converges on the first plan and takes
+      // nothing. The counter is worth asserting only as a bound: it cannot run
+      // ahead of the evaluations that produced it.
+      expect(stats.acceptedImprovements).toBeLessThanOrEqual(stats.evaluated);
     }
     // And the same instance reports the same numbers twice.
     expect(pack(pool, searchCtx, makeOptions(pool, searchCtx, { seed: 1026 })).searchStats).toEqual(
@@ -145,26 +192,60 @@ describe("pack", () => {
     );
   });
 
-  it("reports the improvements the local search accepted, bounded by the work it did", () => {
-    // The count is not a decoration either way. Before the objective was
-    // corrected to the spec this fixture was a local optimum and the honest
-    // reading was a zero; it now finds 4 real improvements. The invariant worth
-    // keeping is not the number but that the counter cannot run ahead of the
-    // evaluations that produced it, which is what makes it evidence of work.
+  it("bounds the accepted improvements by the evaluations that produced them", () => {
+    // The invariant worth keeping is not the number but that the counter cannot
+    // run ahead of the work, which is what makes it evidence of work rather than
+    // a decoration. It reads 0 on this fixture, and nothing in the contract makes
+    // a converged search report anything else, so no count is pinned here.
+    expect(result.searchStats.candidates).toBe(records.length);
     expect(result.searchStats.evaluated).toBeGreaterThan(100);
-    expect(result.searchStats.acceptedImprovements).toBeGreaterThan(0);
     expect(result.searchStats.acceptedImprovements).toBeLessThanOrEqual(result.searchStats.evaluated);
   });
 
-  it("never repeats a stop, and reports the trim that brought the plan inside the window", () => {
-    // Three stops of this fixture do not fit 300 minutes and 2000 rupees at
-    // once, so the packer returns fewer than the stop budget asked for. What it
-    // must not do is exceed the budget, repeat a stop, or lose count of what it
-    // cut on the way.
+  it("never repeats a stop, and never returns more stops than the budget asked for", () => {
+    // The window is inside the search now, so the plan the packer returns is one
+    // that already fits and the stop budget is a cap rather than a hint. What it
+    // must not do is repeat a stop or overshoot the count.
     expect(noRepeats(result)).toBe(true);
     expect(result.stops.length).toBeGreaterThan(0);
     expect(result.stops.length).toBeLessThanOrEqual(ctx.idealStops);
-    expect(result.relaxationNote).toMatch(/\d+ later stops? (was|were) dropped to fit\./);
+  });
+
+  it("packs 3 stops on the default window, where a feasible 3 stop plan exists", () => {
+    // The search optimises inside the window rather than over orders the window
+    // cannot hold and then trimming the surplus off the tail. The old packer
+    // chose 5 stops and 426 minutes for this 300 minute window and handed the
+    // traveller 2 of them; the three stops of 214 minutes it returns now are the
+    // plan the window asked for, and all three of them are kept.
+    expect(ctx.idealStops).toBe(3);
+    expect(result.stops).toHaveLength(3);
+    expect(minutesOf(result)).toBeLessThanOrEqual(ctx.availableMinutes);
+    expect(costOf(result)).toBeLessThanOrEqual(ctx.budgetInr);
+    // Not vacuous. Every feasible 2 stop order of this fixture scores below the
+    // 3 stop plan, so settling for 2 would be a real loss and not a wash.
+    expect(result.objective.value).toBeGreaterThan(bestFeasible(records.map((record) => record.id), 2, ctx, options));
+  });
+
+  it("gives up the better scoring plan for one minute of overflow", () => {
+    // The dominance test. The best of the 210 three stop orders of this slice
+    // needs 217 minutes. It fits a 217 minute window exactly and misses a 216
+    // minute one by a minute, and it scores higher than anything that does fit
+    // the 216 minute window. So on the tighter window the search hands up the
+    // better plan, which is what `1000 * overflowFraction` is for: a plan that
+    // does not fit the traveller's afternoon is not a slightly worse plan.
+    const pool = makeRecords().slice(0, 7);
+    const insideCtx = makeContext({ idealStops: 3, minStops: 2, availableMinutes: 217, budgetInr: 20000 });
+    const outsideCtx = makeContext({ idealStops: 3, minStops: 2, availableMinutes: 216, budgetInr: 20000 });
+    const inside = pack(pool, insideCtx, makeOptions(pool, insideCtx));
+    const outside = pack(pool, outsideCtx, makeOptions(pool, outsideCtx));
+    // The plan given up is the better one, and it is out by minutes not rupees.
+    expect(minutesOf(inside)).toBeGreaterThan(outsideCtx.availableMinutes);
+    expect(minutesOf(inside)).toBeLessThanOrEqual(insideCtx.availableMinutes);
+    // "Just outside", so the penalty has to be doing the work and not the margin.
+    expect(minutesOf(inside) - outsideCtx.availableMinutes).toBeLessThanOrEqual(5);
+    // The tighter window still returns a plan that fits, and it scores lower.
+    expect(minutesOf(outside)).toBeLessThanOrEqual(outsideCtx.availableMinutes);
+    expect(inside.objective.value).toBeGreaterThan(outside.objective.value);
   });
 
   it("keeps the plan inside the traveller's window and budget", () => {
@@ -221,18 +302,21 @@ describe("pack", () => {
     expect(idsOf(pinned)).toContain("r09");
   });
 
-  it("loses an explicitly pinned stop to the trailing trim, which is a pack.ts defect", () => {
-    // `pack` prepends the pin to the order, but the beam is then free to replace
-    // the whole order and `fitToWindow` drops stops from the tail, so a pin that
-    // ended up trailing is trimmed away. A pin is the one thing the traveller
-    // said they must have, and the note does not mention it, so this is a
-    // defect and not the contract.
-    // ponytail: pins the current ceiling. Upgrade path is for `fitToWindow` to
-    // spare `ctx.profile.pins`, or for `pack` to re-insert them after the trim;
-    // this test then goes red and the contract above becomes unconditional.
-    const pinned = pack(records, makeContext({ profile: { ...ctx.profile, pins: ["r09"] } }), options);
-    expect(pinned.relaxationNote).toMatch(/2 later stops were dropped to fit\./);
-    expect(idsOf(pinned)).not.toContain("r09");
+  it("keeps an explicitly pinned stop when the window is too tight, and names what it dropped", () => {
+    // The tightest fixture in this file, and the only one where `fitToWindow`
+    // still has to cut: a 200 minute window and 1000 rupees cannot hold three
+    // stops, so two are dropped to leave the pin. A pin is the one thing the
+    // traveller said they must have, so it is cut last, and the note has to say
+    // out loud what went instead of hiding it behind a sentence about relaxing.
+    const tightCtx = makeContext({ availableMinutes: 200, budgetInr: 1000, profile: { ...ctx.profile, pins: ["r12"] } });
+    const pinned = pack(records, tightCtx, options);
+    expect(idsOf(pinned)).toContain("r12");
+    expect(pinned.relaxationNote).toMatch(/\d+ later stops? (was|were) dropped to fit\./);
+    // And what survives is still a plan that fits, which is the point of cutting
+    // the unpinned stops rather than the pinned one.
+    expect(minutesOf(pinned)).toBeLessThanOrEqual(tightCtx.availableMinutes);
+    expect(costOf(pinned)).toBeLessThanOrEqual(tightCtx.budgetInr);
+    expect(pinned.relaxationNote).not.toMatch(/still does not fit/);
   });
 
   it("keeps the plan inside a larger window when the stop budget exceeds the cluster count", () => {
@@ -246,21 +330,24 @@ describe("pack", () => {
     expect(roomy.stops.length).toBeLessThanOrEqual(roomyCtx.idealStops);
     expect(minutesOf(roomy)).toBeLessThanOrEqual(roomyCtx.availableMinutes);
     expect(costOf(roomy)).toBeLessThanOrEqual(roomyCtx.budgetInr);
-    expect(roomy.relaxationNote).toMatch(/\d+ later stops? (was|were) dropped to fit\./);
+    // Four stops at 314 minutes fit 600, so there is nothing to trim. The note
+    // claiming a trim here would be the old packer describing its own damage.
+    expect(roomy.relaxationNote).not.toMatch(/dropped to fit/);
   });
 
-  it("returns more stops than the stop budget when nothing binds, which is a pack.ts defect", () => {
-    // `trimTo` caps the order at `ctx.idealStops`, and the beam is meant to
-    // inherit that cap, but its seeds may already be `stopBudget` long and it
-    // then runs `stopBudget - 1` further layers, so the order leaves longer
-    // than the budget allows. `paceDeviation` is far too weak to pull it back.
-    // The window trim above only hid this by cutting the surplus stops off again.
-    // ponytail: pins the current ceiling of 7. Upgrade path is to re-cap `order`
-    // at `stopBudget` after the beam; this test goes red until then.
+  it("returns no more stops than the budget asked for, even when nothing binds", () => {
+    // `ctx.idealStops` is a cap, not a hint, and it is applied to the beam's
+    // winner. The beam used to leave with 7 stops for a budget of 4, and the
+    // window trim hid that by cutting the surplus off again. pack.ts fixed this
+    // with `capToBudget` on the beam's winner, so this asserts the guarantee
+    // rather than the defect it used to be named for. The count itself is
+    // deliberately not pinned: a better search filling the budget is the
+    // contract, not a side effect worth freezing.
     const roomyCtx = makeContext({ idealStops: 4, availableMinutes: 600, budgetInr: 20000 });
     const roomy = pack(records, roomyCtx, options);
     expect(roomyCtx.idealStops).toBe(4);
-    expect(roomy.stops).toHaveLength(7);
+    expect(roomy.stops.length).toBeLessThanOrEqual(roomyCtx.idealStops);
+    expect(roomy.stops.length).toBeGreaterThan(0);
   });
 
   it("returns an honest empty plan when given nothing", () => {
@@ -280,23 +367,7 @@ describe("pack", () => {
 });
 
 describe("pack quality against brute force", () => {
-  /** Every order of `size` distinct ids. 7 taken 3 at a time is 210 orders. */
-  function allOrders(pool: string[], size: number): string[][] {
-    const out: string[][] = [];
-    const walk = (prefix: string[], rest: string[]) => {
-      if (prefix.length === size) {
-        out.push([...prefix]);
-        return;
-      }
-      for (let i = 0; i < rest.length; i += 1) {
-        walk([...prefix, rest[i]], [...rest.slice(0, i), ...rest.slice(i + 1)]);
-      }
-    };
-    walk([], pool);
-    return out;
-  }
-
-  it("leaves a 37 percent gap to the best order that fits, which the trailing trim cannot close", () => {
+  it("closes the gap to the best order that fits, because the window is inside the search", () => {
     const small = makeRecords().slice(0, 7);
     const smallCtx = makeContext({ idealStops: 3, minStops: 2 });
     const smallOptions = makeOptions(small, smallCtx);
@@ -305,16 +376,10 @@ describe("pack quality against brute force", () => {
     // the window nor the budget. The unfiltered maximum over all 210 orders is
     // a plan costing 2400 against a 2000 rupee budget, so comparing the packer
     // to it measures nothing but how infeasible the packer is being.
-    const fits = (order: string[]): boolean => {
-      const stops = buildStops(order, smallCtx, smallOptions);
-      const minutes = stops.reduce((sum, stop) => sum + stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes, 0);
-      const cost = stops.reduce((sum, stop) => sum + stop.costInr, 0);
-      return minutes <= smallCtx.availableMinutes && cost <= smallCtx.budgetInr;
-    };
     let best = Number.NEGATIVE_INFINITY;
     let feasibleOrders = 0;
     for (const order of allOrders(small.map((record) => record.id), 3)) {
-      if (!fits(order)) continue;
+      if (!fits(order, smallCtx, smallOptions)) continue;
       feasibleOrders += 1;
       best = Math.max(best, objectiveFast(buildStops(order, smallCtx, smallOptions), smallCtx).value);
     }
@@ -323,13 +388,11 @@ describe("pack quality against brute force", () => {
     expect(feasibleOrders).toBe(34);
     expect(got.objective.value).toBeLessThanOrEqual(best + 1e-9);
     const gap = (best - got.objective.value) / Math.max(1e-9, Math.abs(best));
-    // ponytail: ceiling 0.38, where the contract is 0.03. The search maximises
-    // the objective over orders the window cannot hold, and `fitToWindow` then
-    // cuts from the tail without re-optimising, so it discards three stop plans
-    // it had already built. This instance has a 3 stop plan at 5.806 that fits
-    // and the packer returns 2 stops at 3.660. Upgrade path is for `pack` to
-    // search inside the window rather than trim into it.
-    expect(gap).toBeLessThanOrEqual(0.38);
+    // The 3 percent contract pack.ts documents, restored. The temporary 0.38
+    // ceiling went when the search stopped maximising the objective over orders
+    // the window cannot hold: this instance's feasible 3 stop plan at 5.806 is
+    // now the plan that comes back, and the gap closed to nothing.
+    expect(gap).toBeLessThanOrEqual(0.03);
   });
 
   it("finishes a 25 candidate pool well inside a frame", () => {

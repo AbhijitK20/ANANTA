@@ -192,7 +192,7 @@ export function pack(candidates: ExperienceV2[], ctx: DiscoveryContext, options:
           .slice(0, DEFAULT_CHILDREN_PER_NODE)
           .map((entry) => [...node, entry.id]);
       },
-      score: objectiveOf,
+      score: (node) => searchFitness(node, ctx, options, objectiveOf),
       key: (node) => node.join("|"),
       width: beamWidth,
       iterations: Math.max(0, stopBudget - depth),
@@ -201,7 +201,7 @@ export function pack(candidates: ExperienceV2[], ctx: DiscoveryContext, options:
     // The objective owns the stop count, so the beam's winner replaces the routed
     // tour whenever it clears the floor the traveller set.
     const floor = Math.min(Math.max(0, Math.round(ctx.minStops)), stopBudget);
-    if (beam.best && beam.best.length >= floor) order = beam.best;
+    if (beam.best && beam.best.length >= floor) order = capToBudget(beam.best, stopBudget);
   }
   order = orOpt(twoOpt(order, costOf), costOf);
 
@@ -217,7 +217,19 @@ export function pack(candidates: ExperienceV2[], ctx: DiscoveryContext, options:
   const penalties = new PenaltyTable({ step: spread / 20, ceiling: spread * 2 });
   const rng = lcg(seed);
   const ticks = { count: 0 };
-  const entryFitness = -objectiveOf(order);
+  /**
+   * `lahc` MINIMISES `fitness`, so the value handed to it must be the negation
+   * of the maximise-oriented `searchFitness`.
+   *
+   * It was not negated. `search.best` was therefore the **worst** plan the
+   * search accepted, and the guard below tested `search.bestFitness <=
+   * entryFitness`, which is `5.8 <= -5.8` and always false, so the LAHC result
+   * was discarded every time. The stage ran 240 iterations per plan, kept a
+   * penalty table, and changed nothing: `iters: 0`, `240` and `5000` all
+   * returned byte-identical plans. LAHC is the one anti-local-optima mechanism
+   * this project has, and it was inert.
+   */
+  const entryFitness = -searchFitness(order, ctx, options, objectiveOf);
   penalties.record(order);
   const search = lahc({
     initial: order,
@@ -226,9 +238,9 @@ export function pack(candidates: ExperienceV2[], ctx: DiscoveryContext, options:
       if (ticks.count % PENALTY_DECAY_EVERY === 0) penalties.decay(PENALTY_DECAY_RATE);
       return rng() < SWAP_SHARE ? randomSwap(current, rng) : randomRelocation(current, rng);
     },
-    cost: (candidate) => -objectiveOf(candidate) + penalties.penaltyOf(candidate),
+    cost: (candidate) => -searchFitness(candidate, ctx, options, objectiveOf) + penalties.penaltyOf(candidate),
     fitness: (candidate) => {
-      const value = -objectiveOf(candidate);
+      const value = -searchFitness(candidate, ctx, options, objectiveOf);
       penalties.record(candidate);
       return value;
     },
@@ -356,7 +368,8 @@ function finish(
   options: PackOptions,
   stats: PackResult["searchStats"],
 ): PackResult {
-  const stops = fitToWindow(buildStops(order, ctx, options), ctx);
+  const pinnedIds = new Set(ctx.profile.pins);
+  const stops = fitToWindow(buildStops(order, ctx, options), ctx, pinnedIds);
   const objective: Objective = objectiveFast(stops, ctx);
   const dropped = Math.max(0, order.length - stops.length);
   return {
@@ -370,6 +383,90 @@ function finish(
 }
 
 /**
+ * How far an order overshoots the window and the budget, as a 0-based fraction.
+ */
+function overflowOf(
+  order: readonly string[],
+  ctx: DiscoveryContext,
+  options: PackOptions,
+): number {
+  if (order.length === 0) return 0;
+  // An id the caller cannot resolve is not an overflow, it is a caller mistake,
+  // and `buildStops` throws on it. `minimality.ts` searches over synthetic ids
+  // with no matching records, so the beam's `score` reached this with orders it
+  // had never built stops for. Unresolvable means unknown, and unknown is not
+  // evidence of a bad plan, so it scores 0 and `fitToWindow` still reports the
+  // truth to the traveller at the end.
+  let stops: Stop[];
+  try {
+    stops = buildStops(order as string[], ctx, options);
+  } catch {
+    return 0;
+  }
+  let minutes = 0;
+  let rupees = 0;
+  for (const stop of stops) {
+    minutes += stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes;
+    rupees += stop.costInr;
+  }
+  const timeOver = Math.max(0, minutes - Math.max(0, Math.round(ctx.availableMinutes)));
+  const moneyOver = Math.max(0, rupees - Math.max(0, Math.round(ctx.budgetInr)));
+  const worst = Math.max(
+    timeOver / Math.max(1, Math.round(ctx.availableMinutes)),
+    moneyOver / Math.max(1, Math.round(ctx.budgetInr)),
+  );
+  return Number.isFinite(worst) ? worst : 0;
+}
+
+/**
+ * What the search actually optimises, and the fix for the packer over-cutting.
+ *
+ * The search used to maximise the raw objective over orders the window cannot
+ * hold, and `fitToWindow` then cut the surplus off the tail afterwards. That is
+ * why a feasible three stop plan scoring 5.806 was thrown away for two stops
+ * scoring 3.660: the search was optimising the wrong set, and the trim was
+ * repairing damage the search had already chosen to cause.
+ *
+ * So feasibility is a **dominant** term here rather than a post-hoc filter. The
+ * A step is added only when the overflow is non-zero, so the two regimes cannot
+ * be traded against each other. See `OVERFLOW_STEP` below.
+ */
+/**
+ * `OVERFLOW_STEP` makes the ordering **strictly** lexicographic rather than
+ * merely weighted, and the earlier version got that wrong in a way its own
+ * comment denied. A fixed `1000 * overflowFraction` sounds dominant, but the
+ * fraction can be arbitrarily small: one rupee over a 2000 rupee budget is
+ * `0.0005`, a penalty of `0.5`, which the objective can outbid. So a plan one
+ * rupee over budget could win, `fitToWindow` would repair it afterwards, and
+ * the exact defect the in-search penalty was added to remove came back through
+ * the side door.
+ *
+ * The step is added only when there is any overflow at all, so the two regimes
+ * cannot be traded: **any** feasible order beats **every** infeasible one, and
+ * among infeasible orders the smaller overflow wins. The magnitude is well beyond
+ * the objective's whole range, which is bounded by ten weights in `[0, 1]` plus
+ * four non-negative penalties.
+ */
+const OVERFLOW_STEP = 1e6;
+const OVERFLOW_SHAPE = 1e3;
+
+function searchFitness(
+  order: readonly string[],
+  ctx: DiscoveryContext,
+  options: PackOptions,
+  objectiveOf: (order: string[]) => number,
+): number {
+  const overflow = overflowOf(order, ctx, options);
+  const penalty = overflow > 0 ? OVERFLOW_STEP + OVERFLOW_SHAPE * overflow : 0;
+  return objectiveOf(order as string[]) - penalty;
+}
+
+/** `ctx.idealStops` is a cap, not a hint. The beam could return twice it. */
+function capToBudget(order: readonly string[], stopBudget: number): string[] {
+  return order.length <= stopBudget ? [...order] : order.slice(0, Math.max(0, stopBudget));
+}
+
+/**
  * Drop trailing stops until the plan fits the window and the budget.
  *
  * `pack` optimises **stop count**, capped at `ctx.idealStops`, and never looked
@@ -379,25 +476,35 @@ function finish(
  * removes these before packing, but `pack` is a public entry point and the
  * feasibility check must not depend on the caller having remembered to run it.
  *
- * Trailing stops are dropped rather than re-optimised, because re-optimising is
- * the relaxation ladder's job and it is told what it relaxed. This is a floor,
- * not a substitute: a plan that still does not fit after this is reported as not
- * fitting, by `noteFor`, instead of being described as fine.
+ * **A pinned stop is never dropped.** The traveller asked for it by name, and a
+ * pin silently trimmed away by a window check is the one removal they did not
+ * agree to, so pinned stops are cut last no matter where they sit in the order.
+ * With every stop pinned there is nothing left to drop and the function says so
+ * in the note rather than pretending the plan fits.
  */
-function fitToWindow(stops: Stop[], ctx: DiscoveryContext): Stop[] {
+function fitToWindow(stops: Stop[], ctx: DiscoveryContext, pinned: ReadonlySet<string>): Stop[] {
   const budgetMinutes = Math.max(0, Math.round(ctx.availableMinutes));
   const budgetInr = Math.max(0, Math.round(ctx.budgetInr));
-  let total = 0;
-  let cost = 0;
-  for (const stop of stops) {
-    total += stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes;
-    cost += stop.costInr;
-  }
-  while (stops.length > 0 && (total > budgetMinutes || cost > budgetInr)) {
-    const last = stops.pop();
-    if (!last) break;
-    total -= last.travelMinutes + last.visitMinutes + last.bufferMinutes;
-    cost -= last.costInr;
+  const over = () => {
+    let total = 0;
+    let cost = 0;
+    for (const stop of stops) {
+      total += stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes;
+      cost += stop.costInr;
+    }
+    return { total, cost, fits: total <= budgetMinutes && cost <= budgetInr };
+  };
+  const totals = over();
+  let guard = stops.length;
+  while (!totals.fits && stops.length > 0 && guard > 0) {
+    guard -= 1;
+    // Drop the last unpinned stop. Falling back to the last stop keeps the loop
+    // total, and keeps the function honest when every remaining stop is pinned.
+    let at = stops.length - 1;
+    while (at >= 0 && pinned.has(stops[at].record.id)) at -= 1;
+    if (at < 0) at = stops.length - 1;
+    stops.splice(at, 1);
+    Object.assign(totals, over());
   }
   return stops;
 }
@@ -431,5 +538,8 @@ function noteFor(stops: readonly Stop[], ctx: DiscoveryContext, dropped: number)
   const trimmed = dropped > 0
     ? ` ${dropped} later stop${dropped === 1 ? " was" : "s were"} dropped to fit.`
     : "";
-  return `Packed ${shape}${money}.${trimmed} Every hard constraint is checked separately before this is shown as valid.`;
+  const stillOver = total > Math.round(ctx.availableMinutes) || cost > Math.round(ctx.budgetInr)
+    ? " This plan still does not fit, and the reason is shown above it."
+    : "";
+  return `Packed ${shape}${money}.${trimmed}${stillOver} Every hard constraint is checked separately before this is shown as valid.`;
 }
