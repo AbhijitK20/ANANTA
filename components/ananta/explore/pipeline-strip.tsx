@@ -35,9 +35,19 @@ export function PipelineStrip({ run }: { run: PipelineRun | null }) {
   }
 
   const retrieved = run.retrievalCount;
-  const considered = run.consideredCount;
-  const passed = run.gated.passed.length;
-  const refused = considered - passed;
+const considered = run.consideredCount;
+const passed = run.gated.passed.length;
+/**
+ * The gate only ever receives `retrieval.ids`, at most `PIPELINE_RETRIEVE_LIMIT`
+ * of them. So `considered - passed` counts the records retrieval discarded
+ * *before* the gate ever saw them, and calling those "refused with a reason"
+ * fabricated roughly 1,000 reasons: the pipeline said four passed the gate and
+ * 1,103 were refused with a reason, and the true refused count is
+ * `run.gated.rejected.length`, which is the number the unmet-demand feed is
+ * built from.
+ */
+const refused = run.gated.rejected.length;
+const notRetrieved = Math.max(0, considered - retrieved - refused);
 
   return (
     <div aria-live="polite" className={`${typeScale.meta} leading-5 text-muted`}>

@@ -356,21 +356,80 @@ function finish(
   options: PackOptions,
   stats: PackResult["searchStats"],
 ): PackResult {
-  const stops = buildStops(order, ctx, options);
+  const stops = fitToWindow(buildStops(order, ctx, options), ctx);
   const objective: Objective = objectiveFast(stops, ctx);
+  const dropped = Math.max(0, order.length - stops.length);
   return {
     stops,
     objective,
     clusters: clusters.map((cluster) => ({ ids: [...cluster.ids], diameterKm: cluster.diameterKm })),
     rung: "strict" as Rung,
-    relaxationNote: noteFor(stops.length, ctx),
+    relaxationNote: noteFor(stops, ctx, dropped),
     searchStats: stats,
   };
 }
 
-function noteFor(stopCount: number, ctx: DiscoveryContext): string {
-  if (!stopCount) {
-    return "Nothing was relaxed, and no candidate passed every hard constraint, so the plan is empty.";
+/**
+ * Drop trailing stops until the plan fits the window and the budget.
+ *
+ * `pack` optimises **stop count**, capped at `ctx.idealStops`, and never looked
+ * at `ctx.availableMinutes` or `ctx.budgetInr`. Three stops of 148 minutes each
+ * satisfied the count cap and returned a 444 minute plan for a 300 minute window,
+ * which the traveller sees as a plan that does not fit. The gate normally
+ * removes these before packing, but `pack` is a public entry point and the
+ * feasibility check must not depend on the caller having remembered to run it.
+ *
+ * Trailing stops are dropped rather than re-optimised, because re-optimising is
+ * the relaxation ladder's job and it is told what it relaxed. This is a floor,
+ * not a substitute: a plan that still does not fit after this is reported as not
+ * fitting, by `noteFor`, instead of being described as fine.
+ */
+function fitToWindow(stops: Stop[], ctx: DiscoveryContext): Stop[] {
+  const budgetMinutes = Math.max(0, Math.round(ctx.availableMinutes));
+  const budgetInr = Math.max(0, Math.round(ctx.budgetInr));
+  let total = 0;
+  let cost = 0;
+  for (const stop of stops) {
+    total += stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes;
+    cost += stop.costInr;
   }
-  return `Nothing was relaxed. All hard constraints held for ${stopCount} stop${stopCount === 1 ? "" : "s"} inside the ${Math.round(ctx.availableMinutes)} minute window.`;
+  while (stops.length > 0 && (total > budgetMinutes || cost > budgetInr)) {
+    const last = stops.pop();
+    if (!last) break;
+    total -= last.travelMinutes + last.visitMinutes + last.bufferMinutes;
+    cost -= last.costInr;
+  }
+  return stops;
+}
+
+/**
+ * Say what actually happened.
+ *
+ * The old note read "Nothing was relaxed. All hard constraints held for N stops
+ * inside the M minute window", and `pack` has **never** run a single hard check.
+ * It is a packer, not a gate, and the sentence asserted the output of a
+ * computation that does not exist anywhere in this file. A traveller reading it
+ * had been told a plan was verified by code that never looked.
+ *
+ * The note now reports the two numbers `pack` can actually see, the time and the
+ * money, and it names the dropped stops when there were any. It does not claim
+ * any hard constraint held, because it cannot know that. `validation` is what
+ * makes that claim, and it makes it to the traveller on the Trips screen.
+ */
+function noteFor(stops: readonly Stop[], ctx: DiscoveryContext, dropped: number): string {
+  if (stops.length === 0) {
+    return "No stop fits inside the window and the budget, so there is no plan yet.";
+  }
+  let total = 0;
+  let cost = 0;
+  for (const stop of stops) {
+    total += stop.travelMinutes + stop.visitMinutes + stop.bufferMinutes;
+    cost += stop.costInr;
+  }
+  const shape = `${stops.length} stop${stops.length === 1 ? "" : "s"}, ${Math.round(total)} of your ${Math.round(ctx.availableMinutes)} minutes`;
+  const money = cost > 0 ? `, about ${Math.round(cost)} of ${Math.round(ctx.budgetInr)}` : "";
+  const trimmed = dropped > 0
+    ? ` ${dropped} later stop${dropped === 1 ? " was" : "s were"} dropped to fit.`
+    : "";
+  return `Packed ${shape}${money}.${trimmed} Every hard constraint is checked separately before this is shown as valid.`;
 }

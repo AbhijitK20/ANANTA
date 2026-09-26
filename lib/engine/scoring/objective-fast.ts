@@ -73,19 +73,26 @@ export function crowdLoad(stops: readonly Stop[], ctx: DiscoveryContext): number
   return safeDiv(sumInOrder(parts), stops.length);
 }
 
+/** Spec section 5: "exact string equality, folded to lowercase and trimmed". */
+function categoryKey(category: string): string {
+  return category.toLowerCase().trim();
+}
+
 /**
  * Penalty for repeating a category. Every unordered pair of stops in the same
  * category costs 0.5, divided by `max(1, n - 1)`, so a plan of two cafés is
  * penalised as hard as a plan of eight with two cafés in it.
  *
  * Enumerated as `i < j` over the array, never through a set, so the term cannot
- * depend on any iteration order.
+ * depend on any iteration order. The case fold matters: `interestMatch` folds
+ * case for the same reason, and a product that treats "Food" and "food" as one
+ * category when scoring interest and as two when scoring novelty is incoherent.
  */
 export function redundancyPenalty(stops: readonly Stop[]): number {
   let pairs = 0;
   for (let i = 0; i < stops.length; i += 1) {
     for (let j = i + 1; j < stops.length; j += 1) {
-      if (stops[i].record.category === stops[j].record.category) pairs += 1;
+      if (categoryKey(stops[i].record.category) === categoryKey(stops[j].record.category)) pairs += 1;
     }
   }
   return safeDiv(0.5 * pairs, Math.max(1, stops.length - 1));
@@ -158,9 +165,8 @@ export function objectiveFast(stops: readonly Stop[], ctx: DiscoveryContext): Ob
     }
     perStop.push(sumInOrder(utilityParts));
   }
-
-  const utility = sumInOrder(perStop);
-  const travel = superlinearTravel(stops);  const crowd = crowdLoad(stops, ctx);
+  const travel = superlinearTravel(stops);
+  const crowd = crowdLoad(stops, ctx);
   const novelty = redundancyPenalty(stops);
   const pace = paceDeviation(stops.length, ctx);
   const proximity = planProximity(stops);

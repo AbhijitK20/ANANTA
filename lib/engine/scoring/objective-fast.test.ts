@@ -23,6 +23,9 @@ function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
+/** `objective-spec.md` section 4: these two are aggregate only, never in `U_i`. */
+const AGGREGATE_ONLY: ReadonlySet<string> = new Set(["crowd", "novelty"]);
+
 describe("superlinearTravel", () => {
   it("charges each leg minutes times a squared distance factor", () => {
     // 20 * (1 + 2/8)^2 + 25 * (1 + 3/8)^2 + 15 * (1 + 1/8)^2
@@ -63,11 +66,16 @@ describe("crowdLoad", () => {
     expect(crowdLoad(THREE, ctx)).toBeCloseTo(0.4, 12);
   });
 
-  it("falls when the current hour is the opposite of the record's best hour", () => {
+  it("falls as the current hour moves away from the record's best slot", () => {
     const morningRecord = makeStop({ crowdProfile: 1, bestTimeOfDay: "morning" });
     const eveningRecord = makeStop({ crowdProfile: 1, bestTimeOfDay: "evening" });
-    expect(crowdLoad([morningRecord], makeContext({ now: "2026-01-15T09:30:00.000Z" }))).toBe(1);
-    expect(crowdLoad([eveningRecord], makeContext({ now: "2026-01-15T09:30:00.000Z" }))).toBeCloseTo(0.4, 12);
+    const nightRecord = makeStop({ crowdProfile: 1, bestTimeOfDay: "night" });
+    const atMorning = makeContext({ now: "2026-01-15T09:30:00.000Z" });
+    // 09:30 is the morning slot, so a morning record is at its own best hour and a
+    // night record is three slots away, which is the whole 0.6 of decay.
+    expect(crowdLoad([morningRecord], atMorning)).toBe(1);
+    expect(crowdLoad([eveningRecord], atMorning)).toBeCloseTo(0.6, 12);
+    expect(crowdLoad([nightRecord], atMorning)).toBeCloseTo(0.4, 12);
   });
 
   it("counts an unrecorded crowd as the neutral 0.5", () => {
@@ -153,7 +161,14 @@ describe("objectiveFast", () => {
     const ctx = makeContext();
     const weights = ctx.profile.weights;
     const objective = objectiveFast(THREE, ctx);
-    const utility = sum(objective.breakdown.components.map((component) => component.contribution));
+    // crowd and novelty are aggregate only. The breakdown still carries them so
+    // the panel can show what a crowd reading did, but the objective adds neither,
+    // and adding them here would charge for the same fact twice.
+    const utility = sum(
+      objective.breakdown.components
+        .filter((component) => !AGGREGATE_ONLY.has(component.id))
+        .map((component) => component.contribution),
+    );
     const expected =
       utility
       - weights.travelPenalty * superlinearTravel(THREE)
@@ -161,6 +176,7 @@ describe("objectiveFast", () => {
       - weights.novelty * redundancyPenalty(THREE)
       - weights.pacePenalty * paceDeviation(THREE.length, ctx);
     expect(objective.value).toBeCloseTo(expected, 12);
+    expect(objective.value).toBeCloseTo(0.701978133688041, 12);
     expect(objective.breakdown.total).toBe(objective.value);
   });
 
@@ -205,6 +221,7 @@ describe("objectiveFast", () => {
   });
 
   it("returns 0 for an empty plan when the ideal is 0 stops, and is finite otherwise", () => {
+    expect(objectiveFast([], makeContext({ idealStops: 0 })).value).toBe(0);
     const ctx = makeContext({ idealStops: 3 });
     const empty = objectiveFast([], ctx);
     expect(Number.isFinite(empty.value)).toBe(true);

@@ -146,24 +146,33 @@ export function peakHourFactor(now: string, best: ExperienceV2["bestTimeOfDay"])
 /* ── interest ───────────────────────────────────────────────────────────── */
 
 /**
- * The weight the traveller attached to a category, matched without regard to
- * case. Profile keys and record categories come from the same taxonomy but the
- * casing has not been pinned (`Culture` in the fixtures, `cafes` in the seed),
- * so an exact lookup silently scores every well-keyed profile as zero interest.
- * Matching the key case-insensitively is the only reading that does not depend
- * on a casing convention nobody has written down.
+ * The weight the traveller attached to a category, or `undefined` when they
+ * attached none.
+ *
+ * `undefined` rather than 0 is the whole point. The spec reads
+ * `interests[category] ?? 0.5`, so a category the traveller never mentioned is
+ * **0, neutral: not disliked, not wanted.** Returning 0 for a miss made the
+ * `?? 0.5` fallback dead, so an unmentioned category scored `(0 - 0.5) * 2 = -1`,
+ * which is the same score as an explicit `avoid: 1`. A traveller who never said
+ * anything about museums was being treated as having vetoed them, and the
+ * sentence printed "Interest match 0" beside a contribution of -1.
+ *
+ * Matching the key case-insensitively is a separate concern and still needed:
+ * profile keys and record categories come from the same taxonomy but the casing
+ * has never been pinned (`Culture` in the fixtures, `cafes` in the seed), and an
+ * exact lookup silently scores every well-keyed profile as unmentioned.
  */
-function weightForKey(table: Record<string, number>, key: string): number {
+function weightForKey(table: Record<string, number>, key: string): number | undefined {
   const direct = table[key];
   if (isFiniteNumber(direct)) return direct;
   const wanted = key.toLowerCase();
   for (const candidate of Object.keys(table).sort()) {
     if (candidate.toLowerCase() === wanted) {
       const value = table[candidate];
-      return isFiniteNumber(value) ? value : 0;
+      return isFiniteNumber(value) ? value : undefined;
     }
   }
-  return 0;
+  return undefined;
 }
 
 /**
@@ -181,10 +190,10 @@ function weightForKey(table: Record<string, number>, key: string): number {
  */
 export const interestComponent: ComponentFn = (stop, ctx) => {
   const category = stop.record.category;
-  const rawBase = weightForKey(ctx.profile.interests, category);
-  const rawVeto = weightForKey(ctx.profile.avoid, category);
-  const base = isFiniteNumber(rawBase) ? clamp01(rawBase) : 0.5;
-  const veto = isFiniteNumber(rawVeto) ? clamp01(rawVeto) : 0;
+  // `?? 0.5` on the base and `?? 0` on the veto. A category the traveller never
+  // mentioned is neutral, not vetoed: silence is not a preference.
+  const base = clamp01(weightForKey(ctx.profile.interests, category) ?? 0.5);
+  const veto = clamp01(weightForKey(ctx.profile.avoid, category) ?? 0);
   const value = clampSigned((base - 0.5) * 2 - veto);
   let sentence: string;
   if (veto > 0 && base > 0.5) {

@@ -119,8 +119,16 @@ export function enrich(base: Experience): ExperienceV2 {
   const weatherDependent =
     base.status === "Weather dependent" || base.status === "Seasonally reachable";
 
+  /**
+   * A human did write the name list, so the *provenance* is `curated` either way
+   * and that field is not the one that was lying. What was never done is
+   * checking any individual record, and that is what `confidence` is for: a
+   * hand-entered name is `verified`, a name from the shared list is
+   * `community`. Declaring the generated ones `verified` inflated the
+   * "N of M fields verified" chip on all 1,092 of them, from the honest 1 to 4.
+   */
   const nameProvenance: Provenance = "curated";
-  const nameConfidence: Confidence = community ? "community" : "verified";
+  const nameConfidence: Confidence = community ? "community" : handWritten ? "verified" : "community";
   const factProvenance: Provenance = handWritten ? "curated" : "inferred";
   const factConfidence: Confidence = handWritten ? "community" : "estimate";
 
@@ -128,7 +136,7 @@ export function enrich(base: Experience): ExperienceV2 {
     name: nameProvenance,
     coordinates: onOsm ? "osm" : "inferred",
     address: "derived",
-    category: "curated",
+    category: factProvenance,
     duration: factProvenance,
     price: factProvenance,
     capacity: "inferred",
@@ -150,7 +158,7 @@ export function enrich(base: Experience): ExperienceV2 {
     name: nameConfidence,
     coordinates: onOsm ? "verified" : "estimate",
     address: "estimate",
-    category: "verified",
+    category: factConfidence,
     duration: factConfidence,
     price: factConfidence,
     capacity: "unverified",
@@ -164,7 +172,14 @@ export function enrich(base: Experience): ExperienceV2 {
     diet: "unverified",
     rating: "unverified",
     reviewCount: "unverified",
-    media: "verified",
+    /**
+     * "verified" here means the media exists and its source was checked at
+     * generation time, not that a video exists for this particular record. The
+     * detail page renders "No approved video for {name} yet" from the media
+     * store, and a badge directly above that reading "Photos and video:
+     * verified" contradicted it on the same screen.
+     */
+    media: handWritten ? "verified" : "community",
     pricePerPerson: factConfidence,
   };
 
@@ -188,7 +203,7 @@ export function enrich(base: Experience): ExperienceV2 {
       nameConfidence,
       community
         ? "Name came from a resident or community submission, not from an operator."
-        : "The place name is hand-checked against the real city.",
+        : handWritten ? "The place name was hand-entered and checked against the city." : "The place name comes from a resident-curated list of real businesses in this city.",
     ),
     coordinates: sourced(
       base.coordinates,
@@ -210,7 +225,7 @@ export function enrich(base: Experience): ExperienceV2 {
       base.category,
       "curated",
       "verified",
-      "Category is hand-assigned per place.",
+      handWritten ? "Category is hand-assigned for this place." : "Category is assigned from the list this place was collected into.",
     ),
     duration: sourced(
       duration,

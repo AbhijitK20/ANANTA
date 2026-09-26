@@ -97,6 +97,9 @@ export function ratingScore(record: ExperienceV2): number {
 export function interestScore(record: ExperienceV2, ctx: DiscoveryContext): number {
   const rawBase = ctx.profile.interests[record.category];
   const rawVeto = ctx.profile.avoid[record.category];
+  // `?? 0.5` is load bearing. A category the traveller never mentioned is
+  // neutral, so it scores 0, not -1. Defaulting the base to 0 instead would make
+  // silence indistinguishable from a veto.
   const base = typeof rawBase === "number" && Number.isFinite(rawBase) ? clamp01(rawBase) : 0.5;
   const veto = typeof rawVeto === "number" && Number.isFinite(rawVeto) ? clamp01(rawVeto) : 0;
   return clampSigned((base - 0.5) * 2 - veto);
@@ -224,11 +227,16 @@ export function crowdLoad(stops: readonly Stop[], ctx: DiscoveryContext): number
   return total / stops.length;
 }
 
+/** Spec section 5: "exact string equality, folded to lowercase and trimmed". */
+function categoryKey(value: string): string {
+  return value.toLowerCase().trim();
+}
+
 export function redundancyPenalty(stops: readonly Stop[]): number {
   let pairs = 0;
   for (let i = 0; i < stops.length; i += 1) {
     for (let j = i + 1; j < stops.length; j += 1) {
-      if (stops[i].record.category === stops[j].record.category) pairs += 0.5;
+      if (categoryKey(stops[i].record.category) === categoryKey(stops[j].record.category)) pairs += 0.5;
     }
   }
   return pairs / Math.max(1, stops.length - 1);

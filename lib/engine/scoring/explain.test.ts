@@ -24,10 +24,12 @@ describe("explainStop", () => {
   });
 
   it("is not merely a slice of a fixed order, it reorders", () => {
-    // A traveller with no stated interest, so the only real lever on this record
-    // is the crowd and the panel has to lead with it.
-    const ctx = makeContext({ profile: makeProfile({ interests: {}, avoid: {} }) });
-    const stop = makeStop({ crowdProfile: 1, authenticity: 0.1, providerReliability: 0.05 });
+    // Every other lever is zeroed off, so the panel has to lead with crowd.
+    const ctx = makeContext({ weatherSeverity: null });
+    const stop = makeStop(
+      { crowdProfile: 1, authenticity: 0, providerReliability: 0, ratingSum: null, reviewCount: null, pricePerPersonInr: null },
+      { minutes: 10, km: 1 },
+    );
     const components = explainStop(stop, ctx, objectiveFast([stop], ctx));
     const fixedOrder = scoreStop(stop, ctx, { index: 0, prior: [] });
     expect(components[0].id).toBe("crowd");
@@ -38,7 +40,9 @@ describe("explainStop", () => {
 
   it("leads with the largest lever", () => {
     const ctx = makeContext();
-    const stop = makeStop({ crowdProfile: 0.9, ratingSum: null, reviewCount: null });
+    // A stop 5 km out, so proximity is not the biggest number here and the
+    // traveller's own 0.9 authenticity leads.
+    const stop = makeStop({ crowdProfile: 0.9, ratingSum: null, reviewCount: null }, { minutes: 10, km: 5 });
     const components = explainStop(stop, ctx, objectiveFast([stop], ctx));
     const all = scoreStop(stop, ctx, { index: 0, prior: [] });
     const largest = all.reduce((best, component) => (Math.abs(component.contribution) > Math.abs(best.contribution) ? component : best));
@@ -91,15 +95,19 @@ describe("explainStop", () => {
   });
 
   it("breaks a magnitude tie by the declared component order, so the panel is stable", () => {
-    const ctx = makeContext();
-    // group fit and travel friction are both exactly 0 for this stop, so they
-    // tie and must come out in declared order: groupFit (7) then
-    // travelFriction (8).
+    // A 0.75 interest normalises to exactly 0.5, so weights of 0.8, 1 and 0.5
+    // make three components tie exactly at 0.4. They must come out in declared
+    // order, interest (0), weather (4), reliability (9), and the one zero,
+    // groupFit, must come out last.
+    const weights = { ...PRIOR_WEIGHTS, interest: 0.8, weather: 1, reliability: 0.5 };
+    const ctx = makeContext({ profile: makeProfile({ interests: { cafes: 0.75 }, weights }) });
     const stop = makeStop();
     const components = explainStop(stop, ctx, objectiveFast([stop], ctx));
-    const zeroed = components.filter((component) => component.contribution === 0).map((component) => component.id);
-    expect(zeroed).toEqual(["groupFit", "travelFriction"]);
-    expect(components[components.length - 1].id).toBe("travelFriction");
+    const tied = components
+      .map((component) => component.id)
+      .filter((id) => id === "interest" || id === "weather" || id === "reliability");
+    expect(tied).toEqual(["interest", "weather", "reliability"]);
+    expect(components[components.length - 1].id).toBe("groupFit");
   });
 });
 

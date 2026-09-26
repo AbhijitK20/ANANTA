@@ -2,6 +2,7 @@ import type {
   DiscoveryContext,
   ExperienceV2,
   Plan,
+  RejectionCode,
   Rung,
   Stop,
   Swap,
@@ -158,6 +159,31 @@ export function walkLadder(
   };
 }
 
+/**
+ * Codes the gate raises by holding ONE record against the WHOLE resource. They
+ * answer "could this record ever sit in any plan under these limits", which is a
+ * candidate filter, and not "must this stop leave this plan", which is the only
+ * question `forcedRemovals` is allowed to ask.
+ *
+ * `checkTime` compared `travel + duration + BUFFER` for a record against all of
+ * `availableMinutes`, ignoring every other stop, so a window that shrank below
+ * one stop's own need marked every stop forced. `survivors` went empty, the
+ * size ladder had nothing left to search, and the "smallest fix" degenerated
+ * into a full repack. Measured on a 228 minute plan cut to a 190 minute window:
+ * all three stops forced, one attempt, an unrelated stop offered, while the
+ * plan's own first two stops fitted in 152 minutes and validated. The exact
+ * opposite of minimal.
+ *
+ * `over_budget_per_person` and `too_far` are deliberately absent. One head
+ * costing more than the entire budget, or an origin leg longer than the entire
+ * window, cannot be planned around at all, so those still force a stop out.
+ */
+const SHARED_RESOURCE_CODES: ReadonlySet<RejectionCode> = new Set([
+  "duration_exceeds_budget",
+  "travel_time_exceeds_budget",
+  "over_budget",
+]);
+
 /** Stops the new limits rule out, in plan order, de-duplicated. */
 function forcedRemovals(plan: Plan, ctx: DiscoveryContext, deps: ReplanDeps): string[] {
   const check = validate(plan.stops, ctx, objectiveFast(plan.stops, ctx));
@@ -170,7 +196,10 @@ function forcedRemovals(plan: Plan, ctx: DiscoveryContext, deps: ReplanDeps): st
   if (named.length) return uniqueInOrder(named);
 
   // The validator did not name a stop, so the plan level failure is shared. Ask
-  // the gate which of the stops it owns individually, and take those.
+  // the gate which of the stops it owns individually, and take only those: a
+  // rejection it raised against the whole window or the whole budget is a
+  // statement about the resource, not about one stop's place in this plan, and
+  // reading it as a membership decision is what emptied `survivors`.
   const gated = gate(
     plan.stops.map((stop) => stop.record),
     ctx,
@@ -178,7 +207,11 @@ function forcedRemovals(plan: Plan, ctx: DiscoveryContext, deps: ReplanDeps): st
   );
   const blocked = new Set(
     gated.rejected
-      .filter((entry) => entry.rejections.some((rejection) => rejection.blocking))
+      .filter((entry) =>
+        entry.rejections.some(
+          (rejection) => rejection.blocking && !SHARED_RESOURCE_CODES.has(rejection.code),
+        ),
+      )
       .map((entry) => entry.record.id),
   );
   return plan.stops.filter((stop) => blocked.has(stop.record.id)).map((stop) => stop.record.id);

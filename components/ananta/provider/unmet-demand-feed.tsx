@@ -64,7 +64,15 @@ function unlockText(demand: UnmetDemand): string {
       : ` by a median ${shortfallText(demand.medianShortfall, demand.unit)}`;
 
   if (CHEAPEST_FIRST.has(code)) {
-    return `Give the traveller ${shortfallText(demand.medianShortfall ?? 0, demand.unit) || "more time"} of window, or find a stop that fits inside the one they have.`;
+    // `medianShortfall` is null when the engine declined to measure, and
+    // `shortfallText(0, unit)` returns a truthy "0 minutes", so the old
+    // `?? 0` told a provider the traveller was zero minutes short when the truth
+    // is that nobody measured. Naming the gap is the whole value of this feed.
+    const size =
+      demand.medianShortfall === null
+        ? "more window"
+        : `${shortfallText(demand.medianShortfall, demand.unit)} of window`;
+    return `Give the traveller ${size}, or find a stop that fits inside the one they have.`;
   }
   if (code === "over_budget" || code === "over_budget_per_person") {
     return `Lower the price${gap}, or offer a cheaper slot a traveller in this group can use.`;
@@ -117,7 +125,7 @@ export function UnmetDemandFeed({
           No search has been recorded on this device yet, so there is nothing to show here. That
           is the honest state rather than an empty state we are hiding. The feed fills itself the
           moment a traveller searches and the feasibility gate refuses something, and an operator
-          can generate real refusals from the live gate right now.
+          can generate real refusals from the gate right now, on this device.
         </p>
         {onRunScan && (
           <button
@@ -126,7 +134,7 @@ export function UnmetDemandFeed({
             className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm font-bold disabled:opacity-60"
           >
             <MagnifyingGlass size={16} aria-hidden="true" />
-            {scanning ? "Scanning the live gate" : "Scan the live gate now"}
+            {scanning ? "Scanning the gate" : "Scan the gate now"}
           </button>
         )}
       </StateNote>

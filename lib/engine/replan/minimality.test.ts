@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Objective, Stop } from "@/lib/engine/contracts";
+import { objectiveFast } from "@/lib/engine/scoring";
 import { validate } from "@/lib/engine/validation";
 import { MAX_EXTRA_REMOVALS, minimalSwapSet, planId, walkLadder } from "./minimality";
 import type { RelaxFn } from "./minimality";
@@ -153,7 +154,45 @@ describe.skipIf(!UPSTREAM_AGREES)("walkLadder", () => {
     expect(walked.stops.length).toBe(1);
     expect(walked.ok).toBe(true);
     expect(walked.note).toContain("single best stop");
-    expect(feasible(walked.stops, ctx, plan.objective)).toBe(true);
+    // The objective handed to `validate` has to be the one derived from these
+    // stops. `plan.objective` is the two stop plan's, and `validate` reads its
+    // argument for the drift figure, so pairing it with a one stop plan asks
+    // whether 7.098 and 3.620 are the same number and gets a truthful no.
+    expect(feasible(walked.stops, ctx, objectiveFast(walked.stops, ctx))).toBe(true);
+    expect(feasible(walked.stops, ctx, plan.objective)).toBe(false);
+  });
+
+  it("keeps the stops that still fit when a shrunken window busts the whole plan", () => {
+    // A 228 minute plan against a 190 minute window. `checkTime` holds one
+    // record's own leg plus its visit plus the buffer against all 190 minutes,
+    // so every stop is individually "over budget" and the forced pass used to
+    // take all three. The plan's own first two stops fit in 152 minutes and
+    // validate, so the smallest fix is one removal, not a full repack.
+    resetRecords();
+    const a = makeRecord({ id: "a", name: "Gallery A", priceInr: 0, category: "Gallery", travelMinutes: 100 });
+    const b = makeRecord({ id: "b", name: "Market B", priceInr: 0, category: "Market", travelMinutes: 100 });
+    const c = makeRecord({ id: "c", name: "Garden C", priceInr: 0, category: "Garden", travelMinutes: 100 });
+    const d = makeRecord({ id: "d", name: "Trail D", priceInr: 0, category: "Trail", travelMinutes: 100 });
+    const all = [a, b, c, d];
+
+    const wide = makeContext({ partySize: 1, budgetInr: 1000, availableMinutes: 600, idealStops: 3, minStops: 1 });
+    const plan = makePlan(wide, all, ["a", "b", "c"]);
+    const narrow = makeContext({ partySize: 1, budgetInr: 1000, availableMinutes: 190, idealStops: 3, minStops: 1 });
+    expect(feasible(plan.stops, wide, plan.objective)).toBe(true);
+    expect(feasible(plan.stops, narrow, objectiveFast(plan.stops, narrow))).toBe(false);
+
+    const result = minimalSwapSet(plan, narrow, [d], makeDeps(all), decline);
+
+    // No single stop is impossible, so nothing is forced and the size ladder
+    // does the work the stage exists to do. Before the fix the forced pass took
+    // all three and offered the unrelated stop `d` with a size of 0.
+    expect(result.forced).toEqual([]);
+    expect(result.size).toBe(1);
+    const ids = result.plan.stops.map((stop) => stop.record.id);
+    expect(ids).toEqual(["a", "b"]);
+    expect(ids).not.toContain("d");
+    expect(result.note).toContain("0 stops the new limits rule out and 1 swap on top");
+    expect(feasible(result.plan.stops, narrow, result.plan.objective)).toBe(true);
   });
 
   it("stops at strict when the plan is already valid", () => {

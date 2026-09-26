@@ -345,7 +345,7 @@ export default function OperationsPage() {
               disabled={scanning}
               className="inline-flex items-center gap-2 rounded-lg bg-blue px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
             >
-              <PlayCircle size={17} /> {scanning ? "Scanning..." : "Scan refusals from the live gate"}
+              <PlayCircle size={17} /> {scanning ? "Scanning..." : "Scan refusals from the gate on this device"}
             </button>
             <button
               onClick={() => {

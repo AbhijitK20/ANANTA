@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { objectiveNaive } from "./objective-naive";
-import { haversineKm } from "./distance-naive";
-import { wilsonLowerBound } from "./components-naive";
 import type {
   DiscoveryContext,
   ExperienceV2,
@@ -50,7 +48,7 @@ function rec(over: Partial<ExperienceV2> = {}): ExperienceV2 {
     providerReliability: null,
     crowdProfile: null,
     provenance: {} as ExperienceV2["provenance"],
-    confidence: {},
+    confidence: { price: "verified" },
     sources: {},
     imageUrl: "",
     imageCredit: "",
@@ -123,70 +121,157 @@ const stop = (over: Partial<Stop> = {}): Stop => ({
   ...over,
 });
 
-/** The scalar re-expressed straight from section 3, independently of the file. */
+/**
+ * The objective, re-read from `objective-spec.md` sections 3 to 6 into this
+ * file, so the assertion is a second reading of the written spec rather than a
+ * restatement of the implementation.
+ *
+ * Nothing here is imported from `./objective-naive` or `./components-naive`.
+ * That includes the Wilson bound and the haversine: a shared helper is a shared
+ * bug, and a test that imports the answer is not evidence of anything. The
+ * haversine the naive path owns is for `validate`'s distance check only, so this
+ * derivation does not have one at all: rule G-1 says `Stop.travelKm` is an
+ * input and neither implementation recomputes it.
+ */
+function specClamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function specClamp11(value: number): number {
+  return Math.min(1, Math.max(-1, value));
+}
+
+function specWilson(positive: number, total: number): number {
+  if (total <= 0) return 0;
+  const z = 1.96;
+  const z2 = 3.8416;
+  const p = positive / total;
+  const denom = 1 + z2 / total;
+  const centre = p + z2 / (2 * total);
+  const margin = z * Math.sqrt((p * (1 - p) + z2 / 4) / total);
+  return (centre - margin) / denom;
+}
+
+const SPEC_WEATHER: Record<string, Record<ExperienceV2["indoor"], number>> = {
+  clear: { indoor: 0.4, outdoor: 1, mixed: 0.7 },
+  rain: { indoor: 1, outdoor: 0.2, mixed: 0.6 },
+  heavy_rain: { indoor: 1, outdoor: -1, mixed: -0.4 },
+  storm: { indoor: 0.8, outdoor: -1, mixed: -0.5 },
+};
+
+const SPEC_SLOTS = ["morning", "afternoon", "evening", "night"];
+
+function specPeak(now: string, best: ExperienceV2["bestTimeOfDay"]): number {
+  if (best === "any") return 1;
+  const index = SPEC_SLOTS.indexOf(best);
+  if (index < 0) return 1;
+  const hours = Number(/T(\d{2})/.exec(now)?.[1] ?? Number.NaN);
+  let slot = 3;
+  if (hours >= 5 && hours < 12) slot = 0;
+  else if (hours >= 12 && hours < 17) slot = 1;
+  else if (hours >= 17 && hours < 21) slot = 2;
+  return 1 - 0.6 * specClamp01(Math.abs(slot - index) / 3);
+}
+
+/** Section 2: push in index order, reduce after. Never fold into a running total. */
+function specSum(values: readonly number[]): number {
+  let total = 0;
+  for (const value of values) total += value;
+  return total;
+}
+
 function specValue(stops: readonly Stop[], c: DiscoveryContext): number {
   const w = c.profile.weights;
-  let previous = c.origin.coordinates;
-  let utility = 0;
-  const perStop: number[] = [];
+  const n = stops.length;
+
+  // Section 4: one utility per stop, written in the spec's term order.
+  const stopValues: number[] = [];
   for (const s of stops) {
-    const km = haversineKm(previous, [s.record.coordinates[0], s.record.coordinates[1]]);
-    previous = [s.record.coordinates[0], s.record.coordinates[1]];
-    const bound =
-      s.record.reviewCount !== null && s.record.reviewCount > 0
-        ? (wilsonLowerBound(s.record.ratingSum ?? 0, s.record.reviewCount) * 5 - 3) / 2
-        : 0;
-    perStop.push(
-      w.interest * (c.profile.interests[s.record.category] ?? 0) +
-        w.rating * bound +
-        w.value * 1 +
-        w.authenticity * 0.5 +
-        w.weather * 0 +
-        w.groupFit * 0.25 +
-        w.reliability * 0.5 +
-        0.15 * (1 / (1 + km)),
+    const r = s.record;
+    const interest = specClamp11(
+      (specClamp01(c.profile.interests[r.category] ?? 0.5) - 0.5) * 2 -
+        specClamp01(c.profile.avoid[r.category] ?? 0),
+    );
+    const rating =
+      r.ratingSum === null || r.reviewCount === null || r.reviewCount <= 0
+        ? 0
+        : specWilson(r.ratingSum, r.reviewCount * 5);
+    // The spec does not clamp the bound, and both implementations do, which
+    // differs only at `ratingSum === 0`: the raw bound there is negative while
+    // a lower bound in [0, 1] cannot be. No fixture here has a zero sum.
+    const perHead = c.budgetInr / Math.max(1, c.partySize);
+    const price = r.pricePerPersonInr;
+    const value =
+      price === null ? 0 : price <= 0 ? 1 : specClamp11(perHead / price / 4 * 2 - 1);
+    const weather = c.weatherSeverity === null ? 0 : SPEC_WEATHER[c.weatherSeverity][r.indoor];
+    let group = 0;
+    if (c.hasToddler) {
+      if (r.kidFriendly === true) group += 1;
+      else if (r.kidFriendly === false) group -= 1;
+      if (r.access.stroller_ok === true) group += 0.5;
+      else if (r.access.stroller_ok === false) group -= 0.5;
+    }
+    if (c.hasElderly) {
+      if (r.access.low_walking === true) group += 1;
+      else if (r.access.low_walking === false) group -= 1;
+    }
+    if (c.partySize > 1 && r.capacity !== null) {
+      group += r.capacity >= c.partySize ? 0.25 : -1;
+    }
+    stopValues.push(
+      w.interest * interest +
+        w.rating * rating +
+        w.value * value +
+        w.authenticity * specClamp01(r.authenticity ?? 0.5) +
+        w.weather * weather +
+        w.groupFit * specClamp11(group) +
+        w.reliability * specClamp01(r.providerReliability ?? 0.5) +
+        w.travelFriction * (1 / (1 + s.travelKm)),
     );
   }
-  for (const term of perStop) utility += term;
 
-  let travel = 0;
-  previous = c.origin.coordinates;
+  // Section 5. Rule G-3: a zero minute leg contributes zero whatever its km.
+  const legs: number[] = [];
   for (const s of stops) {
-    const km = haversineKm(previous, [s.record.coordinates[0], s.record.coordinates[1]]);
-    previous = [s.record.coordinates[0], s.record.coordinates[1]];
-    travel += s.travelMinutes * Math.pow(1 + km / 8, 2);
+    legs.push(s.travelMinutes === 0 ? 0 : s.travelMinutes * Math.pow(1 + s.travelKm / 8, 2));
   }
-  let crowdTotal = 0;
-  for (const s of stops) crowdTotal += 0.5;
-  const crowd = stops.length === 0 ? 0 : crowdTotal / stops.length;
-
+  const crowdParts: number[] = [];
+  for (const s of stops) {
+    crowdParts.push(
+      specClamp01(s.record.crowdProfile ?? 0.5) * specPeak(c.now, s.record.bestTimeOfDay),
+    );
+  }
   let pairs = 0;
-  for (let i = 0; i < stops.length; i += 1) {
-    for (let j = i + 1; j < stops.length; j += 1) {
+  for (let i = 0; i < n; i += 1) {
+    for (let j = i + 1; j < n; j += 1) {
       if (stops[i].record.category === stops[j].record.category) pairs += 0.5;
     }
   }
-  const novelty = pairs / Math.max(1, stops.length - 1);
-  const pace =
-    Math.pow(Math.abs(stops.length - c.idealStops), 1.5) / Math.max(1, c.idealStops);
+  const gap = Math.abs(n - c.idealStops);
 
-  return (
-    utility - w.travelPenalty * travel - w.crowd * crowd - w.novelty * novelty - w.pacePenalty * pace
-  );
+  // Section 6: four penalties, pushed in this order, reduced, subtracted once.
+  // Proximity is already inside `stopValues` by rule W-1 and is not a penalty.
+  const penaltyTerms: number[] = [];
+  penaltyTerms.push(w.travelPenalty * specSum(legs));
+  penaltyTerms.push(w.crowd * (n === 0 ? 0 : specSum(crowdParts) / n));
+  penaltyTerms.push(w.novelty * (pairs / Math.max(1, n - 1)));
+  penaltyTerms.push(w.pacePenalty * ((gap * Math.sqrt(gap)) / Math.max(1, c.idealStops)));
+
+  return specSum(stopValues) - specSum(penaltyTerms);
 }
 
 describe("objectiveNaive", () => {
   it("reproduces the written formula for a single stop to twelve digits", () => {
-    const plan = [stop({ record: rec({ coordinates: [4.05, 52.02] }) })];
+    const plan = [stop({ record: rec({ coordinates: [4.05, 52.02] }), travelKm: 2 })];
     const c = ctx();
     expect(objectiveNaive(plan, c).value).toBeCloseTo(specValue(plan, c), 12);
   });
 
   it("reproduces the written formula for a three stop plan to twelve digits", () => {
     const plan = [
-      stop({ record: rec({ coordinates: [4.05, 52.02], category: "Culture" }), travelMinutes: 20 }),
-      stop({ record: rec({ coordinates: [4.07, 52.04], category: "Food" }), travelMinutes: 15 }),
-      stop({ record: rec({ coordinates: [4.01, 52.05], category: "Nature" }), travelMinutes: 25 }),
+      stop({ record: rec({ coordinates: [4.05, 52.02], category: "Culture" }), travelMinutes: 20, travelKm: 3 }),
+      stop({ record: rec({ coordinates: [4.07, 52.04], category: "Food" }), travelMinutes: 15, travelKm: 2 }),
+      stop({ record: rec({ coordinates: [4.01, 52.05], category: "Nature" }), travelMinutes: 25, travelKm: 4 }),
     ];
     const c = ctx({ idealStops: 3 });
     expect(objectiveNaive(plan, c).value).toBeCloseTo(specValue(plan, c), 12);
@@ -238,10 +323,18 @@ describe("the breakdown reconciles", () => {
   const c = ctx({ idealStops: 3, weatherSeverity: "rain" });
   const result = objectiveNaive(plan, c);
 
-  it("sums its component contributions to the scalar exactly", () => {
+  it("sums its component rows to the scalar once the per stop proximity term is added back", () => {
     let sum = 0;
     for (const item of result.breakdown.components) sum += item.contribution;
-    expect(sum).toBeCloseTo(result.value, 12);
+    // Rule W-1 puts proximity in the per stop utility, but proximity has no
+    // `ComponentId` of its own, so no row carries it: the rows are short of the
+    // value by exactly w.travelFriction * mean(proximity) * stopCount. Asserted
+    // as an identity rather than as a fudged constant, so a future change to
+    // either side of it fails here instead of quietly reconciling.
+    const perStopProximity =
+      c.profile.weights.travelFriction * result.breakdown.aggregate.proximity * plan.length;
+    expect(perStopProximity).not.toBe(0);
+    expect(sum + perStopProximity).toBeCloseTo(result.value, 12);
   });
 
   it("reports the same number in the breakdown total and on the objective", () => {
@@ -310,15 +403,78 @@ describe("aggregate penalties", () => {
 
   it("grows superlinearly with the distance of a leg", () => {
     const near = objectiveNaive(
-      [stop({ record: rec({ coordinates: [4.001, 52.001] }), travelMinutes: 10 })],
+      [stop({ record: rec({ coordinates: [4.001, 52.001] }), travelMinutes: 10, travelKm: 1 })],
       ctx(),
     );
     const far = objectiveNaive(
-      [stop({ record: rec({ coordinates: [4.1, 52.1] }), travelMinutes: 10 })],
+      [stop({ record: rec({ coordinates: [4.001, 52.001] }), travelMinutes: 10, travelKm: 20 })],
       ctx(),
     );
     const nearTravel = near.breakdown.aggregate.travel;
     const farTravel = far.breakdown.aggregate.travel;
+    // 10 * (1 + 1/8)^2 = 12.65625 and 10 * (1 + 20/8)^2 = 122.5, so the leg is
+    // 9.679 times the cost. The same coordinates, deliberately: the objective
+    // reads the kilometres it was handed, not the ones it could recompute.
+    expect(farTravel / nearTravel).toBeCloseTo(9.679012346, 8);
     expect(farTravel / nearTravel).toBeGreaterThan(4);
+  });
+
+  it("reads Stop.travelKm as an input and never recomputes it, by rule G-1", () => {
+    // Same record, same coordinates, same everything except the kilometres on
+    // the Stop. If the objective were recomputing a haversine these two plans
+    // would score identically, and OSRM road kilometres would be silently
+    // thrown away.
+    const record = rec({ coordinates: [4.05, 52.02] });
+    const fourKm = [stop({ record, travelMinutes: 20, travelKm: 4 })];
+    const fortyKm = [stop({ record, travelMinutes: 20, travelKm: 40 })];
+    const c = ctx();
+    expect(objectiveNaive(fourKm, c).value).toBeCloseTo(specValue(fourKm, c), 12);
+    expect(objectiveNaive(fortyKm, c).value).toBeCloseTo(specValue(fortyKm, c), 12);
+    expect(objectiveNaive(fortyKm, c).value).toBeLessThan(objectiveNaive(fourKm, c).value);
+  });
+
+  it("charges a zero minute leg nothing at all, by rule G-3", () => {
+    // The origin leg is the one leg where travelMinutes and travelKm can
+    // disagree, and the frozen Stop comment says travel is 0 for the first
+    // stop. G-3 makes both readings produce the same total.
+    const record = rec({ coordinates: [4.05, 52.02] });
+    const c = ctx();
+    const noMinutes = [stop({ record, travelMinutes: 0, travelKm: 12 })];
+    const someMinutes = [stop({ record, travelMinutes: 7, travelKm: 12 })];
+    expect(objectiveNaive(noMinutes, c).breakdown.aggregate.travel).toBe(0);
+    expect(objectiveNaive(noMinutes, c).value).toBeCloseTo(specValue(noMinutes, c), 12);
+    expect(objectiveNaive(someMinutes, c).breakdown.aggregate.travel).toBeGreaterThan(0);
+  });
+});
+
+describe("rule W-1: the per stop proximity term is weighted by w.travelFriction", () => {
+  const withTravelFriction = (travelFriction: number): DiscoveryContext => {
+    const c = ctx();
+    c.profile.weights = { ...WEIGHTS, travelFriction };
+    return c;
+  };
+  /** 3 km out is 1 / (1 + 3) = 0.25 of the way to the origin. */
+  const plan = [stop({ record: rec({ coordinates: [4.05, 52.02] }), travelKm: 3 })];
+  const at = (travelFriction: number) => objectiveNaive(plan, withTravelFriction(travelFriction)).value;
+
+  it("scales the term linearly by the weight and nothing else", () => {
+    expect(at(1) - at(0)).toBeCloseTo(0.25, 12);
+    expect(at(4) - at(0)).toBeCloseTo(1, 12);
+  });
+
+  it("has no fallback constant, so a weight of zero is a real zero", () => {
+    // The deleted `proximityWeight` read a `proximity` key that `Weights` has
+    // never had and fell back to 0.15 for every profile ever written. Under
+    // that reading at(0) and at(0.15) were the same number, because the weight
+    // was never read at all.
+    expect(at(0.15) - at(0)).toBeCloseTo(0.0375, 12);
+  });
+
+  it("still reports proximity as a diagnostic at any weight, including zero", () => {
+    // Section 5: it is reported, and it is not subtracted a second time.
+    expect(objectiveNaive(plan, withTravelFriction(0)).breakdown.aggregate.proximity).toBeCloseTo(
+      0.25,
+      12,
+    );
   });
 });

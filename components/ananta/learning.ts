@@ -285,6 +285,52 @@ export function resetLearner(now: string): LearnerState {
 }
 
 /**
+ * The one place a traveller's action becomes a learning signal.
+ *
+ * Until this existed, `recordChoice` and `rewardForChoice` were written, tested
+ * and **never called**, so `bandit.observations` was permanently 0 and
+ * `learned-weights-panel.tsx` always rendered its "No behaviour has been learned
+ * yet" branch. The panel's own sentence claims the weights "change only when you
+ * save or reject something", and that sentence was false. This function is what
+ * makes it true, in one place, which is the only way to keep it true.
+ *
+ * The signal is deliberately weak. One save is not a habit: a stated preference
+ * is worth 0.6 and a rejection 0.15, not the 1.0 and 0.0 that an explicit rating
+ * would deserve. With `WEIGHT_PRIOR_STRENGTH` pseudo-observations behind them,
+ * ten saves move a weight noticeably and one barely moves it at all.
+ *
+ * `countedChoices` caps at 40 so a heavy user cannot grow localStorage without
+ * bound, and re-saving the same place does not count twice, because a toggle
+ * clicked repeatedly is not a stronger signal than one clicked once.
+ */
+const SAVE_REWARD = 0.6;
+const UNSAVE_REWARD = 0.15;
+
+export function noteChoice(recordId: string, kind: "save" | "unsave"): LearnerState {
+  if (typeof window === "undefined") return readLearner("1970-01-01T00:00:00");
+  const now = new Date().toISOString();
+  const state = readLearner(now);
+  if (!isNewChoice(state.countedChoices, recordId)) return state;
+
+  // Every component gets the same weak signal. A save says "this kind of place
+  // was worth keeping", which is evidence about the traveller's taste in general
+  // and not about which of the ten components earned it. Attributing it to one
+  // component would be a story the data does not tell.
+  const level = kind === "save" ? SAVE_REWARD : UNSAVE_REWARD;
+  const rewards = {} as Record<ComponentId, number>;
+  for (const id of COMPONENT_IDS) rewards[id] = level;
+
+  const next: LearnerState = {
+    ...state,
+    bandit: recordChoice(state.bandit, rewards, now),
+    countedChoices: [...state.countedChoices, recordId].slice(-40),
+    resetReason: state.resetReason,
+  };
+  writeLearner(next);
+  return next;
+}
+
+/**
  * Clamp one weight to its own bounds.
  *
  * A slider moves one key at a time and needs that key back on its own, while the

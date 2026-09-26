@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BookmarkSimple } from "@phosphor-icons/react/dist/ssr";
 import { readSaved, writeSaved } from "@/lib/saved";
 import { depth, motion } from "@/components/ananta/tokens";
+import { noteChoice } from "@/components/ananta/learning";
 
 /**
  * Save and unsave, as one toggle whose depth is its state.
@@ -24,6 +25,14 @@ import { depth, motion } from "@/components/ananta/tokens";
  * writes exactly one id on and exactly one id off and never touches anything
  * else. Inflating that count would be the easiest lie in the product to ship and
  * the hardest to notice.
+ *
+ * **A save is also a learning signal, and until this line existed it was not
+ * recorded at all.** `recordChoice` and `rewardForChoice` in `learning.ts` were
+ * written, tested and never called, so `bandit.observations` was permanently 0
+ * and the learned-weights panel always rendered its "No behaviour has been
+ * learned yet" branch. The panel's own copy claims the weights "change only when
+ * you save or reject something", which was false. Now it is true, and it is true
+ * in exactly one place, which is the only way that sentence can be kept honest.
  */
 export function SaveButton({ experienceId, experienceName }: { experienceId: string; experienceName?: string }) {
   const [saved, setSaved] = useState(false);
@@ -36,9 +45,14 @@ export function SaveButton({ experienceId, experienceName }: { experienceId: str
   }, [experienceId]);
 
   const click = () => {
+    const next = !saved;
     const ids = readSaved();
-    writeSaved(saved ? ids.filter((id) => id !== experienceId) : [...ids, experienceId]);
-    setSaved(!saved);
+    writeSaved(next ? [...ids, experienceId] : ids.filter((id) => id !== experienceId));
+    setSaved(next);
+    // Saving is a stated preference and unsaving is a rejection, so they are
+    // opposite signals. Neither is strong: one click is not a habit, which is why
+    // the Beta prior stays weak.
+    noteChoice(experienceId, next ? "save" : "unsave");
   };
 
   return (
