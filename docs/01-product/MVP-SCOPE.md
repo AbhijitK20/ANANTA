@@ -78,9 +78,18 @@ No production screen should be implemented until the team has approved:
 
 ## MVP Demo Dataset
 
-- 150–300 places and experiences
-- 20–40 providers
-- 20–50 recurring or live events
+The dataset shipped larger than this scope asked for. The authoritative
+description, with its exact composition and its per-field provenance breakdown,
+is in [Architecture, as it actually is](../03-technical/ARCHITECTURE-ACTUAL.md).
+In short: **1,090 records across 26 areas and 10 categories, of which 199 are
+hand-curated and 380 carry a coordinate matched against OpenStreetMap.** No other
+document restates that number.
+
+The targets this scope originally set, for reference:
+
+- 150 to 300 places and experiences
+- 20 to 40 providers
+- 20 to 50 recurring or live events
 - Multiple categories, budgets, durations, zones, and accessibility profiles
 - At least one confirmed event discovered from a public social or community source
 - At least one hidden-gem candidate with provenance and verification history
@@ -88,11 +97,6 @@ No production screen should be implemented until the team has approved:
 
 ## Definition of MVP Done
 
-- Core flow works on desktop and mobile widths.
-- All P0 acceptance criteria pass.
-- External API failure has a visible fallback.
-- No recommendation violates a hard constraint in seeded test scenarios.
-- Event records expire correctly.
-- Admin can correct a stale or incorrect listing.
-- Demo data contains no unexplained placeholder claims.
-- No secrets or private credentials are committed.
+See [Definition of Done](../06-quality/DEFINITION-OF-DONE.md) for the single
+project-wide definition. The P0 criteria and their current status are in
+[Acceptance Criteria](../06-quality/ACCEPTANCE-CRITERIA.md).

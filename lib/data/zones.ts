@@ -21,6 +21,11 @@ export const zoneRows: ZoneRow[] = [
   { zone: "Worli / Lower Parel", city: "Mumbai", area: "Lower Parel", coordinates: [72.8373, 18.9964], station: "Lower Parel" },
   { zone: "Worli / Lower Parel", city: "Mumbai", area: "Worli", coordinates: [72.8231, 19.0079], station: "Lower Parel" },
   { zone: "Malabar Hill", city: "Mumbai", area: "Walkeshwar", coordinates: [72.7934, 18.9455], station: "Grant Road" },
+  // Breach Candy is its own locality on the Cumballa slope, between Grant Road
+  // and the Malabar Hill edge. It is grouped under the Malabar Hill zone because
+  // that is the precinct it shares. The anchor is the locality core, and CSMT is
+  // the nearest station: CSMT sits about 2.2 km east, Grant Road about 3.5 km north.
+  { zone: "Malabar Hill", city: "Mumbai", area: "Breach Candy", coordinates: [72.8203, 18.9265], station: "CSMT" },
   { zone: "Bhendi Bazaar", city: "Mumbai", area: "Bhendi Bazaar", coordinates: [72.8327, 18.9662], station: "Grant Road" },
   { zone: "Sewri / Wadala", city: "Mumbai", area: "Sewri", coordinates: [72.8588, 19.0189], station: "Sewri" },
   { zone: "Borivali / SGNP", city: "Mumbai", area: "Borivali East", coordinates: [72.8847, 19.2242], station: "Borivali" },

@@ -1,4 +1,4 @@
-# Local & Experiences — Intelligent Local Discovery & Experience Platform
+﻿# Local & Experiences â€” Intelligent Local Discovery & Experience Platform
 ## Production-Grade Masterplan
 
 > **Status:** Comprehensive Product + Architecture Blueprint
@@ -53,7 +53,7 @@
 
 **Local & Experiences** is an intelligent local discovery, planning, and experience marketplace designed to answer a question that traditional travel platforms do not answer particularly well:
 
-> "Given who I am, where I am, what I like, how much time I have, how much I want to spend, who I am traveling with, what I have already planned, and what is happening around me — what should I actually do right now?"
+> "Given who I am, where I am, what I like, how much time I have, how much I want to spend, who I am traveling with, what I have already planned, and what is happening around me â€” what should I actually do right now?"
 
 The application goes beyond conventional:
 - Search
@@ -89,13 +89,13 @@ Travel Time
 Reviews
       +
 Weather / Context
-      ↓
+      â†“
 Intelligent Recommendation
-      ↓
+      â†“
 Feasible Itinerary
-      ↓
+      â†“
 Booking / Discovery
-      ↓
+      â†“
 Real-Time Adaptation
 ```
 
@@ -152,14 +152,14 @@ For example, given the input *"I have 3 hours before dinner,"* the traveler must
 ### Traditional platform
 
 ```
-Search → Results → Filters → User decides
+Search â†’ Results â†’ Filters â†’ User decides
 ```
 
 ### Local & Experiences
 
 ```
-Intent → Understand → Context → Constraints → Discover →
-Validate → Rank → Explain → Plan → Book → Monitor → Adapt
+Intent â†’ Understand â†’ Context â†’ Constraints â†’ Discover â†’
+Validate â†’ Rank â†’ Explain â†’ Plan â†’ Book â†’ Monitor â†’ Adapt
 ```
 
 The platform's primary value is therefore **not merely finding places**.
@@ -187,7 +187,7 @@ The platform's primary value is therefore **not merely finding places**.
 
 The provider side should support:
 - Restaurants
-- Cafés
+- CafÃ©s
 - Local guides
 - Tour operators
 - Artists
@@ -236,33 +236,33 @@ The application should be designed around **17 major feature domains**:
 16. Review & Reputation Intelligence
 17. Admin Command Center
 
-### Feature 01 — Intelligent Traveler Onboarding
+### Feature 01 â€” Intelligent Traveler Onboarding
 
 **Objective:** Understand the traveler quickly without creating an annoying registration questionnaire.
 
 **Basic information:** name, email, preferred language, optional profile image
 
-**Travel style:** Solo · Couple · Family · Friends · Business · Backpacker · Group
+**Travel style:** Solo Â· Couple Â· Family Â· Friends Â· Business Â· Backpacker Â· Group
 
-**Interests:** Food · Culture · History · Heritage · Art · Music · Festivals · Nature · Adventure · Shopping · Nightlife · Photography · Workshops · Local communities · Hidden places
+**Interests:** Food Â· Culture Â· History Â· Heritage Â· Art Â· Music Â· Festivals Â· Nature Â· Adventure Â· Shopping Â· Nightlife Â· Photography Â· Workshops Â· Local communities Â· Hidden places
 
-**Preference dimensions:** Budget · Pace · Walking tolerance · Indoor/outdoor · Touristy/local · Social/private · Spontaneous/planned
+**Preference dimensions:** Budget Â· Pace Â· Walking tolerance Â· Indoor/outdoor Â· Touristy/local Â· Social/private Â· Spontaneous/planned
 
-**Accessibility (optional):** Wheelchair accessibility · Reduced walking · Elevator · Accessible restroom · Seating · Low-noise environment
+**Accessibility (optional):** Wheelchair accessibility Â· Reduced walking Â· Elevator Â· Accessible restroom Â· Seating Â· Low-noise environment
 
 **Important UX principle:** Do not force users to answer everything.
 
 ```
-Minimal onboarding → Start exploring → Learn behavior → Improve profile
+Minimal onboarding â†’ Start exploring â†’ Learn behavior â†’ Improve profile
 ```
 
-### Feature 02 — Dynamic Traveler Profile
+### Feature 02 â€” Dynamic Traveler Profile
 
 The user's profile should become more intelligent over time, using **three types of preferences**:
 
-- **Explicit** — User says: *"I love local food."*
-- **Behavioral** — User repeatedly saves food experiences, books food experiences, ignores nightlife
-- **Contextual (temporary)** — *"I'm traveling with my parents this weekend."*
+- **Explicit** â€” User says: *"I love local food."*
+- **Behavioral** â€” User repeatedly saves food experiences, books food experiences, ignores nightlife
+- **Contextual (temporary)** â€” *"I'm traveling with my parents this weekend."*
 
 The system should distinguish these.
 
@@ -272,11 +272,11 @@ The system should distinguish these.
 
 ```
 Traveler
- ├── Explicit Preferences
- ├── Behavioral Preferences
- ├── Current Trip Context
- ├── Group Context
- └── Historical Experience
+ â”œâ”€â”€ Explicit Preferences
+ â”œâ”€â”€ Behavioral Preferences
+ â”œâ”€â”€ Current Trip Context
+ â”œâ”€â”€ Group Context
+ â””â”€â”€ Historical Experience
 ```
 
 **Example:**
@@ -296,13 +296,13 @@ Traveler
 
 ## 10. Structured Experience Database
 
-### Feature 03 — Structured Experience Database
+### Feature 03 â€” Structured Experience Database
 
 This is **the foundation of the entire platform**. Each experience should contain structured information.
 
-**Core fields:** Experience ID · Provider ID · Name · Description · Category · Subcategory · Location · Coordinates · Price · Currency · Duration · Capacity · Languages · Opening Hours · Availability · Rating · Review Count · Images
+**Core fields:** Experience ID Â· Provider ID Â· Name Â· Description Â· Category Â· Subcategory Â· Location Â· Coordinates Â· Price Â· Currency Â· Duration Â· Capacity Â· Languages Â· Opening Hours Â· Availability Â· Rating Â· Review Count Â· Images
 
-**Advanced metadata:** Experience Type · Indoor/Outdoor · Authenticity · Tourist Density · Walking Intensity · Age Suitability · Group Suitability · Accessibility · Booking Requirement · Cancellation Policy · Safety Information · Best Time · Crowd Level
+**Advanced metadata:** Experience Type Â· Indoor/Outdoor Â· Authenticity Â· Tourist Density Â· Walking Intensity Â· Age Suitability Â· Group Suitability Â· Accessibility Â· Booking Requirement Â· Cancellation Policy Â· Safety Information Â· Best Time Â· Crowd Level
 
 ### Why Structured Data Is Critical
 
@@ -314,40 +314,40 @@ Duration + Travel Time + Opening Hours + Availability + Buffer
 
 > **AI should sit on top of structured operational data, not replace it.**
 
-### Feature 04 — Intelligent Map
+### Feature 04 â€” Intelligent Map
 
-The map should not merely display pins — it should become part of the recommendation experience.
+The map should not merely display pins â€” it should become part of the recommendation experience.
 
-**Capabilities:** current location · destination · experience markers · category layers · clustering · routes · itinerary visualization · distance · travel time · nearby discovery
+**Capabilities:** current location Â· destination Â· experience markers Â· category layers Â· clustering Â· routes Â· itinerary visualization Â· distance Â· travel time Â· nearby discovery
 
-**Layers:** Food · Culture · Adventure · Shopping · Nightlife · Nature · Workshops · Events · Hidden Gems
+**Layers:** Food Â· Culture Â· Adventure Â· Shopping Â· Nightlife Â· Nature Â· Workshops Â· Events Â· Hidden Gems
 
 **Map + Recommendation Integration:**
 
 ```
-Traveler location → Nearby experiences → Personalized ranking → Map visualization
+Traveler location â†’ Nearby experiences â†’ Personalized ranking â†’ Map visualization
 ```
 
-Selecting a marker should show: Name · Rating · Price · Duration · Distance · Availability · Why recommended
+Selecting a marker should show: Name Â· Rating Â· Price Â· Duration Â· Distance Â· Availability Â· Why recommended
 
-### Feature 05 — Intelligent Search
+### Feature 05 â€” Intelligent Search
 
 Users who know what they want should still be able to search normally (e.g. *"Mumbai food"*, *"Heritage experiences"*, *"Things to do near me"*, *"Family activities"*).
 
-Default search ranking should be **Recommended**, rather than **Most Popular** — because the most popular experience isn't necessarily the best experience for the specific traveler.
+Default search ranking should be **Recommended**, rather than **Most Popular** â€” because the most popular experience isn't necessarily the best experience for the specific traveler.
 
-### Feature 06 — Natural Language Discovery
+### Feature 06 â€” Natural Language Discovery
 
 One of the strongest AI features. A user can type:
 
-> "I have 3 hours near CST, ₹1500, and want authentic local food and something cultural."
+> "I have 3 hours near CST, â‚¹1500, and want authentic local food and something cultural."
 
 The system extracts:
 
 ```
 Location: CST
 Available Time: 3 hours
-Budget: ₹1500
+Budget: â‚¹1500
 Interests: Food + Culture
 Preference: Authentic
 ```
@@ -357,8 +357,8 @@ Then searches the structured experience system.
 **Natural Language Architecture:**
 
 ```
-User Message → Intent Understanding → Constraint Extraction →
-Structured Query → Experience Search → Recommendation
+User Message â†’ Intent Understanding â†’ Constraint Extraction â†’
+Structured Query â†’ Experience Search â†’ Recommendation
 ```
 
 The LLM should interpret the request. **It should not invent operational facts.**
@@ -409,13 +409,13 @@ Recommendations should account for local conditions such as:
 
 The prototype should aim for quality rather than maximum volume:
 
-- 150–300 total places and experiences
-- 50–100 tourist and heritage locations
-- 50–100 food and local experiences
-- 25–50 nature and family activities
-- 25–50 workshops and cultural activities
-- 20–50 recurring or live events
-- 20–40 providers
+- 150â€“300 total places and experiences
+- 50â€“100 tourist and heritage locations
+- 50â€“100 food and local experiences
+- 25â€“50 nature and family activities
+- 25â€“50 workshops and cultural activities
+- 20â€“50 recurring or live events
+- 20â€“40 providers
 
 These numbers are targets, not a requirement to fabricate coverage. Every published record must have provenance, a confidence level, and a freshness date.
 
@@ -441,19 +441,19 @@ Social and community sources are discovery signals, not automatic proof of curre
 
 ```text
 External Sources
-      ↓
+      â†“
 Source Connectors / Admin Submissions
-      ↓
+      â†“
 Raw Source Records
-      ↓
+      â†“
 Normalization and Geocoding
-      ↓
+      â†“
 Duplicate Detection
-      ↓
+      â†“
 Verification and Moderation
-      ↓
+      â†“
 Experience / Event Database
-      ↓
+      â†“
 Recommendation and Map APIs
 ```
 
@@ -478,7 +478,7 @@ Every place, experience, and event should track:
 Recommended record states are:
 
 ```text
-Raw → Normalized → Needs Review → Verified → Published → Stale → Archived
+Raw â†’ Normalized â†’ Needs Review â†’ Verified â†’ Published â†’ Stale â†’ Archived
 ```
 
 Stale information must be downgraded in ranking or clearly marked for confirmation. Expired events should automatically leave active discovery and remain available only in historical analytics.
@@ -499,7 +499,7 @@ Events require a dedicated temporary-content model because they expire quickly. 
 The event lifecycle is:
 
 ```text
-Discovered → Parsed → Deduplicated → Verified → Published → Updated → Completed → Archived
+Discovered â†’ Parsed â†’ Deduplicated â†’ Verified â†’ Published â†’ Updated â†’ Completed â†’ Archived
 ```
 
 Event records should expose confirmation labels such as `Confirmed by organizer`, `Confirmed by venue`, `Official listing`, `Ticket platform listing`, `Community reported`, and `Awaiting confirmation`. The UI must never present an unverified social-media discovery as confirmed availability.
@@ -537,13 +537,13 @@ Providers should be able to submit structured experiences and maintain price, sc
 
 ```text
 User / Provider Submission
-        ↓
+        â†“
 Duplicate Check
-        ↓
+        â†“
 Admin Review and Provider Confirmation
-        ↓
+        â†“
 Verified or Community Reported
-        ↓
+        â†“
 Published with Provenance
 ```
 
@@ -598,15 +598,15 @@ The product must clearly distinguish free software from free quotas. Public serv
 
 ## 14. AI Recommendation Engine
 
-### Feature 07 — AI Recommendation Engine
+### Feature 07 â€” AI Recommendation Engine
 
 This is the core intelligence layer.
 
 **Recommendation pipeline:**
 
 ```
-Traveler Context → Candidate Generation → Hard Constraint Filtering →
-Context Filtering → Scoring → Personalization → Ranking → Explanation
+Traveler Context â†’ Candidate Generation â†’ Hard Constraint Filtering â†’
+Context Filtering â†’ Scoring â†’ Personalization â†’ Ranking â†’ Explanation
 ```
 
 ### Hard Constraints
@@ -622,41 +622,41 @@ An experience failing a hard constraint should normally not be recommended as fe
 
 ### Soft Ranking Factors
 
-Interest Match · Time Fit · Budget Fit · Distance · Availability · Rating · Review Quality · Authenticity · Group Compatibility · Accessibility · Provider Reliability · Previous User Behavior · Context
+Interest Match Â· Time Fit Â· Budget Fit Â· Distance Â· Availability Â· Rating Â· Review Quality Â· Authenticity Â· Group Compatibility Â· Accessibility Â· Provider Reliability Â· Previous User Behavior Â· Context
 
 ### Dynamic Ranking
 
 Different contexts change the weighting.
 
-**User has only 45 minutes:** Time Fit ↑↑ · Distance ↑↑ · Availability ↑ · Popularity ↓
+**User has only 45 minutes:** Time Fit â†‘â†‘ Â· Distance â†‘â†‘ Â· Availability â†‘ Â· Popularity â†“
 
-**User wants hidden gems:** Authenticity ↑↑ · Local relevance ↑↑ · Tourist density ↓ · Popularity ↓
+**User wants hidden gems:** Authenticity â†‘â†‘ Â· Local relevance â†‘â†‘ Â· Tourist density â†“ Â· Popularity â†“
 
-### Feature 08 — Advanced Filters
+### Feature 08 â€” Advanced Filters
 
 Users should retain control:
 
-- **Price:** Free · Budget · Moderate · Premium · Custom
-- **Distance:** <1 km · <3 km · <5 km · Custom
-- **Duration:** <30 min · 30–60 min · 1–2 hours · 2+ hours
-- **Availability:** Open now · Today · Tomorrow · Specific time
-- **Categories:** Food · Culture · Nature · Adventure · Shopping · Nightlife · Workshop · Events
-- **Audience:** Solo · Couple · Family · Children · Groups
+- **Price:** Free Â· Budget Â· Moderate Â· Premium Â· Custom
+- **Distance:** <1 km Â· <3 km Â· <5 km Â· Custom
+- **Duration:** <30 min Â· 30â€“60 min Â· 1â€“2 hours Â· 2+ hours
+- **Availability:** Open now Â· Today Â· Tomorrow Â· Specific time
+- **Categories:** Food Â· Culture Â· Nature Â· Adventure Â· Shopping Â· Nightlife Â· Workshop Â· Events
+- **Audience:** Solo Â· Couple Â· Family Â· Children Â· Groups
 - **Accessibility:** Dedicated accessibility filters
 
 ### Recommendation Feedback Loop
 
-Users should have: Like · Save · Not Interested · Hide · Book · Review
+Users should have: Like Â· Save Â· Not Interested Â· Hide Â· Book Â· Review
 
-For "Not Interested," capture reasons: Too expensive · Too far · Not my interest · Too touristy · Too crowded · Already visited — these signals improve future ranking.
+For "Not Interested," capture reasons: Too expensive Â· Too far Â· Not my interest Â· Too touristy Â· Too crowded Â· Already visited â€” these signals improve future ranking.
 
 ### Recommendation Quality
 
 ```
-Impression → Click → Save → Booking → Completion → Satisfaction
+Impression â†’ Click â†’ Save â†’ Booking â†’ Completion â†’ Satisfaction
 ```
 
-A click is not the final goal — **the real objective is a successful experience.**
+A click is not the final goal â€” **the real objective is a successful experience.**
 
 ### Cold Start
 
@@ -677,16 +677,16 @@ Positive feedback + Provider reliability
 
 ### Experience Diversity
 
-Recommendation engines can become repetitive. If a traveler likes food, don't return Food × 5 — instead diversify: Food, Culture, Workshop, Market, Photography — unless the user explicitly wants only food.
+Recommendation engines can become repetitive. If a traveler likes food, don't return Food Ã— 5 â€” instead diversify: Food, Culture, Workshop, Market, Photography â€” unless the user explicitly wants only food.
 
 ### Context Intelligence
 
-Recommendations should understand: Time · Date · Location · Weather · Traffic · Opening Hours · Availability · Events · Traveler Profile · Group
+Recommendations should understand: Time Â· Date Â· Location Â· Weather Â· Traffic Â· Opening Hours Â· Availability Â· Events Â· Traveler Profile Â· Group
 
 | Context | Recommend |
 |---|---|
 | Morning | Markets, breakfast, walking tours |
-| Rain | Museums, indoor workshops, cafés |
+| Rain | Museums, indoor workshops, cafÃ©s |
 | Evening | Food, nightlife, cultural events |
 
 ### Group Intelligence
@@ -694,16 +694,16 @@ Recommendations should understand: Time · Date · Location · Weather · Traffi
 Group preferences should not be treated as a single preference:
 
 ```
-Person A → Food
-Person B → History
-Person C → Adventure
-Child   → Family-friendly
+Person A â†’ Food
+Person B â†’ History
+Person C â†’ Adventure
+Child   â†’ Family-friendly
 ```
 
 The recommendation engine should seek the best compromise. **Group Planning Modes:**
-- **Consensus** — find something everyone is likely to enjoy
-- **Balanced** — rotate different interests
-- **Organizer** — one person has greater decision authority
+- **Consensus** â€” find something everyone is likely to enjoy
+- **Balanced** â€” rotate different interests
+- **Organizer** â€” one person has greater decision authority
 
 ### Recommendation Fairness
 
@@ -719,15 +719,15 @@ This prevents the platform from becoming a popularity-only marketplace.
 
 ## 15. Time, Budget & Itinerary Intelligence
 
-### Feature 09 — Real-Time Availability
+### Feature 09 â€” Real-Time Availability
 
 A production-like system cannot recommend an experience that cannot be booked or attended.
 
-**Availability model:** Operating Hours · Specific Slots · Capacity · Remaining Capacity · Booking Requirement · Blackout Dates · Provider Status
+**Availability model:** Operating Hours Â· Specific Slots Â· Capacity Â· Remaining Capacity Â· Booking Requirement Â· Blackout Dates Â· Provider Status
 
-**Provider Availability Controls:** open slots · close slots · modify capacity · block dates · temporarily close · update operating hours. Availability becomes a major signal for recommendation.
+**Provider Availability Controls:** open slots Â· close slots Â· modify capacity Â· block dates Â· temporarily close Â· update operating hours. Availability becomes a major signal for recommendation.
 
-### Feature 10 — Time-Aware Planning
+### Feature 10 â€” Time-Aware Planning
 
 Ensures recommendations are actually feasible.
 
@@ -770,7 +770,7 @@ Distance alone is insufficient for Mumbai and Navi Mumbai. Each route should sup
 The interface should show estimated time and mode, for example:
 
 ```text
-8.2 km away · Taxi: 32 min · Local train + walk: 24 min
+8.2 km away Â· Taxi: 32 min Â· Local train + walk: 24 min
 ```
 
 The MVP may use cached or curated transit estimates. The architecture must allow live routing later without making it mandatory today.
@@ -801,17 +801,17 @@ Example:
 
 ```text
 Feasibility: 92%
-✓ Open now
-✓ Available for 3 people
-✓ Fits your 2-hour window
-✓ 18 minutes away
-✓ Within budget
-✓ Weather suitable
+âœ“ Open now
+âœ“ Available for 3 people
+âœ“ Fits your 2-hour window
+âœ“ 18 minutes away
+âœ“ Within budget
+âœ“ Weather suitable
 ```
 
 If confidence is low, the system should explain why, such as `Opening hours have not been verified recently` or `Live availability could not be confirmed`.
 
-### Feature 11 — Budget-Aware Planning
+### Feature 11 â€” Budget-Aware Planning
 
 The system should understand both individual experience cost and total trip cost:
 
@@ -820,22 +820,22 @@ Cost = Experience + Food + Transport + Booking Fee + Optional Add-ons
 ```
 
 **Hard vs Soft Budget**
-- **Hard:** *"Never spend more than ₹1,000."* — system must respect it.
-- **Soft:** *"I'd prefer to spend around ₹1,000."* — system may suggest ₹1,100 if significantly better.
+- **Hard:** *"Never spend more than â‚¹1,000."* â€” system must respect it.
+- **Soft:** *"I'd prefer to spend around â‚¹1,000."* â€” system may suggest â‚¹1,100 if significantly better.
 
-### Feature 12 — Personalized Itinerary Generation
+### Feature 12 â€” Personalized Itinerary Generation
 
 Turns individual experiences into a coherent journey.
 
-**Inputs:** Traveler Profile · Location · Dates · Available Time · Budget · Group · Preferences · Existing Itinerary · Availability · Weather · Travel Time
+**Inputs:** Traveler Profile Â· Location Â· Dates Â· Available Time Â· Budget Â· Group Â· Preferences Â· Existing Itinerary Â· Availability Â· Weather Â· Travel Time
 
-**Itinerary Controls:** Add · Remove · Replace · Reorder · Regenerate · Optimize Time · Optimize Cost · Save · Share · Book
+**Itinerary Controls:** Add Â· Remove Â· Replace Â· Reorder Â· Regenerate Â· Optimize Time Â· Optimize Cost Â· Save Â· Share Â· Book
 
 > AI should suggest changes, not silently make major changes.
 
 ### Itinerary Optimization
 
-Optimize for (in priority order): Preference satisfaction → Time feasibility → Budget feasibility → Travel efficiency → Availability → Experience quality → Group satisfaction → Accessibility → Variety
+Optimize for (in priority order): Preference satisfaction â†’ Time feasibility â†’ Budget feasibility â†’ Travel efficiency â†’ Availability â†’ Experience quality â†’ Group satisfaction â†’ Accessibility â†’ Variety
 
 ### Multiple Valid Plans
 
@@ -855,7 +855,7 @@ Each plan should explain its tradeoffs, such as `more authentic but 20 minutes f
 Provide quick-entry modes for common situations:
 
 ```text
-45 minutes · 1 hour · 2 hours · 4 hours · All day
+45 minutes Â· 1 hour Â· 2 hours Â· 4 hours Â· All day
 ```
 
 The same planner should support hotel gaps, airport layovers, time before a train, and free time between existing itinerary items.
@@ -865,7 +865,7 @@ The same planner should support hotel gaps, airport layovers, time before a trai
 The platform should combine compatible experiences into validated bundles such as:
 
 - Food + heritage
-- Museum + café
+- Museum + cafÃ©
 - Market + street food
 - Nature walk + local meal
 - Workshop + shopping
@@ -877,27 +877,27 @@ Bundles must be checked for opening hours, travel time, budget, duration, availa
 
 ## 16. Adaptive Itinerary
 
-### Feature 13 — Adaptive Itinerary
+### Feature 13 â€” Adaptive Itinerary
 
 One of the biggest differentiators. The itinerary should react to changing conditions.
 
-**Triggers:** Experience unavailable · Weather changes · Traffic increases · User loses time · Budget changes · Provider closes · User changes preference · Reservation changes
+**Triggers:** Experience unavailable Â· Weather changes Â· Traffic increases Â· User loses time Â· Budget changes Â· Provider closes Â· User changes preference Â· Reservation changes
 
-The adaptive system should also support explicit requests such as `I want something peaceful`, `I am tired`, `I do not want to walk`, `I want something romantic`, `I want to escape crowds`, and `Surprise me under ₹800`. Natural language should become temporary structured context rather than permanently changing the traveler's profile without confirmation.
+The adaptive system should also support explicit requests such as `I want something peaceful`, `I am tired`, `I do not want to walk`, `I want something romantic`, `I want to escape crowds`, and `Surprise me under â‚¹800`. Natural language should become temporary structured context rather than permanently changing the traveler's profile without confirmation.
 
 **Adaptive Planning Flow:**
 
 ```
-Change Detected → Affected Items Identified → Constraints Recalculated →
-Alternatives Generated → Alternatives Ranked → Schedule Validated →
-Traveler Asked → Plan Updated
+Change Detected â†’ Affected Items Identified â†’ Constraints Recalculated â†’
+Alternatives Generated â†’ Alternatives Ranked â†’ Schedule Validated â†’
+Traveler Asked â†’ Plan Updated
 ```
 
 **Example (rain begins):**
 
 ```
-Outdoor activity affected → Search indoor alternatives → Check availability →
-Check budget → Check travel time → Update itinerary
+Outdoor activity affected â†’ Search indoor alternatives â†’ Check availability â†’
+Check budget â†’ Check travel time â†’ Update itinerary
 ```
 
 ### What-If Planning
@@ -917,11 +917,11 @@ The simulation returns alternatives without modifying the confirmed plan. Any re
 
 ## 17. Provider Systems
 
-### Feature 14 — Provider Dashboard
+### Feature 14 â€” Provider Dashboard
 
-**Main sections:** Overview · Experiences · Bookings · Availability · Customers · Reviews · Analytics · Profile · Settings
+**Main sections:** Overview Â· Experiences Â· Bookings Â· Availability Â· Customers Â· Reviews Â· Analytics Â· Profile Â· Settings
 
-**Dashboard metrics:** Today's Bookings · Upcoming Bookings · Revenue · Views · Saves · Recommendations · Conversion Rate · Cancellation Rate
+**Dashboard metrics:** Today's Bookings Â· Upcoming Bookings Â· Revenue Â· Views Â· Saves Â· Recommendations Â· Conversion Rate Â· Cancellation Rate
 
 **Provider Alerts (examples):**
 - "Your experience has high interest tomorrow."
@@ -931,9 +931,9 @@ The simulation returns alternatives without modifying the confirmed plan. Any re
 
 Additional provider signals should include high demand for a time slot, many searches with low conversion, unused slots tomorrow, strong family demand, rising event interest, and stale listing information.
 
-### Feature 15 — Provider Experience Creation
+### Feature 15 â€” Provider Experience Creation
 
-**Fields:** Name · Description · Category · Location · Images · Price · Duration · Capacity · Languages · Schedule · Availability · Accessibility · Age Requirements · Cancellation Policy · Meeting Point · Included · Excluded · Safety Information
+**Fields:** Name Â· Description Â· Category Â· Location Â· Images Â· Price Â· Duration Â· Capacity Â· Languages Â· Schedule Â· Availability Â· Accessibility Â· Age Requirements Â· Cancellation Policy Â· Meeting Point Â· Included Â· Excluded Â· Safety Information
 
 **AI-Assisted Provider Listing:** a provider can describe their experience in plain language and the AI assists with Title, Description, Tags, Category, Highlights, Target audience, and Structured fields.
 
@@ -955,7 +955,7 @@ If sponsored placement is eventually introduced, it must be clearly labeled `Spo
 
 ## 18. Review & Trust Intelligence
 
-### Verified Experience Media — “See It Before You Go”
+### Verified Experience Media â€” â€œSee It Before You Goâ€
 
 The platform may attach approved external videos to experiences, places, markets, hidden-gem candidates, and live events. This gives travelers visual context about atmosphere, layout, crowds, food, shopping, access, and the practical feel of a place before they visit.
 
@@ -971,8 +971,8 @@ Supported sources may include:
 The media layer must preserve the distinction between context and operational truth:
 
 ```text
-Video content → Atmosphere, context, and inspiration
-Verified structured data → Current price, hours, availability, access, and booking truth
+Video content â†’ Atmosphere, context, and inspiration
+Verified structured data â†’ Current price, hours, availability, access, and booking truth
 ```
 
 Videos must never be treated as proof of current pricing, opening hours, availability, safety, crowd level, or event status. Every media item should display creator attribution, platform, publish date, verification state, and last-checked date where available.
@@ -993,12 +993,12 @@ Videos must never be treated as proof of current pricing, opening hours, availab
 
 ```text
 Discovered / Submitted
-→ Matched to Place or Event
-→ Admin or Provider Review
-→ Approved External Media
-→ Published
-→ Periodic Link and Context Check
-→ Stale / Unavailable / Archived
+â†’ Matched to Place or Event
+â†’ Admin or Provider Review
+â†’ Approved External Media
+â†’ Published
+â†’ Periodic Link and Context Check
+â†’ Stale / Unavailable / Archived
 ```
 
 Recommended labels include `Provider video`, `Official venue video`, `Local creator`, `Community submitted`, `Admin verified`, `Older video`, and `May not reflect current details`.
@@ -1007,33 +1007,33 @@ Recommended labels include `Provider video`, `Official venue video`, `Local crea
 
 The platform may track video opened, watched, completed, saved-after-video, and booked-after-video events. These are engagement signals only and must not make a place rank highly solely because it has many videos.
 
-### Feature 16 — Review & Reputation Intelligence
+### Feature 16 â€” Review & Reputation Intelligence
 
-Traditional `4.6 ★` should become:
+Traditional `4.6 â˜…` should become:
 
 ```
-4.6 ★
+4.6 â˜…
 Travelers commonly praise:
-✓ Authentic experience   ✓ Friendly guide   ✓ Good value
+âœ“ Authentic experience   âœ“ Friendly guide   âœ“ Good value
 Common concerns:
-⚠ Parking   ⚠ Occasional delays
+âš  Parking   âš  Occasional delays
 ```
 
 **Review Intelligence** analyzes: sentiment, recurring themes, quality, recency, complaints, strengths.
 
-**Review tags:** Authentic · Friendly · Good Value · Well Organized · Crowded · Expensive · Hard to Find · Delayed · Family Friendly
+**Review tags:** Authentic Â· Friendly Â· Good Value Â· Well Organized Â· Crowded Â· Expensive Â· Hard to Find Â· Delayed Â· Family Friendly
 
 ### Provider Reputation
 
-Do not use rating alone. Consider: Rating · Review Quality · Recent Reviews · Cancellation Rate · Completion Rate · Response Time · Complaint Rate · Booking Reliability · Listing Accuracy
+Do not use rating alone. Consider: Rating Â· Review Quality Â· Recent Reviews Â· Cancellation Rate Â· Completion Rate Â· Response Time Â· Complaint Rate Â· Booking Reliability Â· Listing Accuracy
 
 ### Trust Architecture
 
 Trust should be a first-class product feature.
 
-**Trust indicators:** Verified Provider · Verified Experience · Recent Availability · Review Confidence · Data Freshness
+**Trust indicators:** Verified Provider Â· Verified Experience Â· Recent Availability Â· Review Confidence Â· Data Freshness
 
-**Data Freshness fields to track:** Price Last Updated · Hours Last Verified · Availability Last Updated · Provider Last Updated — helps identify stale listings.
+**Data Freshness fields to track:** Price Last Updated Â· Hours Last Verified Â· Availability Last Updated Â· Provider Last Updated â€” helps identify stale listings.
 
 ### Field-Level Confidence
 
@@ -1087,13 +1087,13 @@ Every recommendation should explain itself:
 
 ```
 Why we recommend this:
-✓ Matches your interest in local culture
-✓ Fits your 2-hour window
-✓ 12 minutes away
-✓ Currently available
-✓ Within your budget
-✓ Highly rated by similar travelers
-✓ Less crowded than nearby alternatives
+âœ“ Matches your interest in local culture
+âœ“ Fits your 2-hour window
+âœ“ 12 minutes away
+âœ“ Currently available
+âœ“ Within your budget
+âœ“ Highly rated by similar travelers
+âœ“ Less crowded than nearby alternatives
 ```
 
 ### Why This Was Not Recommended
@@ -1122,27 +1122,27 @@ Experience Quality =
 
 ## 19. Admin & Platform Governance
 
-### Feature 17 — Admin Command Center
+### Feature 17 â€” Admin Command Center
 
-**Sections:** Dashboard · Travelers · Providers · Experiences · Bookings · Reviews · Reports · Moderation · Analytics · System
+**Sections:** Dashboard Â· Travelers Â· Providers Â· Experiences Â· Bookings Â· Reviews Â· Reports Â· Moderation Â· Analytics Â· System
 
 ### Provider Verification Lifecycle
 
 ```
-Registered → Pending Verification → Under Review → Verified → Published
+Registered â†’ Pending Verification â†’ Under Review â†’ Verified â†’ Published
 ```
-Possible states: `Pending` · `Verified` · `Rejected` · `Suspended`
+Possible states: `Pending` Â· `Verified` Â· `Rejected` Â· `Suspended`
 
 ### Experience Moderation
 
 ```
-Draft → Pending Review → Approved → Published
+Draft â†’ Pending Review â†’ Approved â†’ Published
 ```
-Possible later states: `Flagged` · `Suspended` · `Archived`
+Possible later states: `Flagged` Â· `Suspended` Â· `Archived`
 
 ### Admin Capabilities
 
-Verify providers · Approve/reject listings · Suspend providers · Moderate reviews · Manage reports · Resolve disputes · Manage categories · Monitor fraud · View platform analytics · Inspect operational problems · Review source records · Resolve duplicates · Verify hidden-gem candidates · Manage event expiry
+Verify providers Â· Approve/reject listings Â· Suspend providers Â· Moderate reviews Â· Manage reports Â· Resolve disputes Â· Manage categories Â· Monitor fraud Â· View platform analytics Â· Inspect operational problems Â· Review source records Â· Resolve duplicates Â· Verify hidden-gem candidates Â· Manage event expiry
 
 ### Data Operations Console
 
@@ -1162,7 +1162,7 @@ Every review action should record who reviewed it, what changed, the source used
 
 ### Fraud Detection
 
-Potential signals: Review bursts · Repeated review text · Fake accounts · Suspicious booking patterns · Unusual cancellations · Provider manipulation. Flag suspicious behavior for review — **do not automatically accuse users without sufficient evidence.**
+Potential signals: Review bursts Â· Repeated review text Â· Fake accounts Â· Suspicious booking patterns Â· Unusual cancellations Â· Provider manipulation. Flag suspicious behavior for review â€” **do not automatically accuse users without sufficient evidence.**
 
 ### Content Moderation
 
@@ -1174,7 +1174,7 @@ Moderate: provider descriptions, images, reviews, user-generated content, report
 
 ### "What Can I Experience Right Now?"
 
-The application's flagship interaction. User presses **"What can I experience right now?"** The system considers: Current Location · Current Time · Weather · Opening Hours · Availability · Budget · Preferences — and returns:
+The application's flagship interaction. User presses **"What can I experience right now?"** The system considers: Current Location Â· Current Time Â· Weather Â· Opening Hours Â· Availability Â· Budget Â· Preferences â€” and returns:
 
 ```
 Best Experience + Alternative + Complete Mini-Itinerary
@@ -1194,11 +1194,11 @@ When multiple plans satisfy the hard constraints, the traveler can compare `Chea
 
 ### "Surprise Me, Within My Limits"
 
-The traveler can request discovery while preserving hard limits, such as `Surprise me with something local under ₹800 within 30 minutes`. The system may explore less familiar options but must still respect budget, time, accessibility, availability, and safety requirements.
+The traveler can request discovery while preserving hard limits, such as `Surprise me with something local under â‚¹800 within 30 minutes`. The system may explore less familiar options but must still respect budget, time, accessibility, availability, and safety requirements.
 
 ### "Something Changed"
 
-A dedicated adaptive planning action with options: *I have less time · It's raining · This place is unavailable · I want something cheaper · I want something closer · I don't want to walk much · My group changed · I changed my mind.* The platform then regenerates the affected part of the itinerary.
+A dedicated adaptive planning action with options: *I have less time Â· It's raining Â· This place is unavailable Â· I want something cheaper Â· I want something closer Â· I don't want to walk much Â· My group changed Â· I changed my mind.* The platform then regenerates the affected part of the itinerary.
 
 ### Group Decision Support
 
@@ -1224,13 +1224,13 @@ AI should be divided into responsibilities:
 
 ### AI Itinerary Architecture
 
-Avoid: `User → LLM → Itinerary`
+Avoid: `User â†’ LLM â†’ Itinerary`
 
 Prefer:
 
 ```
-User → Intent Extraction → Constraints → Candidate Experiences →
-Availability → Travel Time → Optimization → Validated Itinerary → LLM Explanation
+User â†’ Intent Extraction â†’ Constraints â†’ Candidate Experiences â†’
+Availability â†’ Travel Time â†’ Optimization â†’ Validated Itinerary â†’ LLM Explanation
 ```
 
 This produces a much more reliable system.
@@ -1239,8 +1239,8 @@ This produces a much more reliable system.
 
 Do not call an LLM for everything.
 
-- **Use deterministic systems for:** Arithmetic · Filtering · Availability · Permissions · Scheduling
-- **Use AI for:** Understanding · Reasoning over preferences · Natural-language interaction · Summarization · Explanation
+- **Use deterministic systems for:** Arithmetic Â· Filtering Â· Availability Â· Permissions Â· Scheduling
+- **Use AI for:** Understanding Â· Reasoning over preferences Â· Natural-language interaction Â· Summarization Â· Explanation
 
 Cache reusable AI outputs where appropriate.
 
@@ -1250,27 +1250,27 @@ Search should combine: Keyword + Structured Filters + Semantic Similarity + Loca
 
 ### Semantic Search
 
-A traveler may say *"I want something locals actually do"* — the system should understand concepts such as Authenticity, Local relevance, Community experiences, Low tourist density, rather than requiring the exact phrase "local experience."
+A traveler may say *"I want something locals actually do"* â€” the system should understand concepts such as Authenticity, Local relevance, Community experiences, Low tourist density, rather than requiring the exact phrase "local experience."
 
 ### Human-in-the-Loop AI
 
 ```
-AI Suggests → User Reviews → User Confirms → System Acts
+AI Suggests â†’ User Reviews â†’ User Confirms â†’ System Acts
 ```
 
 Especially for: itinerary modifications, booking, cancellation, provider publishing, important account actions.
 
 ### Recommended Technology Direction
 
-**Frontend:** React / Next.js ecosystem — mature ecosystem, reusable components, responsive applications, strong dashboard support, good map integration, suitable for AI interfaces, strong developer availability.
+**Frontend:** React / Next.js ecosystem â€” mature ecosystem, reusable components, responsive applications, strong dashboard support, good map integration, suitable for AI interfaces, strong developer availability.
 
 **Mobile Strategy:** Start with a **responsive web application first** (Desktop + Tablet support), then later add **Responsive Web + Mobile Application**. Avoids maintaining multiple codebases prematurely.
 
-**Backend:** Modular backend architecture with core domains: Identity · Traveler · Provider · Experience · Search · Recommendation · Availability · Itinerary · Booking · Reviews · Notifications · Admin · Analytics
+**Backend:** Modular backend architecture with core domains: Identity Â· Traveler Â· Provider Â· Experience Â· Search Â· Recommendation Â· Availability Â· Itinerary Â· Booking Â· Reviews Â· Notifications Â· Admin Â· Analytics
 
-**Database:** **PostgreSQL** — the platform contains strongly relational information (users, providers, experiences, schedules, bookings, reviews, itineraries). A relational foundation provides consistency and strong querying capabilities.
+**Database:** **PostgreSQL** â€” the platform contains strongly relational information (users, providers, experiences, schedules, bookings, reviews, itineraries). A relational foundation provides consistency and strong querying capabilities.
 
-**Search + Semantic Layer:** Structured Database + Full-text Search + Semantic/Vector Search + Caching. Do not replace structured search with vectors — they solve different problems.
+**Search + Semantic Layer:** Structured Database + Full-text Search + Semantic/Vector Search + Caching. Do not replace structured search with vectors â€” they solve different problems.
 
 **Map and Routing (free-first):** Use MapLibre GL JS for the client map, OpenStreetMap as the geographic foundation, and OpenFreeMap or another low-cost OpenStreetMap tile provider for the prototype. The application database, not the map vendor, owns curated experience and event records. Use OSRM, OpenRouteService, Valhalla, or an equivalent OpenStreetMap-based routing service for distance and travel-time estimates, with caching and rate limits. Public tile, geocoding, and routing endpoints must not be treated as unlimited production infrastructure. If usage grows, move to self-hosted or controlled tiles and routing.
 
@@ -1282,21 +1282,21 @@ The map stack should remain replaceable: map rendering, tiles, geocoding, routin
 
 **Weather Integration:** influences indoor/outdoor decisions, activity suitability, travel time, itinerary changes. Should be treated as **contextual intelligence, not absolute truth**.
 
-**Payment Integration (future):** Payment · Refund · Cancellation · Provider settlement · Platform commission. Financial operations should be handled by authoritative payment systems — **never rely on LLM-generated payment state.**
+**Payment Integration (future):** Payment Â· Refund Â· Cancellation Â· Provider settlement Â· Platform commission. Financial operations should be handled by authoritative payment systems â€” **never rely on LLM-generated payment state.**
 
-**Authentication:** Recommended MVP — email/social authentication with secure session management. Phone authentication can be added where business requirements justify it.
+**Authentication:** Recommended MVP â€” email/social authentication with secure session management. Phone authentication can be added where business requirements justify it.
 
-**Role-Based Authorization:** Roles — Traveler · Provider · Moderator · Admin. Every backend operation must verify authorization.
+**Role-Based Authorization:** Roles â€” Traveler Â· Provider Â· Moderator Â· Admin. Every backend operation must verify authorization.
 
 ### Scalability
 
 Do not start with dozens of microservices.
 
 - **Phase 1:** Modular Monolith
-- **Phase 2:** Extract heavy workloads — AI Processing, Recommendation Jobs, Notifications, Analytics
+- **Phase 2:** Extract heavy workloads â€” AI Processing, Recommendation Jobs, Notifications, Analytics
 - **Phase 3:** Move to additional services only when scale requires it
 
-**Why Modular Monolith First?** Easier development, simpler deployment, faster debugging, lower infrastructure complexity, easier hackathon development, easier testing — the internal codebase can still maintain clear domain boundaries.
+**Why Modular Monolith First?** Easier development, simpler deployment, faster debugging, lower infrastructure complexity, easier hackathon development, easier testing â€” the internal codebase can still maintain clear domain boundaries.
 
 ### Error Handling
 
@@ -1305,11 +1305,11 @@ Never show meaningless technical errors to users.
 | Bad | Better |
 |---|---|
 | `Error 500.` | "We couldn't update your itinerary right now. Your existing plan is still saved." |
-| — | "Live availability couldn't be confirmed. Please verify before booking." |
+| â€” | "Live availability couldn't be confirmed. Please verify before booking." |
 
 ### Offline / Poor Connectivity
 
-Saved trips should remain accessible. Potential cached information: Itinerary · Booking details · Essential experience information · Important directions · Provider contact. Live availability remains online-dependent.
+Saved trips should remain accessible. Potential cached information: Itinerary Â· Booking details Â· Essential experience information Â· Important directions Â· Provider contact. Live availability remains online-dependent.
 
 ### Graceful Degradation
 
@@ -1324,9 +1324,9 @@ Saved trips should remain accessible. Potential cached information: Itinerary ·
 
 Build **vertical slices** rather than isolated technical features.
 
-Instead of: `Finish entire frontend → backend → AI`
+Instead of: `Finish entire frontend â†’ backend â†’ AI`
 
-Build: `Traveler → Search → Recommendation → Detail → Itinerary` end-to-end. Then add provider functionality. Then add adaptation.
+Build: `Traveler â†’ Search â†’ Recommendation â†’ Detail â†’ Itinerary` end-to-end. Then add provider functionality. Then add adaptation.
 
 ---
 
@@ -1336,52 +1336,52 @@ Build: `Traveler → Search → Recommendation → Detail → Itinerary` end-to-
 
 ```
 User
- ├── Profile
- ├── Preferences
- ├── Trips
- ├── Searches
- ├── Saves
- ├── Bookings
- ├── Reviews
- └── Itineraries
+ â”œâ”€â”€ Profile
+ â”œâ”€â”€ Preferences
+ â”œâ”€â”€ Trips
+ â”œâ”€â”€ Searches
+ â”œâ”€â”€ Saves
+ â”œâ”€â”€ Bookings
+ â”œâ”€â”€ Reviews
+ â””â”€â”€ Itineraries
 
 Provider
- ├── Business Profile
- ├── Experiences
- ├── Availability
- ├── Bookings
- ├── Reviews
- └── Analytics
+ â”œâ”€â”€ Business Profile
+ â”œâ”€â”€ Experiences
+ â”œâ”€â”€ Availability
+ â”œâ”€â”€ Bookings
+ â”œâ”€â”€ Reviews
+ â””â”€â”€ Analytics
 
 Experience
- ├── Provider
- ├── Location
- ├── Category
- ├── Pricing
- ├── Availability
- ├── Reviews
- └── Metadata
+ â”œâ”€â”€ Provider
+ â”œâ”€â”€ Location
+ â”œâ”€â”€ Category
+ â”œâ”€â”€ Pricing
+ â”œâ”€â”€ Availability
+ â”œâ”€â”€ Reviews
+ â””â”€â”€ Metadata
 
 Trip
- ├── Destination
- ├── Dates
- ├── Budget
- ├── Group
- └── Itinerary
+ â”œâ”€â”€ Destination
+ â”œâ”€â”€ Dates
+ â”œâ”€â”€ Budget
+ â”œâ”€â”€ Group
+ â””â”€â”€ Itinerary
 
 Itinerary
- ├── Stops
- ├── Travel Segments
- ├── Constraints
- └── Status
+ â”œâ”€â”€ Stops
+ â”œâ”€â”€ Travel Segments
+ â”œâ”€â”€ Constraints
+ â””â”€â”€ Status
 
 Booking
- ├── User
- ├── Provider
- ├── Experience
- ├── Slot
- ├── Participants
-  └── Payment Status
+ â”œâ”€â”€ User
+ â”œâ”€â”€ Provider
+ â”œâ”€â”€ Experience
+ â”œâ”€â”€ Slot
+ â”œâ”€â”€ Participants
+  â””â”€â”€ Payment Status
 ```
 
 ### Geographic, Provenance, and Event Entities
@@ -1390,16 +1390,16 @@ The launch geography and multi-source ingestion require these additional concept
 
 ```text
 City / Zone / Neighborhood
-  └── Experience / Event
+  â””â”€â”€ Experience / Event
 
 Experience / Event
-  └── Source Record → Verification → Freshness History
+  â””â”€â”€ Source Record â†’ Verification â†’ Freshness History
 
 Experience / Event
-  └── Approved External Media → Attribution · Verification · Link Health
+  â””â”€â”€ Approved External Media â†’ Attribution Â· Verification Â· Link Health
 
 Event
-  └── Organizer · Venue · Start/End Time · Ticket/Registration URL
+  â””â”€â”€ Organizer Â· Venue Â· Start/End Time Â· Ticket/Registration URL
 ```
 
 `ExperienceSource` should track source type, source URL, collector or submitter, verification status, confidence, and last verified time. Experiences and events should separately track price freshness, opening-hours freshness, availability freshness, and location verification. Event records must support expiry and archival.
@@ -1412,39 +1412,39 @@ Each experience should also support city, zone, neighborhood, nearby transit poi
 
 ```
 USER
- ├── TRIP → ITINERARY → EXPERIENCE
- ├── BOOKING → EXPERIENCE
- ├── REVIEW → EXPERIENCE
- └── PREFERENCES
+ â”œâ”€â”€ TRIP â†’ ITINERARY â†’ EXPERIENCE
+ â”œâ”€â”€ BOOKING â†’ EXPERIENCE
+ â”œâ”€â”€ REVIEW â†’ EXPERIENCE
+ â””â”€â”€ PREFERENCES
 
 PROVIDER
- └── EXPERIENCE
-      ├── AVAILABILITY
-      ├── REVIEWS
-      └── BOOKINGS
+ â””â”€â”€ EXPERIENCE
+      â”œâ”€â”€ AVAILABILITY
+      â”œâ”€â”€ REVIEWS
+      â””â”€â”€ BOOKINGS
 ```
 
 ### Production State Machines
 
-**Experience:** `Draft → Pending → Published → Temporarily Unavailable → Suspended → Archived`
+**Experience:** `Draft â†’ Pending â†’ Published â†’ Temporarily Unavailable â†’ Suspended â†’ Archived`
 
-**Provider:** `Pending → Verified → Rejected → Suspended`
+**Provider:** `Pending â†’ Verified â†’ Rejected â†’ Suspended`
 
-**Booking:** `Pending → Confirmed → Cancelled → Completed → Refunded → Disputed`
+**Booking:** `Pending â†’ Confirmed â†’ Cancelled â†’ Completed â†’ Refunded â†’ Disputed`
 
-**Itinerary:** `Draft → Active → Modified → Completed → Cancelled`
+**Itinerary:** `Draft â†’ Active â†’ Modified â†’ Completed â†’ Cancelled`
 
 ### Booking Integrity
 
-Booking systems must protect against: double booking · over-capacity · invalid slots · stale availability · race conditions · unauthorized cancellation · incorrect prices. **The backend should be authoritative.**
+Booking systems must protect against: double booking Â· over-capacity Â· invalid slots Â· stale availability Â· race conditions Â· unauthorized cancellation Â· incorrect prices. **The backend should be authoritative.**
 
 ### Data Quality System
 
-The recommendation engine is only as good as the underlying data. Implement mechanisms for: Duplicate Detection · Stale Listing Detection · Missing Data · Invalid Coordinates · Incorrect Hours · Outdated Pricing · Provider Confirmation
+The recommendation engine is only as good as the underlying data. Implement mechanisms for: Duplicate Detection Â· Stale Listing Detection Â· Missing Data Â· Invalid Coordinates Â· Incorrect Hours Â· Outdated Pricing Â· Provider Confirmation
 
 ### Data Confidence
 
-Potentially assign confidence to information (`High` / `Medium` / `Low`) based on: Source · Recency · Provider Confirmation · Consistency. This can eventually influence recommendation ranking.
+Potentially assign confidence to information (`High` / `Medium` / `Low`) based on: Source Â· Recency Â· Provider Confirmation Â· Consistency. This can eventually influence recommendation ranking.
 
 ---
 
@@ -1484,11 +1484,11 @@ Location information can be sensitive. The platform should:
 
 ### Security Core Requirements
 
-Secure Authentication · Authorization · Input Validation · Rate Limiting · Session Protection · Secure API Design · Audit Logging · Data Encryption · Secrets Management
+Secure Authentication Â· Authorization Â· Input Validation Â· Rate Limiting Â· Session Protection Â· Secure API Design Â· Audit Logging Â· Data Encryption Â· Secrets Management
 
 ### Logging
 
-Important events to log: Authentication · Admin actions · Provider approval · Booking changes · Payment state · Moderation · Security events · System failures.
+Important events to log: Authentication Â· Admin actions Â· Provider approval Â· Booking changes Â· Payment state Â· Moderation Â· Security events Â· System failures.
 
 > Logs should not unnecessarily contain sensitive personal information.
 
@@ -1501,24 +1501,24 @@ Important events to log: Authentication · Admin actions · Provider approval ·
 Target experience:
 
 ```
-Open → Search → Useful Results
+Open â†’ Search â†’ Useful Results
 ```
 
 ...without requiring every external service to respond before anything can render.
 
-Use: caching · pagination · lazy loading · optimized images · asynchronous processing · background updates.
+Use: caching Â· pagination Â· lazy loading Â· optimized images Â· asynchronous processing Â· background updates.
 
 ### Production Observability
 
-Monitor: API latency · Errors · External API failures · AI failures · Recommendation failures · Booking failures · Database performance · System availability
+Monitor: API latency Â· Errors Â· External API failures Â· AI failures Â· Recommendation failures Â· Booking failures Â· Database performance Â· System availability
 
 ### Testing Strategy
 
-- **Unit** — business logic
-- **Integration** — services working together
-- **End-to-end** — complete traveler journey
-- **Recommendation testing** — verify constraints, ranking, personalization, cold start
-- **Itinerary testing** — verify no overlap, budget, duration, availability, travel time
+- **Unit** â€” business logic
+- **Integration** â€” services working together
+- **End-to-end** â€” complete traveler journey
+- **Recommendation testing** â€” verify constraints, ranking, personalization, cold start
+- **Itinerary testing** â€” verify no overlap, budget, duration, availability, travel time
 
 ---
 
@@ -1532,15 +1532,15 @@ The platform can identify **market opportunities**:
 High traveler demand + Low provider supply = Market opportunity
 ```
 
-Example: High demand for local art workshops + Low supply → Platform opportunity: recruit more providers. This becomes a powerful provider acquisition feature.
+Example: High demand for local art workshops + Low supply â†’ Platform opportunity: recruit more providers. This becomes a powerful provider acquisition feature.
 
 ### Provider Analytics
 
-Answers provider questions: How many travelers saw my experience? (Discovery) · How many saved it? (Interest) · How often was it recommended? (Recommendation) · How many booked? (Conversion) · Which travelers are interested? (Audience) · Which times are most requested? (Demand)
+Answers provider questions: How many travelers saw my experience? (Discovery) Â· How many saved it? (Interest) Â· How often was it recommended? (Recommendation) Â· How many booked? (Conversion) Â· Which travelers are interested? (Audience) Â· Which times are most requested? (Demand)
 
 ### Platform Analytics
 
-Track: Daily Active Travelers · Searches · Recommendations · Clicks · Saves · Itinerary Generations · Bookings · Booking Conversion · Cancellations · Reviews · Provider Growth
+Track: Daily Active Travelers Â· Searches Â· Recommendations Â· Clicks Â· Saves Â· Itinerary Generations Â· Bookings Â· Booking Conversion Â· Cancellations Â· Reviews Â· Provider Growth
 
 ### Product Analytics Events (conceptual)
 
@@ -1568,9 +1568,9 @@ Selected/Booked + Completed + Positive satisfaction signal
 
 | Category | KPIs |
 |---|---|
-| **Traveler** | Activation · Recommendation Acceptance · Itinerary Creation · Booking Conversion · Completion · Repeat Usage · Satisfaction |
-| **Provider** | Listing Activation · Views · Saves · Bookings · Conversion · Provider Retention |
-| **Marketplace** | Supply · Demand · Match Quality · Booking Value · Cancellation Rate · Repeat Usage |
+| **Traveler** | Activation Â· Recommendation Acceptance Â· Itinerary Creation Â· Booking Conversion Â· Completion Â· Repeat Usage Â· Satisfaction |
+| **Provider** | Listing Activation Â· Views Â· Saves Â· Bookings Â· Conversion Â· Provider Retention |
+| **Marketplace** | Supply Â· Demand Â· Match Quality Â· Booking Value Â· Cancellation Rate Â· Repeat Usage |
 
 ---
 
@@ -1578,10 +1578,10 @@ Selected/Booked + Completed + Positive satisfaction signal
 
 ### Revenue Strategy (future possibilities)
 
-- **Booking commission** — platform receives a percentage of successful bookings
-- **Provider subscription** — premium provider tools
-- **Sponsored discovery** — clearly labeled
-- **Traveler premium** — advanced planning, premium personalization, offline plans, enhanced support
+- **Booking commission** â€” platform receives a percentage of successful bookings
+- **Provider subscription** â€” premium provider tools
+- **Sponsored discovery** â€” clearly labeled
+- **Traveler premium** â€” advanced planning, premium personalization, offline plans, enhanced support
 
 > Do not allow monetization to distort relevance.
 
@@ -1596,44 +1596,44 @@ Selected/Booked + Completed + Positive satisfaction signal
 Do not begin globally. Recommended progression:
 
 ```
-One City → One Region → Multiple Cities → National → International
+One City â†’ One Region â†’ Multiple Cities â†’ National â†’ International
 ```
 
 For a prototype, a single city provides significantly better control over data quality.
 
 ### Seed Dataset (prototype target)
 
-150–300 Mumbai/Navi Mumbai places and experiences · 20–40 Providers · 20–50 recurring or live events · Multiple Categories · Multiple Price Levels · Multiple Durations · Multiple Zones · Availability Patterns · Reviews · Accessibility Information · Source URLs · Confidence Levels · Freshness Dates
+150â€“300 Mumbai/Navi Mumbai places and experiences Â· 20â€“40 Providers Â· 20â€“50 recurring or live events Â· Multiple Categories Â· Multiple Price Levels Â· Multiple Durations Â· Multiple Zones Â· Availability Patterns Â· Reviews Â· Accessibility Information Â· Source URLs Â· Confidence Levels Â· Freshness Dates
 
 > Quality is more important than raw quantity.
 
 ### Demo Dataset Scenarios
 
 Intentionally include:
-- **A** — Affordable family activity
-- **B** — Rain-sensitive activity
-- **C** — Fully booked experience
-- **D** — 45-minute experience
-- **E** — Budget-constrained traveler
-- **F** — Accessibility requirement
-- **G** — Event discovered from a public social/community source and confirmed before publishing
-- **H** — Deadline before a train or airport transfer
-- **I** — Multiple valid plans with different cost/travel tradeoffs
-- **J** — Hidden-gem candidate with high satisfaction but low exposure
+- **A** â€” Affordable family activity
+- **B** â€” Rain-sensitive activity
+- **C** â€” Fully booked experience
+- **D** â€” 45-minute experience
+- **E** â€” Budget-constrained traveler
+- **F** â€” Accessibility requirement
+- **G** â€” Event discovered from a public social/community source and confirmed before publishing
+- **H** â€” Deadline before a train or airport transfer
+- **I** â€” Multiple valid plans with different cost/travel tradeoffs
+- **J** â€” Hidden-gem candidate with high satisfaction but low exposure
 
 This allows the intelligence to be demonstrated convincingly.
 
 ### Core Product Flywheel
 
 ```
-More Travelers → More Behavior Data → Better Personalization →
-Better Recommendations → More Successful Experiences →
-More Traveler Trust → More Travelers
+More Travelers â†’ More Behavior Data â†’ Better Personalization â†’
+Better Recommendations â†’ More Successful Experiences â†’
+More Traveler Trust â†’ More Travelers
 ```
 
 ```
-More Travelers → More Provider Demand → More Providers →
-More Experiences → Better Discovery → (loop)
+More Travelers â†’ More Provider Demand â†’ More Providers â†’
+More Experiences â†’ Better Discovery â†’ (loop)
 ```
 
 ### Competitive Positioning
@@ -1658,55 +1658,55 @@ The platform owns the question: **"What should I actually do?"**
 
 > **Simple surface, complex intelligence underneath.**
 
-The system may perform dozens of calculations. The user should only see: *What do you want? Where are you? How much time do you have? How much do you want to spend?* — then receive an understandable result.
+The system may perform dozens of calculations. The user should only see: *What do you want? Where are you? How much time do you have? How much do you want to spend?* â€” then receive an understandable result.
 
 ### Traveler Navigation
 
-`Home · Explore · Trips · Saved · Profile`
+`Home Â· Explore Â· Trips Â· Saved Â· Profile`
 
 **Home Page (example flow):**
 ```
-Good Evening 👋
+Good Evening ðŸ‘‹
 Where are you exploring?  [ Mumbai ]
 What do you feel like doing?  [ Tell us naturally... ]
-✨ What can I experience right now?
+âœ¨ What can I experience right now?
 
 Recommended for you
 Nearby Hidden Gems
 Popular with travelers like you
 ```
 
-**Explore Page:** Search · Categories · Map · Filters · Recommended Experiences
+**Explore Page:** Search Â· Categories Â· Map Â· Filters Â· Recommended Experiences
 
-**Trips Page:** Current Trip · Upcoming Trips · Past Trips (with Timeline · Map · Budget · Bookings · Weather · Plan Status)
+**Trips Page:** Current Trip Â· Upcoming Trips Â· Past Trips (with Timeline Â· Map Â· Budget Â· Bookings Â· Weather Â· Plan Status)
 
-**Saved Page:** Experiences · Restaurants · Events · Places · Itineraries
+**Saved Page:** Experiences Â· Restaurants Â· Events Â· Places Â· Itineraries
 
-**Profile:** Traveler Profile · Preferences · Travel Style · Past Experiences · Reviews · Privacy · Notifications
+**Profile:** Traveler Profile Â· Preferences Â· Travel Style Â· Past Experiences Â· Reviews Â· Privacy Â· Notifications
 
 ### Provider Interface
 
-Provider home should prioritize: Today's Activity · Upcoming Bookings · Availability · Performance. Avoid overwhelming small businesses with unnecessary complexity.
+Provider home should prioritize: Today's Activity Â· Upcoming Bookings Â· Availability Â· Performance. Avoid overwhelming small businesses with unnecessary complexity.
 
 ### Admin Interface
 
-Prioritize: Alerts · Verification · Moderation · Reports · Analytics · System Health
+Prioritize: Alerts Â· Verification Â· Moderation Â· Reports Â· Analytics Â· System Health
 
 ### Experience Detail Page
 
-A production-quality experience page should contain: Hero Images · Experience Name · Rating · Trust Badge · Price · Duration · Availability · Location · Description · Why Recommended · Reviews · Accessibility · What is Included · Cancellation Policy · Provider · Map · Booking
+A production-quality experience page should contain: Hero Images Â· Experience Name Â· Rating Â· Trust Badge Â· Price Â· Duration Â· Availability Â· Location Â· Description Â· Why Recommended Â· Reviews Â· Accessibility Â· What is Included Â· Cancellation Policy Â· Provider Â· Map Â· Booking
 
 ### Accessibility
 
-The application should support: keyboard navigation · screen readers · readable typography · sufficient contrast · accessible forms · touch-friendly controls · text alternatives for maps · non-color-only status indicators · clear error messages
+The application should support: keyboard navigation Â· screen readers Â· readable typography Â· sufficient contrast Â· accessible forms Â· touch-friendly controls Â· text alternatives for maps Â· non-color-only status indicators Â· clear error messages
 
 ### Notifications
 
-Contextual, not spammy — e.g. *"Your experience starts in 45 minutes,"* *"Traffic has increased. Consider leaving earlier,"* *"Rain may affect your outdoor activity,"* *"Your saved experience has availability."*
+Contextual, not spammy â€” e.g. *"Your experience starts in 45 minutes,"* *"Traffic has increased. Consider leaving earlier,"* *"Rain may affect your outdoor activity,"* *"Your saved experience has availability."*
 
 ### Calendar Integration (future)
 
-Potential integration with Google Calendar, Apple Calendar, Outlook — to identify free time without requiring manual entry. Should be introduced later due to privacy and integration complexity.
+Potential integration with Google Calendar, Apple Calendar, Outlook â€” to identify free time without requiring manual entry. Should be introduced later due to privacy and integration complexity.
 
 ---
 
@@ -1719,7 +1719,7 @@ This contract is a non-negotiable product requirement. It must be agreed before 
 The product should feel:
 
 ```text
-Local · Calm · Useful · Specific · Trustworthy · Decision-focused
+Local Â· Calm Â· Useful Â· Specific Â· Trustworthy Â· Decision-focused
 ```
 
 It should look like a carefully designed local utility, not a generic AI-generated travel marketplace or a template dashboard.
@@ -1740,7 +1740,7 @@ The website and application must never use:
 - Decorative glassmorphism or generic AI visual effects
 - AI-generated or stock-like slop imagery presented as a real place
 - AI-generated filler copy presented as factual product content
-- “Made with AI” badges or labels in the product
+- â€œMade with AIâ€ badges or labels in the product
 
 ### Required Design Patterns
 
@@ -1824,12 +1824,12 @@ No screen should be considered approved if it violates this contract, even if it
 
 - **Human-in-the-loop AI** for itinerary modifications, booking, cancellation, provider publishing, and important account actions.
 - **Recommendation fairness** balancing relevance, quality, availability, diversity, and fair provider exposure.
-- **Provider discovery fairness** — controlled opportunities for new/small providers.
+- **Provider discovery fairness** â€” controlled opportunities for new/small providers.
 - **Sponsored content** must be clearly labeled and cannot override safety, relevance, availability, or constraints.
 - **Fraud detection** flags suspicious behavior for human review rather than automatic penalization.
 - **Content moderation** is AI-assisted but retains human review for important decisions.
 - **Hidden gem logic** must never equate low popularity with quality.
-- **AI must never be the source of operational truth** — availability, pricing, and bookings remain authoritative in the deterministic backend.
+- **AI must never be the source of operational truth** â€” availability, pricing, and bookings remain authoritative in the deterministic backend.
 
 ---
 
@@ -1848,7 +1848,7 @@ Legal and policy pages are part of the product foundation, not a final polish ta
 The footer should link to:
 
 ```text
-Privacy Policy · Terms and Conditions · Contact · Report incorrect information
+Privacy Policy Â· Terms and Conditions Â· Contact Â· Report incorrect information
 ```
 
 ### Privacy Policy Topics
@@ -1904,40 +1904,40 @@ Before public launch or judging submission, verify:
 
 ## 32. Roadmap & Phasing
 
-### Phase 0 — Product Foundation
+### Phase 0 â€” Product Foundation
 Finalize personas, user journeys, requirements, wireframes, information architecture, design system, data model, free-first architecture, source policy, and Mumbai/Navi Mumbai zone boundaries.
-**Deliverables:** Product Specification · Wireframes · Architecture Diagram · Data Model · Source and Licensing Policy · MVP Scope · Curated Seed Dataset Plan
+**Deliverables:** Product Specification Â· Wireframes Â· Architecture Diagram Â· Data Model Â· Source and Licensing Policy Â· MVP Scope Â· Curated Seed Dataset Plan
 
-### Phase 1 — Core Platform
-Build: Authentication · User Profile · Provider Profile · Mumbai/Navi Mumbai Experience Database · Source Provenance · Field Confidence · Categories · Search · Experience Detail · Report Incorrect Information · Responsive UI
+### Phase 1 â€” Core Platform
+Build: Authentication Â· User Profile Â· Provider Profile Â· Mumbai/Navi Mumbai Experience Database Â· Source Provenance Â· Field Confidence Â· Categories Â· Search Â· Experience Detail Â· Report Incorrect Information Â· Responsive UI
 **Success:** Traveler can discover and inspect experiences.
 
-### Phase 2 — Maps & Filters
-Build: MapLibre Map · OpenStreetMap Base Data · Mumbai/Navi Mumbai Zones · Marker Clustering · Category Layers · Filters · Nearby Search · Railway/Metro Points · Free-First Routing · Walking/Taxi/Transit Estimates · Transit-Oriented Discovery
+### Phase 2 â€” Maps & Filters
+Build: MapLibre Map Â· OpenStreetMap Base Data Â· Mumbai/Navi Mumbai Zones Â· Marker Clustering Â· Category Layers Â· Filters Â· Nearby Search Â· Railway/Metro Points Â· Free-First Routing Â· Walking/Taxi/Transit Estimates Â· Transit-Oriented Discovery
 **Success:** Traveler can discover experiences geographically.
 
-### Phase 3 — Recommendation Intelligence
-Build: Preferences · Semantic or Tag-Based Search · Recommendation Signals · Ranking · Personalization · Mood-Based Discovery · Feasibility Score · Recommendation Explanations · Exclusion Reasons · Multiple Valid Plans
+### Phase 3 â€” Recommendation Intelligence
+Build: Preferences Â· Semantic or Tag-Based Search Â· Recommendation Signals Â· Ranking Â· Personalization Â· Mood-Based Discovery Â· Feasibility Score Â· Recommendation Explanations Â· Exclusion Reasons Â· Multiple Valid Plans
 **Success:** Different users receive meaningfully different recommendations.
 
-### Phase 4 — Intelligent Planning
-Build: Time Constraints · Deadline-Aware Planning · Free-Time/Layover Modes · Budget Constraints · Itinerary Generation · Travel Time · Existing Plans · Experience Bundles · Plan Confidence
+### Phase 4 â€” Intelligent Planning
+Build: Time Constraints Â· Deadline-Aware Planning Â· Free-Time/Layover Modes Â· Budget Constraints Â· Itinerary Generation Â· Travel Time Â· Existing Plans Â· Experience Bundles Â· Plan Confidence
 **Success:** Generated itineraries are actually feasible.
 
-### Phase 5 — Availability & Booking
-Build: Provider Schedule · Capacity · Availability · Booking · Confirmation · Booking States · Provider Updates
+### Phase 5 â€” Availability & Booking
+Build: Provider Schedule Â· Capacity Â· Availability Â· Booking Â· Confirmation Â· Booking States Â· Provider Updates
 **Success:** Recommendation can become an actionable booking.
 
-### Phase 6 — Adaptive Intelligence
-Build: Weather · Traffic/context · Monsoon Mode · Live Event Context · Happening Near Me · Availability Changes · Replanning · Notifications · What-if Changes · Event Change Detection
+### Phase 6 â€” Adaptive Intelligence
+Build: Weather Â· Traffic/context Â· Monsoon Mode Â· Live Event Context Â· Happening Near Me Â· Availability Changes Â· Replanning Â· Notifications Â· What-if Changes Â· Event Change Detection
 **Success:** The platform can recover from changing conditions.
 
-### Phase 7 — Trust & Provider Intelligence
-Build: Reviews · Review Summaries · Verification · Trust Scores · Provider Analytics · Provider Reliability · Moderation · Hidden-Gem Candidate Review · Data Freshness · Safety/Suitability · Data Operations Console · Verified Experience Media
+### Phase 7 â€” Trust & Provider Intelligence
+Build: Reviews Â· Review Summaries Â· Verification Â· Trust Scores Â· Provider Analytics Â· Provider Reliability Â· Moderation Â· Hidden-Gem Candidate Review Â· Data Freshness Â· Safety/Suitability Â· Data Operations Console Â· Verified Experience Media
 **Success:** Travelers trust the marketplace and providers receive meaningful business intelligence.
 
-### Phase 8 — Production Hardening
-Focus on: Security · Performance · Monitoring · Logging · Accessibility · Testing · Backups · Data Quality · Error Handling · Deployment · Usage/Quota Monitoring · Source Compliance Review
+### Phase 8 â€” Production Hardening
+Focus on: Security Â· Performance Â· Monitoring Â· Logging Â· Accessibility Â· Testing Â· Backups Â· Data Quality Â· Error Handling Â· Deployment Â· Usage/Quota Monitoring Â· Source Compliance Review
 
 ---
 
@@ -1945,15 +1945,15 @@ Focus on: Security · Performance · Monitoring · Logging · Accessibility · T
 
 The strongest demonstration should include all 17 domains conceptually, but implementation depth should prioritize the **traveler journey in Mumbai and Navi Mumbai**. The map and data pipeline must be visible parts of the product, not decorative additions.
 
-**Traveler:** Onboarding · Profile · Mumbai/Navi Mumbai Map · Search · Natural Language · Recommendations · Live Events · Filters · Availability · Time Planning · Budget Planning · Itinerary · Adaptive Replanning
+**Traveler:** Onboarding Â· Profile Â· Mumbai/Navi Mumbai Map Â· Search Â· Natural Language Â· Recommendations Â· Live Events Â· Filters Â· Availability Â· Time Planning Â· Budget Planning Â· Itinerary Â· Adaptive Replanning
 
-**Provider:** Dashboard · Experience Creation · Availability · Bookings · Analytics
+**Provider:** Dashboard Â· Experience Creation Â· Availability Â· Bookings Â· Analytics
 
-**Admin:** Verification · Moderation · Analytics · Data Operations Console · Source Review · Incorrect-Information Reports
+**Admin:** Verification Â· Moderation Â· Analytics Â· Data Operations Console Â· Source Review Â· Incorrect-Information Reports
 
-**Data operations:** Curated seed data · Source URLs · Freshness status · Event expiry · Hidden-gem candidate review
+**Data operations:** Curated seed data Â· Source URLs Â· Freshness status Â· Event expiry Â· Hidden-gem candidate review
 
-**Media operations:** Approved YouTube references · Instagram link/embed fallback · Creator attribution · Media verification · Broken-link reporting · Media expiry/archive
+**Media operations:** Approved YouTube references Â· Instagram link/embed fallback Â· Creator attribution Â· Media verification Â· Broken-link reporting Â· Media expiry/archive
 
 ### Recommended Hackathon Demo Scenario
 
@@ -1962,26 +1962,26 @@ The strongest demonstration should include all 17 domains conceptually, but impl
 | Traveler | Family of 3 |
 | Location | Mumbai |
 | Time | 4 hours |
-| Budget | ₹1,500 |
+| Budget | â‚¹1,500 |
 | Requirement | Authentic local food + Culture + Family friendly |
 
-The system should generate: `Experience A → Travel → Experience B → Travel → Experience C`, with Total Time · Total Cost · Distance · Availability · Why Recommended.
+The system should generate: `Experience A â†’ Travel â†’ Experience B â†’ Travel â†’ Experience C`, with Total Time Â· Total Cost Â· Distance Â· Availability Â· Why Recommended.
 
 The map should show the selected route, relevant zone, nearby transit points, and live events that can realistically be reached in the remaining four-hour window. The demo dataset should include source provenance and at least one event discovered from a community or social source but confirmed before publication.
 
 ### Killer Demo Moments
 
-1. **Simulate heavy rain** — outdoor activity becomes unsuitable → system runs `Weather Change → Affected Activity → Search Alternatives → Check Availability → Check Budget → Check Travel Time → Generate New Plan → Ask User → Apply`. Far more impressive than a simple AI chatbot.
-2. **Change available time** from 4 hours → 2 hours — system automatically removes experiences that no longer fit and creates a new optimized plan.
-3. **Change budget** from ₹1,500 → ₹700 — system regenerates around the new financial constraint.
-4. **Switch group** from Family → Solo traveler — recommendations should meaningfully change.
-5. **Make the top recommendation "Fully Booked"** — platform should immediately propose Alternative #1/#2/#3 while explaining why they fit.
-6. **Ask "What is happening near me?"** — show active or soon-starting events, travel time, ticket status, source confidence, and an expiry-aware result set.
-7. **Open a hidden-gem candidate** — show why it is surfaced, who verified it, when it was last checked, and why low popularity alone was not enough to classify it.
-8. **Compare valid plans** — show Cheapest, Most Local, Least Travel, and Best for Families with transparent cost, travel, and confidence tradeoffs.
-9. **Demonstrate a deadline** — enter a train or airport deadline and show that the final route includes a realistic buffer.
-10. **Report incorrect information** — report a changed price or cancelled event and show it entering the data-operations queue.
-11. **See It Before You Go** — open an experience, watch an approved local YouTube walkthrough or open an Instagram Reel, then compare the video atmosphere with the current structured price, hours, availability, and route data.
+1. **Simulate heavy rain** â€” outdoor activity becomes unsuitable â†’ system runs `Weather Change â†’ Affected Activity â†’ Search Alternatives â†’ Check Availability â†’ Check Budget â†’ Check Travel Time â†’ Generate New Plan â†’ Ask User â†’ Apply`. Far more impressive than a simple AI chatbot.
+2. **Change available time** from 4 hours â†’ 2 hours â€” system automatically removes experiences that no longer fit and creates a new optimized plan.
+3. **Change budget** from â‚¹1,500 â†’ â‚¹700 â€” system regenerates around the new financial constraint.
+4. **Switch group** from Family â†’ Solo traveler â€” recommendations should meaningfully change.
+5. **Make the top recommendation "Fully Booked"** â€” platform should immediately propose Alternative #1/#2/#3 while explaining why they fit.
+6. **Ask "What is happening near me?"** â€” show active or soon-starting events, travel time, ticket status, source confidence, and an expiry-aware result set.
+7. **Open a hidden-gem candidate** â€” show why it is surfaced, who verified it, when it was last checked, and why low popularity alone was not enough to classify it.
+8. **Compare valid plans** â€” show Cheapest, Most Local, Least Travel, and Best for Families with transparent cost, travel, and confidence tradeoffs.
+9. **Demonstrate a deadline** â€” enter a train or airport deadline and show that the final route includes a realistic buffer.
+10. **Report incorrect information** â€” report a changed price or cancelled event and show it entering the data-operations queue.
+11. **See It Before You Go** â€” open an experience, watch an approved local YouTube walkthrough or open an Instagram Reel, then compare the video atmosphere with the current structured price, hours, availability, and route data.
 
 ### MVP Boundary
 
@@ -2031,12 +2031,12 @@ The quality bar is a trustworthy, free-first Mumbai/Navi Mumbai decision engine,
 
 | Feature | Description |
 |---|---|
-| **AI Travel Companion** | Proactive prompts — "You have a free 2-hour window. Here are three options." / "Traffic is heavier than usual, leave 15 min earlier." / "Rain may affect your outdoor activity." / "You still have ₹700 of your planned budget." The user always remains in control. |
+| **AI Travel Companion** | Proactive prompts â€” "You have a free 2-hour window. Here are three options." / "Traffic is heavier than usual, leave 15 min earlier." / "Rain may affect your outdoor activity." / "You still have â‚¹700 of your planned budget." The user always remains in control. |
 | **Voice Assistant** | *"I'm tired, find something relaxed nearby"* / *"I have one hour before dinner."* Voice as an interface over the same intelligence system. |
 | **Image-Based Discovery** | User uploads a photo of food, architecture, artwork, a market, or a location; system identifies contextual elements and recommends related experiences. |
 | **Advanced What-If Simulator** | Extend the MVP simulation with many simultaneous changes, saved scenarios, and side-by-side plan comparison. |
 | **Advanced Social Planning** | Extend group voting with shared trips, collaborative itineraries, synchronized saves, and live participant updates. |
-| **Community Layer** | Local residents contribute tips, hidden gems, neighborhood recommendations, cultural stories, events — requires strong moderation and trust systems. |
+| **Community Layer** | Local residents contribute tips, hidden gems, neighborhood recommendations, cultural stories, events â€” requires strong moderation and trust systems. |
 | **Creator Marketplace** | Creators publish itineraries (e.g. "My Perfect Mumbai Food Day"); users follow, save, adapt, and book components. Creators can potentially monetize. |
 | **Local Experience Pass** | Bundle Museum + Food + Workshop + Transport into a single city experience product. |
 | **AI Provider Copilot** | Provider asks "Why aren't people booking my experience?"; AI analyzes Views, Saves, Price, Availability, Reviews, Conversion, Competition and produces recommendations. |
@@ -2045,9 +2045,9 @@ The quality bar is a trustworthy, free-first Mumbai/Navi Mumbai decision engine,
 ### Long-Term Marketplace Intelligence
 
 ```
-Traveler Demand → Recommendation Engine → Provider Supply →
-Demand Analysis → Provider Suggestions → Better Supply →
-Better Recommendations → (self-improving loop)
+Traveler Demand â†’ Recommendation Engine â†’ Provider Supply â†’
+Demand Analysis â†’ Provider Suggestions â†’ Better Supply â†’
+Better Recommendations â†’ (self-improving loop)
 ```
 
 ### Product Evolution
@@ -2068,66 +2068,66 @@ The system should be separated into **three conceptual layers**:
 
 | Layer | Responsibility | Includes |
 |---|---|---|
-| **Layer 1 — Understanding** | Interpret intent | LLM, Natural Language, Intent, Preferences, Conversation |
-| **Layer 2 — Truth** | Authoritative data | Database, Availability, Pricing, Opening Hours, Locations, Bookings, Provider Data |
-| **Layer 3 — Decision** | Produce outcomes | Recommendation, Ranking, Optimization, Itinerary, Adaptation |
+| **Layer 1 â€” Understanding** | Interpret intent | LLM, Natural Language, Intent, Preferences, Conversation |
+| **Layer 2 â€” Truth** | Authoritative data | Database, Availability, Pricing, Opening Hours, Locations, Bookings, Provider Data |
+| **Layer 3 â€” Decision** | Produce outcomes | Recommendation, Ranking, Optimization, Itinerary, Adaptation |
 
 > **This separation is one of the most important decisions in the entire product.**
 
 ### Why This Architecture Matters
 
-**Without separation:** `User → LLM → "Here is your itinerary"` — the system can hallucinate.
+**Without separation:** `User â†’ LLM â†’ "Here is your itinerary"` â€” the system can hallucinate.
 
 **With separation:**
 ```
-User → LLM understands → Structured data provides facts →
-Algorithm validates constraints → Optimizer creates plan → LLM explains
+User â†’ LLM understands â†’ Structured data provides facts â†’
+Algorithm validates constraints â†’ Optimizer creates plan â†’ LLM explains
 ```
 The result is substantially more reliable.
 
 ### Ultimate Architecture Diagram
 
 ```
-┌────────────────┐
-│  TRAVELER APP  │
-└───────┬────────┘
-        │
-┌───────▼────────┐
-│   API LAYER    │
-└───────┬────────┘
-        │
-   ┌────┼──────────────────┐
-   ▼    ▼                  ▼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  TRAVELER APP  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+        â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚   API LAYER    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+        â”‚
+   â”Œâ”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+   â–¼    â–¼                  â–¼
 Identity  Traveler Domain   Provider Domain
-             │                  │
-             ▼                  ▼
+             â”‚                  â”‚
+             â–¼                  â–¼
        Recommendation      Experiences
-             │              Availability
-             ▼                Bookings
+             â”‚              Availability
+             â–¼                Bookings
          Itinerary
-   └──────────┼──────────────────┘
-              │
-        ┌─────▼─────┐
-        │ DATA LAYER│
-        ├───────────┤
-        │ PostgreSQL│
-        │ Search    │
-        │ Vector    │
-        │ Cache     │
-        └─────┬─────┘
-     ┌────────┼────────────┐
-     ▼        ▼             ▼
+   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+              â”‚
+        â”Œâ”€â”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”
+        â”‚ DATA LAYERâ”‚
+        â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+        â”‚ PostgreSQLâ”‚
+        â”‚ Search    â”‚
+        â”‚ Vector    â”‚
+        â”‚ Cache     â”‚
+        â””â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”˜
+     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+     â–¼        â–¼             â–¼
   Maps/Geo  Weather     Notifications
-     └────────┼────────────┘
-         ┌────▼─────┐
-         │ AI LAYER │
-         ├──────────┤
-         │ Intent            │
-         │ Semantic Search    │
-         │ Recommendation     │
-         │ Review Intelligence│
-         │ Planning Assistance│
-         └────────────────────┘
+     â””â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+         â”Œâ”€â”€â”€â”€â–¼â”€â”€â”€â”€â”€â”
+         â”‚ AI LAYER â”‚
+         â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+         â”‚ Intent            â”‚
+         â”‚ Semantic Search    â”‚
+         â”‚ Recommendation     â”‚
+         â”‚ Review Intelligenceâ”‚
+         â”‚ Planning Assistanceâ”‚
+         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
@@ -2140,7 +2140,7 @@ Identity  Traveler Domain   Provider Domain
 
 ### One-line traveler value proposition
 
-> Tell us who you are, where you are, what you like, your time and budget — and we'll figure out what you can realistically experience.
+> Tell us who you are, where you are, what you like, your time and budget â€” and we'll figure out what you can realistically experience.
 
 ### One-line provider value proposition
 
@@ -2165,8 +2165,8 @@ What's happening around me + What might change
 If the team wants to build something that looks genuinely production-like, **do not focus on adding hundreds of superficial features.** Focus on making this loop exceptional:
 
 ```
-UNDERSTAND → DISCOVER → FILTER → RANK → EXPLAIN →
-PLAN → VALIDATE → BOOK → ADAPT → LEARN
+UNDERSTAND â†’ DISCOVER â†’ FILTER â†’ RANK â†’ EXPLAIN â†’
+PLAN â†’ VALIDATE â†’ BOOK â†’ ADAPT â†’ LEARN
 ```
 
 - The **17 feature domains** provide the product breadth.
@@ -2184,15 +2184,25 @@ The end goal is not to create another directory of places. It is to create a sys
 
 ```
 TRAVELERS
-    ↓
+    â†“
 AI EXPERIENCE ENGINE
-  (Understand · Discover · Recommend · Plan · Optimize · Adapt)
-    ↓
+  (Understand Â· Discover Â· Recommend Â· Plan Â· Optimize Â· Adapt)
+    â†“
 LOCAL EXPERIENCES
-    ↓
+    â†“
 LOCAL PROVIDERS
-    ↓
+    â†“
 DEMAND INTELLIGENCE
 ```
 
 **That is the core product around which all 17 features should be built.**
+
+
+---
+
+> **Archived. Not implemented.** This document describes a system that does not
+> exist in this repository. There are zero API routes, zero server code, and no
+> database. For what is actually built, read
+> [../03-technical/ARCHITECTURE-ACTUAL.md](../03-technical/ARCHITECTURE-ACTUAL.md).
+> This file is kept only as a record of what was considered, so nobody
+> re-derives it from scratch. Nothing here is a claim about the product.

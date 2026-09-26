@@ -1,4 +1,4 @@
-# Data Model
+﻿# Data Model
 
 ## Core Entities
 
@@ -140,11 +140,11 @@ An active media record must attach to exactly one experience or event. Store URL
 ## State Machines
 
 ```text
-Provider: Pending → Verified → Rejected / Suspended
-Experience: Draft → Review → Published → Stale / Suspended / Archived
-Event: Discovered → Parsed → Verified → Published → Changed → Completed → Archived
-Booking: Pending → Confirmed → Cancelled → Completed
-Itinerary: Draft → Active → Modified → Completed / Cancelled
+Provider: Pending â†’ Verified â†’ Rejected / Suspended
+Experience: Draft â†’ Review â†’ Published â†’ Stale / Suspended / Archived
+Event: Discovered â†’ Parsed â†’ Verified â†’ Published â†’ Changed â†’ Completed â†’ Archived
+Booking: Pending â†’ Confirmed â†’ Cancelled â†’ Completed
+Itinerary: Draft â†’ Active â†’ Modified â†’ Completed / Cancelled
 ```
 
 ## Integrity Rules
@@ -159,3 +159,13 @@ Itinerary: Draft → Active → Modified → Completed / Cancelled
 - Approved media must have a valid external source URL and parent record.
 - Media must not be used as evidence for current price, hours, availability, safety, or booking state.
 - Availability claims must include a recent timestamp.
+
+
+---
+
+> **Archived. Not implemented.** This document describes a system that does not
+> exist in this repository. There are zero API routes, zero server code, and no
+> database. For what is actually built, read
+> [../03-technical/ARCHITECTURE-ACTUAL.md](../03-technical/ARCHITECTURE-ACTUAL.md).
+> This file is kept only as a record of what was considered, so nobody
+> re-derives it from scratch. Nothing here is a claim about the product.

@@ -45,14 +45,47 @@ async function fetchText(url) {
   }
 }
 
-/** Live Commons check, tri-state: "ok", "missing" (confirmed gone), or "unknown" (transient). */
+/**
+ * Live Commons check, tri-state: "ok", "missing" (confirmed gone), or "unknown" (transient).
+ *
+ * `extmetadata` carries the fields Commons attribution actually requires: the
+ * Artist (the photographer), the licence, and the licence URL. The old call
+ * fetched `iiprop=url` only, which proved the file exists and told us nothing
+ * about who took the photo, so every entry had to be written with the literal
+ * string "Wikimedia Commons contributor". That is not a photographer and not a
+ * licence, and Commons attribution requires naming the author. Fetching
+ * `extmetadata` is what lets a credit become a real attribution.
+ */
 async function verifyCommonsFile(title) {
-  const url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url&titles=" + encodeURIComponent(title);
+  const url =
+    "https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo" +
+    "&iiprop=url|extmetadata&titles=" + encodeURIComponent(title);
   const data = await fetchJson(url);
-  if (!data || !data.query) return "unknown"; // rate limit or network error: NOT evidence of absence
+  if (!data || !data.query) return { state: "unknown" }; // rate limit or network error: NOT evidence of absence
   const page = Object.values(data.query.pages)[0] ?? null;
-  if (!page || page.missing !== undefined || !page.imageinfo || !page.imageinfo[0]) return "missing";
-  return page.title === title.replace(/_/g, " ") || page.title === title ? "ok" : "missing";
+  if (!page || page.missing !== undefined || !page.imageinfo || !page.imageinfo[0]) return { state: "missing" };
+  const info = page.imageinfo[0];
+  if (page.title !== title.replace(/_/g, " ") && page.title !== title) return { state: "missing" };
+  const meta = info.extmetadata ?? {};
+  const pick = (key) => {
+    const raw = meta[key]?.value;
+    if (typeof raw !== "string") return "";
+    return raw
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#0?39;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+  const artist = pick("Artist");
+  const licence = pick("LicenseShortName") || pick("UsageTerms");
+  return {
+    state: "ok",
+    credit: artist && licence ? `${artist} / ${licence}` : artist || licence || "",
+    file: page.title,
+  };
 }
 
 async function searchCommons(query, limit) {
@@ -210,17 +243,28 @@ async function refreshExisting(images, videos) {
 
   const keptImages = [];
   for (const row of images) {
-    let state = await verifyCommonsFile(row.file);
-    for (let attempt = 0; state === "unknown" && attempt < RETRIES; attempt += 1) {
+    let result = await verifyCommonsFile(row.file);
+    for (let attempt = 0; result.state === "unknown" && attempt < RETRIES; attempt += 1) {
       await sleep(500);
-      state = await verifyCommonsFile(row.file);
+      result = await verifyCommonsFile(row.file);
     }
-    if (state === "missing") {
+    if (result.state === "missing") {
       console.log("image dropped: " + row.file);
       droppedImages.push(row.file);
       continue;
     }
-    if (state === "unknown") console.log("image kept unverified this run: " + row.file);
+    if (result.state === "unknown") {
+      console.log("image kept unverified this run: " + row.file);
+    } else if (result.credit && result.credit !== row.credit) {
+      // A placeholder credit becomes a real attribution, or a real one is
+      // corrected after an upstream edit to the file page. Either way the record
+      // now states who took the photo and under what licence.
+      console.log("image credit updated: " + row.file + " -> " + result.credit);
+      row.credit = result.credit;
+    }
+    if (result.state === "ok" && !row.credit) {
+      console.log("image credit still empty after a successful lookup: " + row.file);
+    }
     keptImages.push(row);
     await sleep(150);
   }
@@ -295,13 +339,17 @@ async function main() {
     for (const title of hits) {
       if (images.length >= TARGET_IMAGES || added >= 2) break;
       if (usedImageTitles.has(title)) continue;
-      const ok = await verifyCommonsFile(title);
+      const result = await verifyCommonsFile(title);
       await sleep(120);
-      if (ok) {
+      if (result.state === "ok") {
         usedImageTitles.add(title);
-        images.push({ key: "commons-" + images.length, file: title, credit: "Wikimedia Commons contributor", query });
+        // The credit is the real artist and licence off the file's extmetadata.
+        // It is only added when the lookup returned one, so a file whose author
+        // field is empty is recorded as unknown rather than credited to nobody.
+        if (!result.credit) console.log("image ok but Commons gave no author: " + title);
+        images.push({ key: "commons-" + images.length, file: title, credit: result.credit, query });
         writePool("images.generated.ts", "generatedImages", "GeneratedImage", "{ key: string; file: string; credit: string; query: string }", images);
-        console.log("image ok: " + title);
+        console.log("image ok: " + title + (result.credit ? " (" + result.credit + ")" : ""));
         added += 1;
       }
     }

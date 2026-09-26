@@ -69,8 +69,8 @@ export function AvailabilityPicker({ placeName }: { placeName: string }) {
         )}
         <span className={active.tone === "green" ? "text-green" : "text-amber"}>
           {active.tone === "green"
-            ? "Slots typically available — confirm with the venue"
-            : "Limited slots — call ahead to confirm"}
+            ? "Slots typically available, confirm with the venue"
+            : "Limited slots, call ahead to confirm"}
         </span>
       </p>
       <p className="mt-1 text-[10px] leading-4 text-muted">

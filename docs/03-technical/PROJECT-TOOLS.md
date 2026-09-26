@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This registry defines the local tools, plugins, and reference repositories approved for Local & Experiences. It is the source of truth for which resources should be used consistently during design, implementation, data work, and QA.
+This registry defines the local tools, plugins, and reference repositories approved for Ananta. It is the source of truth for which resources should be used consistently during design, implementation, data work, and QA.
 
 The collection lives in `/home/abhijitk20/plugins`. Repositories in that folder are references or tools, not automatic runtime dependencies. A repository must be intentionally added to the application dependency graph before application code imports it.
 

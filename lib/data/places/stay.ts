@@ -6,7 +6,6 @@
 export const stayNames: Record<string, string[]> = {
   "Colaba": [
     "The Taj Mahal Palace",
-    "Taj Lands End equivalent Colaba wing",
     "The Oberoi Mumbai",
     "Trident Nariman Point",
     "Hotel Diplomat",
@@ -22,7 +21,6 @@ export const stayNames: Record<string, string[]> = {
     "The Capital Fort boutique stay",
     "Hotel Harbour View Fort",
     "Bora Bazar service apartments",
-    "Hotel Godwin Colaba-Fort edge",
     "Fort heritage boutique stays",
     "Hotel City Point Fort",
   ],
@@ -32,18 +30,15 @@ export const stayNames: Record<string, string[]> = {
     "Marine Drive art-deco heritage stays",
     "Sea Green Hotel",
     "Sun-n-Sand Marine Drive",
-    "Hotel Kemps Corner edge stay",
     "Chowpatty seafront guesthouses",
     "Nariman Point business hotels",
   ],
   "Bandra": [
     "Taj Lands End",
-    "The Leela equivalent Bandra Kurla edge",
     "Hotel Bandra Residency",
     "Bandra boutique villa stays",
     "Waterfield Road design hostels",
     "Bandra west serviced apartments",
-    "Hotel Santa Cruz International edge",
     "Carter Road guesthouses",
   ],
   "Juhu": [
@@ -101,7 +96,6 @@ export const stayNames: Record<string, string[]> = {
     "St. Regis Mumbai",
     "The St. Regis residence suites",
     "ITC Grand Central Parel",
-    "Trident Lower Parel equivalent towers",
     "Palladium-adjacent boutique stays",
     "Lower Parel corporate serviced flats",
     "Worli sea-face premium stays",
@@ -138,8 +132,6 @@ export const stayNames: Record<string, string[]> = {
   ],
   "Vashi": [
     "Hotel Vashi International",
-    "The Park Navi Mumbai equivalent Vashi",
-    "Fortune Select Exotica Vashi edge",
     "Vashi serviced apartments",
     "Palm Beach Vashi business hotels",
     "Vashi budget hotel row",
@@ -151,7 +143,6 @@ export const stayNames: Record<string, string[]> = {
     "Seawoods serviced apartments",
   ],
   "Belapur": [
-    "Hotel Sahara Star equivalent Belapur",
     "CBD Belapur business hotels",
     "Belapur serviced residences",
     "Belapur budget stays",

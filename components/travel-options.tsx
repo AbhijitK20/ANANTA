@@ -35,6 +35,10 @@ export function TravelOptions({ coordinates, placeName }: { coordinates: [number
   const withRoutes = TRAVEL_MODES.map((mode) => ({ mode, route: routes[mode.id] })).filter((entry): entry is { mode: (typeof TRAVEL_MODES)[number]; route: StreetRoute } => Boolean(entry.route));
   if (!loading && withRoutes.length === 0) return null;
   const fastest = withRoutes.slice().sort((a, b) => a.route.durationMinutes - b.route.durationMinutes)[0];
+  // The lead word follows the data. It used to read "Live estimates" on every
+  // card, including the ones that fell back to a straight line.
+  const allStreet = withRoutes.length > 0 && withRoutes.every((entry) => entry.route.kind === "street");
+  const noneStreet = withRoutes.length > 0 && withRoutes.every((entry) => entry.route.kind !== "street");
 
   return <section className="mt-8 border border-line bg-[#fbfcfd] p-5" aria-live="polite">
     <div className="flex items-center justify-between">
@@ -44,7 +48,13 @@ export function TravelOptions({ coordinates, placeName }: { coordinates: [number
       </div>
       {loading && <ClockCounterClockwise size={20} className="animate-spin text-muted" />}
     </div>
-    <p className="mt-2 text-xs font-semibold text-muted">Live estimates from {demoUserLocation.label}, from OpenStreetMap routing. Not live traffic.</p>
+    <p className="mt-2 text-xs font-semibold text-muted">
+      {allStreet
+        ? `Street routes from ${demoUserLocation.label}, from OpenStreetMap routing. Durations are estimates, not live traffic.`
+        : noneStreet
+          ? `Straight-line estimates from ${demoUserLocation.label}. OpenStreetMap routing did not answer, so no route is drawn and no street distance is claimed.`
+          : `Part street routes, part straight-line estimates from ${demoUserLocation.label}. Each card below says which it is.`}
+    </p>
     {loading && <p className="mt-4 text-sm text-muted">Comparing walking, cycling, and driving routes...</p>}
     <div className="mt-4 grid gap-3 sm:grid-cols-3">
       {withRoutes.map(({ mode, route }) => {

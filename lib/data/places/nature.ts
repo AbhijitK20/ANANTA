@@ -65,10 +65,10 @@ export const natureNames: Record<string, string[]> = {
     "Kamala Nehru Park hedge loops",
     "Malabar Hill ridge green walk",
     "Hanging Gardens sunset viewpoint lawn",
-  ],
-  "Breach Candy": [
     "Banganga tank banyan shade hour",
     "Walkeshwar ridge green trail",
+  ],
+  "Breach Candy": [
     "Breach Candy Coolie Park loop",
   ],
   Worli: [
@@ -91,7 +91,6 @@ export const natureNames: Record<string, string[]> = {
     "Shivaji Park green loop",
     "Five Gardens canopy walk",
     "Dadar beach shoreline walk",
-    "Shivaji Park sea-face morning walk",
   ],
   Matunga: [
     "King Circle garden green loop",
@@ -115,31 +114,25 @@ export const natureNames: Record<string, string[]> = {
     "Noor Baug green lane walk",
   ],
   Vashi: [
-    "Vashi mini seashore walk extension",
-    "Vashi creek-edge green belt",
     "Palm Beach shoreline walk",
-    "Vashi rock garden green corner",
+    "Vashi creek-edge green belt",
   ],
   "Nerul/Seawoods": [
-    "Seawoods creek boardwalk extension",
     "Nerul lake shoreline walk",
     "Wonders Park green lawns walk",
     "Seawoods grand central mangrove edge",
   ],
   Belapur: [
-    "Belapur mango grove extension",
     "Belapur creek-edge walk",
     "Belapur fort green trail",
     "Belapur CBD mangrove belt",
   ],
   Kharghar: [
-    "Central Park Kharghar green loop",
     "Kharghar hills base nature trail",
     "Kharghar valley green belt",
     "Central Park Kharghar lotus pond corner",
   ],
   Airoli: [
-    "Airoli mangrove boardwalk extension",
     "Airoli creek flamingo shoreline",
     "Airoli knowledge park green belt",
     "Airoli mangrove park nature trail",

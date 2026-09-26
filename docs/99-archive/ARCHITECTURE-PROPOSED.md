@@ -1,4 +1,4 @@
-# Technical Architecture
+﻿# Technical Architecture
 
 ## Architecture Style
 
@@ -6,14 +6,14 @@ Start with a modular monolith. Keep domain boundaries explicit so heavy workload
 
 ```text
 Responsive Web Client
-        ↓
+        â†“
 API Layer
-        ↓
+        â†“
 Identity | Traveler | Experience | Search | Recommendation
 Itinerary | Availability | Booking | Events | Provider | Admin
-        ↓
+        â†“
 PostgreSQL + Cache + Source Records
-        ↓
+        â†“
 Map / Routing / Weather Adapters
 ```
 
@@ -35,15 +35,15 @@ Candidate generation, hard filtering, scoring, feasibility, itinerary optimizati
 
 ```text
 User Request
-→ Intent Extraction
-→ Structured Constraints
-→ Candidate Query
-→ Hard Constraint Filter
-→ Travel-Time Enrichment
-→ Ranking and Diversity
-→ Feasibility Validation
-→ Explanation
-→ UI Result
+â†’ Intent Extraction
+â†’ Structured Constraints
+â†’ Candidate Query
+â†’ Hard Constraint Filter
+â†’ Travel-Time Enrichment
+â†’ Ranking and Diversity
+â†’ Feasibility Validation
+â†’ Explanation
+â†’ UI Result
 ```
 
 The LLM never writes operational facts directly. It can propose structured intent, but the backend validates the result.
@@ -119,3 +119,13 @@ Do not blindly cache:
 - Rate-limit public search and reports.
 - Audit provider, admin, booking, and moderation changes.
 - Do not expose private source credentials or raw personal data.
+
+
+---
+
+> **Archived. Not implemented.** This document describes a system that does not
+> exist in this repository. There are zero API routes, zero server code, and no
+> database. For what is actually built, read
+> [../03-technical/ARCHITECTURE-ACTUAL.md](../03-technical/ARCHITECTURE-ACTUAL.md).
+> This file is kept only as a record of what was considered, so nobody
+> re-derives it from scratch. Nothing here is a claim about the product.

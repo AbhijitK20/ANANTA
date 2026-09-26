@@ -46,7 +46,7 @@ export type { Experience, MediaSeed };
 
 /**
  * Hand-written media records first (they exercise the review/archived states),
- * then one approved oEmbed-verified video per experience that still lacks one —
+ * then one approved oEmbed-verified video per experience that still lacks one -
  * generated places, plus any hand-written record whose video was never
  * verified. No detail page is left without an approved, embeddable video.
  */

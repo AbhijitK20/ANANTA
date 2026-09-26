@@ -16,6 +16,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { zoneRows } from "../lib/data/zones";
+import { geocodedPlaces } from "../lib/data/geocoded.generated";
 import { foodNames } from "../lib/data/places/food";
 import { nightlifeNames } from "../lib/data/places/nightlife";
 import { shoppingNames } from "../lib/data/places/shopping";
@@ -145,6 +146,51 @@ function allTasks(): Task[] {
 
 // ---- saved rows (merge target) ----
 type Row = { id: string; coordinates: [number, number]; match: string };
+
+/** The ids a freshly generated snapshot can legitimately contain. */
+export function currentPlaceIds(): Set<string> {
+  const ids = new Set<string>();
+  for (const namesByArea of Object.values(NAMES_BY_CATEGORY)) {
+    for (const [area, names] of Object.entries(namesByArea)) {
+      if (!VALID_AREAS.has(area)) continue;
+      for (const name of names) ids.add(slug(name));
+    }
+  }
+  return ids;
+}
+
+/**
+ * Why a saved row must go, or `null` to keep it.
+ *
+ * Pruning on distance alone let rows rot forever: once a place was removed from
+ * a `places/*.ts` table, its row had no task any more, so the distance check had
+ * no anchor to run against and the row simply sat there claiming a match for a
+ * place that no longer exists. Those rows are why 11 ids in the committed
+ * snapshot no longer correspond to anything. This is the second half of the rule
+ * and it is the half that actually mattered.
+ */
+export function pruneReason(
+  row: Row,
+  taskArea: string | undefined,
+  placeIds: Set<string>,
+): "not-a-place" | "out-of-radius" | null {
+  if (!placeIds.has(row.id)) return "not-a-place";
+  const anchor = taskArea ? ZONE_BY_AREA.get(taskArea)?.coordinates : undefined;
+  if (!anchor) return "out-of-radius";
+  return distanceKm(anchor, row.coordinates) > 3.5 ? "out-of-radius" : null;
+}
+
+/** Every id a fresh prune would drop, with the reason. Pure, so a test can run it. */
+export function rowsToPrune(rows: Row[], tasks: Task[]): { id: string; reason: string }[] {
+  const areaOfTask = new Map(tasks.map((task) => [task.id, task.area]));
+  const placeIds = currentPlaceIds();
+  const out: { id: string; reason: string }[] = [];
+  for (const row of rows) {
+    const reason = pruneReason(row, areaOfTask.get(row.id), placeIds);
+    if (reason) out.push({ id: row.id, reason });
+  }
+  return out;
+}
 
 function readSaved(): Map<string, Row> {
   if (!fs.existsSync(OUT_FILE)) return new Map();
@@ -288,20 +334,14 @@ async function main() {
   console.log("tasks: " + tasks.length + " | already geocoded: " + saved.size);
 
   if (prune) {
-    const areaOfTask = new Map(tasks.map((task) => [task.id, task.area]));
-    let removed = 0;
-    for (const [id, row] of Array.from(saved.entries())) {
-      const area = areaOfTask.get(id);
-      const anchor = area ? ZONE_BY_AREA.get(area)?.coordinates : undefined;
-      if (!anchor) continue;
-      if (distanceKm(anchor, row.coordinates) > 3.5) {
-        saved.delete(id);
-        removed += 1;
-        console.log("pruned " + id + " (" + distanceKm(anchor, row.coordinates).toFixed(2) + " km from " + area + ")");
-      }
+    const doomed = rowsToPrune(Array.from(saved.values()), tasks);
+    for (const { id, reason } of doomed) {
+      saved.delete(id);
+      const row = geocodedPlaces.find((candidate) => candidate.id === id);
+      console.log("pruned " + id + " (" + reason + (row ? ", matched " + JSON.stringify(row.match) : "") + ")");
     }
     writeSaved(saved);
-    console.log("prune done: removed " + removed + ", kept " + saved.size);
+    console.log("prune done: removed " + doomed.length + ", kept " + saved.size);
     return;
   }
 
@@ -345,4 +385,13 @@ async function main() {
   console.log("done. new: " + added + ", total geocoded: " + saved.size + "/" + tasks.length);
 }
 
-main();
+/**
+ * Only run when this file is the entry point. The prune helpers above are pure
+ * and are imported by `lib/data/dataset.test.ts`, so a bare `main()` at module
+ * scope would make a unit test open Overpass connections.
+ */
+const isDirectRun =
+  typeof process.argv[1] === "string" &&
+  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+
+if (isDirectRun) main();

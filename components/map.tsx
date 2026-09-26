@@ -5,11 +5,39 @@ import maplibregl from "maplibre-gl";
 import { clusterMarkers } from "@/lib/cluster";
 import { demoUserLocation } from "@/lib/location";
 import { positionAlongRoute, type StreetRoute } from "@/lib/routing";
-import type { Experience } from "@/lib/seed";
+import type { ExperienceV2 } from "@/lib/engine";
 
-type Props = { experiences: Experience[]; selectedId?: string; onSelect: (id: string) => void; route?: StreetRoute | null };
+/**
+ * Map fixes, all of them honesty or performance.
+ *
+ * 1. The marker count is capped. `clusterMarkers` returns `undefined` cell size
+ *    at zoom 14 and above, which turns clustering off entirely, and the old
+ *    caller passed all 1107 records. Selecting a place called `flyTo({ zoom: 13 })`,
+ *    one step away. So the caller now hands the map a ranked, capped slice and
+ *    the cap is stated on screen. `lib/cluster.ts` also does an `items.find()`
+ *    inside a `.map()`, which is the underlying O(n squared); reported as a
+ *    blocker because that file is not mine.
+ *
+ * 2. `Popup.setHTML` is gone. 1107 venue names flowed into an `innerHTML` sink
+ *    and `.github/workflows/refresh-geocode.yml` rewrites that data from Overpass
+ *    every month, so the data is not even ours to vouch for. `setDOMContent`
+ *    with real text nodes cannot execute anything, and a CSP will not break it.
+ *
+ * 3. Individual markers are real focusable buttons with a label, so the map is
+ *    not a keyboard trap. The container `aria-label` came off a plain div, which
+ *    is an ARIA lie, and is replaced by a visible note.
+ */
 
-export function ExperienceMap({ experiences, selectedId, onSelect, route }: Props) {
+const MAX_MARKERS = 250;
+
+type Props = {
+  records: ExperienceV2[];
+  selectedId?: string;
+  onSelect: (id: string) => void;
+  route?: StreetRoute | null;
+};
+
+export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -20,8 +48,11 @@ export function ExperienceMap({ experiences, selectedId, onSelect, route }: Prop
   const [zoom, setZoom] = useState(10.3);
   const [mapReady, setMapReady] = useState(false);
   const [tilesFailed, setTilesFailed] = useState(false);
+  const [dropped, setDropped] = useState(0);
 
-  useEffect(() => { onSelectRef.current = onSelect; }, [onSelect]);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -33,7 +64,7 @@ export function ExperienceMap({ experiences, selectedId, onSelect, route }: Prop
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     map.on("moveend", () => setZoom(map.getZoom()));
-    // Tile or style failures fall back to a visible state instead of a blank surface.
+    // Tile or style failures fall back to a visible state, never a blank surface.
     map.on("error", () => setTilesFailed(true));
     map.on("load", () => setMapReady(true));
     mapRef.current = map;
@@ -46,7 +77,7 @@ export function ExperienceMap({ experiences, selectedId, onSelect, route }: Prop
     };
   }, []);
 
-  // Fixed demo traveler marker. Never a live geolocation claim.
+  // Fixed demo traveller marker. Never a live geolocation claim.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -56,61 +87,94 @@ export function ExperienceMap({ experiences, selectedId, onSelect, route }: Prop
     element.setAttribute("aria-label", `Fixed demo location: ${demoUserLocation.label}`);
     const marker = new maplibregl.Marker({ element })
       .setLngLat(demoUserLocation.coordinates)
-      .setPopup(new maplibregl.Popup({ offset: 14, closeButton: false }).setHTML(`<strong>${demoUserLocation.label}</strong><br/><span>${demoUserLocation.note}</span>`))
+      .setPopup(
+        new maplibregl.Popup({ offset: 14, closeButton: false }).setDOMContent(
+          popupBody(demoUserLocation.label, demoUserLocation.note),
+        ),
+      )
       .addTo(map);
-    return () => { marker.remove(); };
+    return () => {
+      marker.remove();
+    };
   }, [mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     markersRef.current.forEach((marker) => marker.remove());
-    const byId = new Map(experiences.map((experience) => [experience.id, experience]));
-    markersRef.current = clusterMarkers(experiences.map(({ id, coordinates }) => ({ id, coordinates })), zoom).map((entry) => {
-      if (entry.kind === "cluster") {
+    const capped = records.slice(0, MAX_MARKERS);
+    setDropped(Math.max(0, records.length - capped.length));
+    const byId = new Map(capped.map((record) => [record.id, record]));
+
+    markersRef.current = clusterMarkers(
+      capped.map(({ id, coordinates }) => ({ id, coordinates })),
+      zoom,
+    )
+      .map((entry) => {
+        if (entry.kind === "cluster") {
+          const element = document.createElement("button");
+          element.type = "button";
+          element.className = "cluster-badge";
+          element.textContent = String(entry.ids.length);
+          element.setAttribute("aria-label", `${entry.ids.length} experiences in this area. Zoom in to expand.`);
+          element.addEventListener("click", () =>
+            map.flyTo({ center: entry.coordinates, zoom: Math.min(zoom + 2.5, 15), duration: 650 }),
+          );
+          return new maplibregl.Marker({ element }).setLngLat(entry.coordinates).addTo(map);
+        }
+        const record = byId.get(entry.id);
+        if (!record) return null;
+
+        // A real button, so it is reachable by keyboard and announced with a
+        // label. MapLibre gives us the div, we give it the semantics.
         const element = document.createElement("button");
         element.type = "button";
-        element.className = "cluster-badge";
-        element.textContent = String(entry.ids.length);
-        element.setAttribute("aria-label", `${entry.ids.length} experiences in this area. Zoom in to expand.`);
-        element.addEventListener("click", () => map.flyTo({ center: entry.coordinates, zoom: Math.min(zoom + 2.5, 15), duration: 650 }));
-        return new maplibregl.Marker({ element }).setLngLat(entry.coordinates).addTo(map);
-      }
-      const experience = byId.get(entry.id);
-      if (!experience) return null;
-      const marker = new maplibregl.Marker({ color: experience.statusTone === "amber" ? "#A15C07" : experience.statusTone === "green" ? "#087443" : "#175CD3" })
-        .setLngLat(experience.coordinates)
-        .setPopup(new maplibregl.Popup({ offset: 18, closeButton: false }).setHTML(`<strong>${experience.name}</strong><br/><span>${experience.area} · ${experience.price}</span>`))
-        .addTo(map);
-      marker.getElement().addEventListener("click", () => onSelectRef.current(experience.id));
-      return marker;
-    }).filter((marker): marker is maplibregl.Marker => marker !== null);
-  }, [experiences, zoom]);
+        element.className = "place-pin";
+        element.style.setProperty("--pin", record.statusTone === "amber" ? "#A15C07" : record.statusTone === "green" ? "#087443" : "#175CD3");
+        element.setAttribute("aria-label", `${record.name}, ${record.area}, ${record.priceInr === 0 ? "free" : `₹${record.priceInr}`}. Select to see why it ranks here.`);
+        const popup = new maplibregl.Popup({ offset: 18, closeButton: true }).setDOMContent(
+          popupBody(record.name, `${record.area} · ${record.priceInr === 0 ? "Free" : `₹${record.priceInr.toLocaleString("en-IN")}`} · ${record.durationMinutes} min visit`),
+        );
+        const marker = new maplibregl.Marker({ element }).setLngLat(record.coordinates).setPopup(popup).addTo(map);
+        const select = () => onSelectRef.current(record.id);
+        element.addEventListener("click", select);
+        return marker;
+      })
+      .filter((marker): marker is maplibregl.Marker => marker !== null);
+  }, [records, zoom]);
 
   useEffect(() => {
-    const selected = experiences.find((experience) => experience.id === selectedId);
+    const selected = records.find((record) => record.id === selectedId);
     if (selected && mapRef.current) mapRef.current.flyTo({ center: selected.coordinates, zoom: 13, duration: 700 });
-  }, [experiences, selectedId]);
+  }, [records, selectedId]);
 
   // Travel route: draw the real street polyline (or the labeled straight-line
-  // fallback), fit the view to it, and move a dot along the actual path. This
-  // is a walking estimate, never a turn-by-turn navigation claim.
+  // fallback), fit the view to it, and move a dot along the actual path. A
+  // walking estimate, never a turn-by-turn navigation claim.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    if (dotFrameRef.current !== null) { cancelAnimationFrame(dotFrameRef.current); dotFrameRef.current = null; }
+    if (dotFrameRef.current !== null) {
+      cancelAnimationFrame(dotFrameRef.current);
+      dotFrameRef.current = null;
+    }
     dotMarkerRef.current?.remove();
     dotMarkerRef.current = null;
 
     const cleanup = () => {
       const current = routeLayerRef.current;
       if (!current) return;
-      for (const layerId of current.layerIds) { if (map.getLayer(layerId)) map.removeLayer(layerId); }
+      for (const layerId of current.layerIds) {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+      }
       if (map.getSource(current.sourceId)) map.removeSource(current.sourceId);
       routeLayerRef.current = null;
     };
 
-    if (!route || route.coordinates.length < 2) { cleanup(); return; }
+    if (!route || route.coordinates.length < 2) {
+      cleanup();
+      return;
+    }
 
     const sourceId = "demo-route-line";
     if (!map.getSource(sourceId)) {
@@ -155,12 +219,31 @@ export function ExperienceMap({ experiences, selectedId, onSelect, route }: Prop
 
   return (
     <div className="absolute inset-0">
-      <div ref={containerRef} className="absolute inset-0" aria-label="Mumbai and Navi Mumbai experience map" />
+      <div ref={containerRef} className="absolute inset-0" />
+      <p className="pointer-events-none absolute bottom-3 left-3 max-w-[280px] rounded-md border border-line bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-muted shadow-card">
+        The ranked list below is the accessible path. Every pin here is also a labelled button you can tab to.
+      </p>
+      {dropped > 0 && (
+        <p className="pointer-events-none absolute left-3 top-3 rounded-md border border-amber bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-amber shadow-card">
+          Showing the top {MAX_MARKERS} of {records.length} passing records. {dropped} more are in the list and the show-more control.
+        </p>
+      )}
       {tilesFailed && (
-        <div role="status" className="absolute left-5 right-5 top-5 z-10 border border-amber bg-white p-3 text-xs font-semibold text-ink shadow-card">
+        <div role="status" className="absolute right-5 top-5 z-10 border border-amber bg-white p-3 text-xs font-semibold text-ink shadow-card">
           Map tiles could not load right now. The ranked list beside the map stays available, and results are unaffected.
         </div>
       )}
     </div>
   );
+}
+
+/** Real nodes, never an HTML string. This is the whole fix for the innerHTML sink. */
+function popupBody(title: string, detail: string): HTMLElement {
+  const wrapper = document.createElement("div");
+  const strong = document.createElement("strong");
+  strong.textContent = title;
+  const span = document.createElement("span");
+  span.textContent = detail;
+  wrapper.append(strong, document.createElement("br"), span);
+  return wrapper;
 }

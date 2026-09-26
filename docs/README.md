@@ -18,12 +18,18 @@ Start here when implementing the project.
 
 ## Technical
 
-- [Architecture](03-technical/ARCHITECTURE.md)
-- [Data Model](03-technical/DATA-MODEL.md)
-- [API Specification](03-technical/API-SPEC.md)
+Start with the one that is true:
+
+- [Architecture, as it actually is](03-technical/ARCHITECTURE-ACTUAL.md)
 - [Map and Routing](03-technical/MAP-AND-ROUTING.md)
-- [AI Recommendation Design](03-technical/AI-RECOMMENDATION-DESIGN.md)
+- [Recommendation Design, as it actually is](03-technical/AI-RECOMMENDATION-DESIGN.md)
 - [Project Tools and Plugin Registry](03-technical/PROJECT-TOOLS.md)
+
+Archived, because they describe a system that was never built:
+
+- [Architecture, proposed](99-archive/ARCHITECTURE-PROPOSED.md)
+- [API Specification, proposed](99-archive/API-SPEC.md)
+- [Data Model, proposed](99-archive/DATA-MODEL-PROPOSED.md)
 
 ## Data
 
@@ -50,8 +56,18 @@ Start here when implementing the project.
 
 ## Source of Context
 
-- [Masterplan](../Local-Experiences-Masterplan.md)
+The plan of record is [`../MASTERPLAN.md`](../MASTERPLAN.md), at the repository root.
+The earlier [masterplan](99-archive/Local-Experiences-Masterplan.md) is archived. It is
+kept as a record of what was considered, and it should not be cited as a claim
+about the product.
 
 ## Deployment
 
-The application is configured for native Vercel deployment as a Next.js project. Do not commit `.env` files or generated `.next/` output. Use `.env.example` as the list of future environment variables.
+The application is a static Next.js project and deploys to Vercel with no
+configuration and no environment variables. `.env.example` lists the single
+variable the map style URL can read, and leaving it empty is the supported setup.
+
+**Do not deploy this publicly as it stands.** There is no authentication, and
+`/admin/operations` and `/provider` mutate persistent state for anyone who loads
+the page. This is a deliberate demo scope, recorded as DEC-020 in the
+[decision log](02-planning/DECISION-LOG.md) and stated on both pages in the UI.

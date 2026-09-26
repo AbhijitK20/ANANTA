@@ -1,8 +1,20 @@
-# AI and Recommendation Design
+# Recommendation Design, as it actually is
+
+> **There is no model in this product.** Not for understanding, not for
+> explanation, not anywhere at runtime. This document used to describe an AI
+> intent parser and an AI explainer. Neither exists. What exists is a regex
+> parser and a component breakdown, both deterministic, and the decision that
+> replaced the model is DEC-021 in the
+> [decision log](../02-planning/DECISION-LOG.md).
+>
+> A model is permitted as an offline authoring tool. It may help write a record.
+> It may not rank one.
 
 ## Principle
 
-Use AI for understanding and explanation. Use deterministic code for operational truth and hard constraints.
+Deterministic code owns operational truth, hard constraints, ranking, and
+explanation. There is no second opinion to reconcile and nothing that can
+disagree with itself.
 
 ## Pipeline
 

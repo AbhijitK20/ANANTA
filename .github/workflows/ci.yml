@@ -6,9 +6,20 @@ on:
   pull_request:
     branches: [main]
 
+# Read-only by default. The two scheduled refresh workflows declare their own
+# `contents: write`, so nothing in CI can push to the repository.
+permissions:
+  contents: read
+
+# One push, one run. A stale run finishing after a newer one would otherwise
+# report a stale result as the latest.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Typecheck, lint, test, build
+    name: Typecheck, lint, test, build, eval
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +33,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The masterplan's strongest constraint is zero new runtime dependencies.
+      # A diff check on `dependencies` is one step and it locks the constraint in.
+      - name: Assert runtime dependencies are unchanged
+        run: |
+          node -e '
+            const expected = {
+              "@phosphor-icons/react": "^2.1.7",
+              "maplibre-gl": "^5.6.1",
+              "next": "^14.2.30",
+              "react": "^18.3.1",
+              "react-dom": "^18.3.1",
+            };
+            const actual = require("./package.json").dependencies;
+            const same =
+              JSON.stringify(Object.keys(actual).sort()) === JSON.stringify(Object.keys(expected).sort()) &&
+              Object.keys(expected).every((name) => actual[name] === expected[name]);
+            if (!same) {
+              console.error("Runtime dependencies changed. Expected exactly:", expected);
+              console.error("Found:", actual);
+              process.exit(1);
+            }
+            console.log("Runtime dependencies unchanged: " + Object.keys(actual).length + " packages.");
+          '
+
       - name: Typecheck
         run: npx tsc --noEmit
 
@@ -33,3 +68,8 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The eval report is the section 9 success table, printed and asserted.
+      # A measurement nobody runs is a blog post, not a criterion.
+      - name: Eval report
+        run: npm run eval

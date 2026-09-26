@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, BookmarkSimple, CalendarCheck, MapPin, NotePencil, UserCircle } from "@phosphor-icons/react/dist/ssr";
 import { BottomNav, StatusLabel } from "@/components/ui";
+import { Footer } from "@/components/footer";
+import { LearnedWeights } from "@/components/ananta/learned-weights";
+import { useLearner } from "@/components/ananta/use-ananta";
 import { demoUserLocation, estimateFromUser, formatDistance } from "@/lib/location";
 import { readPlan } from "@/lib/plan";
 import { readSaved } from "@/lib/saved";
@@ -10,6 +13,7 @@ import { readReports } from "@/lib/reports";
 import { allExperiences } from "@/lib/data";
 
 export default function ProfilePage() {
+  const [learner, setLearner] = useLearner();
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [planIds, setPlanIds] = useState<string[]>([]);
   const [reportCount, setReportCount] = useState(0);
@@ -35,16 +39,22 @@ export default function ProfilePage() {
     <main id="main-content" className="min-h-screen bg-canvas">
       <div className="mx-auto min-h-screen max-w-[1180px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
-          <a href="/" className="flex items-center gap-2 text-sm font-bold"><ArrowLeft size={18} /> Home</a>
+          <a href="/" className="flex items-center gap-2 text-sm font-bold">
+            <ArrowLeft size={18} /> Home
+          </a>
           <h1 className="text-lg font-bold">Profile</h1>
           <span className="w-20" />
         </header>
         <section className="px-5 pb-28 pt-10 sm:px-8 lg:px-14 lg:pb-14">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blueSoft text-blue"><UserCircle size={30} weight="fill" /></div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blueSoft text-blue">
+              <UserCircle size={30} weight="fill" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-[-0.03em]">Demo traveler</h2>
-              <p className="mt-1 text-sm text-muted">No account is used in this prototype. Everything below lives on this device only.</p>
+              <h2 className="text-2xl font-bold tracking-[-0.03em]">Demo traveller</h2>
+              <p className="mt-1 text-sm text-muted">
+                No account is used in this prototype. Everything below lives on this device only.
+              </p>
             </div>
           </div>
 
@@ -56,14 +66,28 @@ export default function ProfilePage() {
             <div className="mt-4 flex items-start gap-3">
               <MapPin size={20} className="mt-0.5 shrink-0 text-blue" weight="fill" />
               <div>
-                <p className="font-bold">{demoUserLocation.label} · {demoUserLocation.area}, {demoUserLocation.city}</p>
-                <p className="mt-1 text-sm leading-6 text-muted">This is a fixed demo position, not live geolocation. Distances across the app are measured from here and labeled as estimates.</p>
+                <p className="font-bold">
+                  {demoUserLocation.label} · {demoUserLocation.area}, {demoUserLocation.city}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  This is a fixed demo position, not live geolocation. Distances across the app are measured
+                  from here and labeled as estimates.
+                </p>
               </div>
             </div>
             <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
-              <div><p className="text-sm text-muted">Nearest saved place</p><NearestSaved ids={savedIds} /></div>
-              <div><p className="text-sm text-muted">Walk-time band</p><p className="mt-1 font-bold">{bandLabel()}</p></div>
-              <div><p className="text-sm text-muted">Coverage</p><p className="mt-1 font-bold">Mumbai and Navi Mumbai only</p></div>
+              <div>
+                <p className="text-sm text-muted">Nearest saved place</p>
+                <NearestSaved ids={savedIds} />
+              </div>
+              <div>
+                <p className="text-sm text-muted">Walk-time band</p>
+                <p className="mt-1 font-bold">{bandLabel()}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">Coverage</p>
+                <p className="mt-1 font-bold">Mumbai and Navi Mumbai only</p>
+              </div>
             </div>
           </div>
 
@@ -73,11 +97,31 @@ export default function ProfilePage() {
             <StatCard Icon={NotePencil} label="Reports submitted" value={reportCount} href="/events" note="Reviewed in Operations" />
           </div>
 
-          <div className="mt-8 border border-amber bg-amberSoft/40 p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber">Demo data notice</p>
-            <p className="mt-2 text-sm leading-6 text-muted">Saved places, plans, and reports live in this browser&apos;s local storage. Clearing site data removes them. Nothing is shared with a server, and no behavioral profile is built in this prototype.</p>
+          <div id="learned">
+            <LearnedWeights learner={learner} onChange={setLearner} />
+          </div>
+
+          <div className="mt-6 border border-amber bg-amberSoft/40 p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber">What is stored, and what is learned</p>
+            <ul className="mt-2 space-y-2 text-sm leading-6 text-muted">
+              <li>
+                Saved places, draft plans, reports, and your weight edits live in this browser&apos;s local
+                storage. Clearing site data removes all of them. Nothing is uploaded to a server.
+              </li>
+              <li>
+                A weight profile is built, from two named interactions and nothing else: a weight you moved
+                yourself, and a place you chose to add to the plan. There is no passive tracking and no
+                third-party script. The panel above shows every weight, its prior, and how many observations
+                moved it, and you can put any of them back.
+              </li>
+              <li>
+                The travel-time and crowd signals used in the ranking are our own estimates from the city
+                manifest, not measurements and not a traffic feed.
+              </li>
+            </ul>
           </div>
         </section>
+        <Footer />
         <BottomNav />
       </div>
     </main>
@@ -92,28 +136,27 @@ export default function ProfilePage() {
 
 function NearestSaved({ ids }: { ids: string[] }) {
   const nearest = nearestSavedEstimate(ids);
-  if (!nearest) return <p className="mt-1 font-bold">—</p>;
+  if (!nearest) return <p className="mt-1 font-bold">None saved yet</p>;
   return <p className="mt-1 font-bold">{nearest.name}</p>;
 }
 
 function nearestSavedEstimate(ids: string[]) {
   const saved = ids
-    .map((id) => experienceById(id))
-    .filter((place): place is NonNullable<ReturnType<typeof experienceById>> => Boolean(place))
+    .map((id) => allExperiences.find((place) => place.id === id))
+    .filter((place): place is NonNullable<ReturnType<typeof allExperiences.find>> => Boolean(place))
     .map((place) => ({ place, estimate: estimateFromUser(place.coordinates) }));
   if (!saved.length) return null;
   const nearest = saved.sort((a, b) => a.estimate.km - b.estimate.km)[0];
   return { name: nearest.place.name, km: nearest.estimate.km, walkMinutes: nearest.estimate.walkMinutes };
 }
 
-function experienceById(id: string) {
-  return allExperiences.find((place) => place.id === id);
-}
-
 function StatCard({ Icon, label, value, href, note }: { Icon: typeof BookmarkSimple; label: string; value: number; href: string; note: string }) {
   return (
     <a href={href} className="border border-line p-5 transition-colors hover:border-blue">
-      <div className="flex items-center justify-between"><Icon size={20} className="text-blue" /><span className="text-2xl font-bold">{value}</span></div>
+      <div className="flex items-center justify-between">
+        <Icon size={20} className="text-blue" />
+        <span className="text-2xl font-bold">{value}</span>
+      </div>
       <p className="mt-3 font-bold">{label}</p>
       <p className="mt-1 text-xs text-muted">{note}</p>
     </a>

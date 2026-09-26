@@ -69,13 +69,33 @@ function hash(value: string): number {
 
 const OFFSET_DEGREES = 0.008; // roughly ±800 m around the anchor
 
-/** Deterministic landward pin: jitter both axes, but never step into open water. */
-function derivePin(anchor: [number, number], waterTo: "west" | "east" | undefined, id: string): [number, number] {
-  const rawLng = (((hash(`${id}-lng`) % 201) - 100) / 100) * OFFSET_DEGREES;
-  const rawLat = (((hash(`${id}-lat`) % 201) - 100) / 100) * OFFSET_DEGREES;
+/**
+ * Deterministic landward pin: jitter both axes, but never step into open water.
+ *
+ * `salt` exists so a caller can re-derive the same pin differently. Two ids can
+ * quantise to the same jitter, which puts two different places on one dot and
+ * sends a traveller to the same venue twice. Re-deriving with a salt is the
+ * cheapest way out and it stays deterministic: no clock, no randomness.
+ */
+function derivePin(anchor: [number, number], waterTo: "west" | "east" | undefined, id: string, salt = 0): [number, number] {
+  const suffix = salt === 0 ? "" : "#" + salt;
+  const rawLng = (((hash(`${id}-lng${suffix}`) % 201) - 100) / 100) * OFFSET_DEGREES;
+  const rawLat = (((hash(`${id}-lat${suffix}`) % 201) - 100) / 100) * OFFSET_DEGREES;
   const lng = waterTo === "west" ? Math.abs(rawLng) : waterTo === "east" ? -Math.abs(rawLng) : rawLng;
   return [anchor[0] + lng, anchor[1] + rawLat];
 }
+
+const pinKey = (coordinates: [number, number]) => coordinates.map((v) => v.toFixed(6)).join(",");
+
+/** Great-circle distance in metres, the same approximation the test suite uses. */
+function metresApart(a: [number, number], b: [number, number]): number {
+  const dLng = (a[0] - b[0]) * 111.32 * Math.cos(((a[1] + b[1]) / 2) * (Math.PI / 180));
+  const dLat = (a[1] - b[1]) * 110.57;
+  return Math.sqrt(dLng * dLng + dLat * dLat) * 1000;
+}
+
+/** Two pins closer than this are the same dot on a map. */
+const MIN_SEPARATION_M = 30;
 
 function derivedStyle(category: string, id: string): DerivedStyle {
   const style = STYLE_BY_CATEGORY[category] ?? STYLE_BY_CATEGORY.Culture;
@@ -107,6 +127,18 @@ const geocodedById: Map<string, GeocodedPlace> = new Map(
 /**
  * Expand category name-lists into full Experience records. `namesByArea` maps
  * category -> area (must match a ZoneRow area) -> real place names.
+ *
+ * Two rules keep the map honest, and both are enforced here rather than hoped
+ * for:
+ *
+ *   1. One OSM match is one venue. A geocoder that pins six different places to
+ *      a single "Flora Fountain" area element would otherwise put six dots on
+ *      one coordinate. The second and later claimants fall back to the honest
+ *      area anchor instead of pretending to a match they do not have.
+ *   2. No two invented pins in one area share a point. The jitter is quantised,
+ *      so distinct ids can land on the same coordinate. The loser re-derives with
+ *      a salt until it clears 30 m. A real OSM match is never moved for this:
+ *      OSM is the ground truth and a genuine venue can sit beside another.
  */
 export function buildExperiences(
   zones: ZoneRow[],
@@ -115,21 +147,46 @@ export function buildExperiences(
 ): Experience[] {
   const zoneByArea = new Map(zones.map((zone) => [zone.area, zone]));
   const experiences: Experience[] = [];
+  // area -> invented pins handed out so far, so rule 2 can hold across categories.
+  const inventedByArea = new Map<string, [number, number][]>();
+  // OSM coordinates already claimed, so rule 1 knows a second claimant exists.
+  const osmClaims = new Map<string, string>();
 
   for (const category of categories) {
     const areaGroups = namesByArea[category] ?? {};
     for (const [areaName, names] of Object.entries(areaGroups)) {
       const zoneRow = zoneByArea.get(areaName);
       if (!zoneRow) continue;
+      const invented = inventedByArea.get(areaName) ?? [];
       for (const name of names) {
         const id = slug(name);
         const style = derivedStyle(category, id);
         const image = generatedImages[hash(id) % Math.max(generatedImages.length, 1)];
-        // Exact OSM match when the geocoder found the real feature; otherwise
-        // the area-anchor pin with an honest location-confidence label.
+        // Exact OSM match when the geocoder found the real feature AND no other
+        // record has already claimed that element; otherwise the area-anchor
+        // pin with an honest location-confidence label.
         const geocoded = geocodedById.get(id);
-        const coordinates = geocoded ? geocoded.coordinates : derivePin(zoneRow.coordinates, zoneRow.waterTo, id);
-        const confidence = geocoded
+        const osmAvailable = geocoded !== undefined && !osmClaims.has(pinKey(geocoded.coordinates));
+        if (geocoded && osmAvailable) osmClaims.set(pinKey(geocoded.coordinates), id);
+
+        let coordinates: [number, number];
+        if (geocoded && osmAvailable) {
+          coordinates = geocoded.coordinates;
+        } else {
+          let salt = 0;
+          for (;;) {
+            salt += 1;
+            const candidate = derivePin(zoneRow.coordinates, zoneRow.waterTo, id, salt);
+            if (salt > 64 || !invented.some((other) => metresApart(other, candidate) < MIN_SEPARATION_M)) {
+              coordinates = candidate;
+              invented.push(candidate);
+              break;
+            }
+          }
+        }
+        inventedByArea.set(areaName, invented);
+
+        const confidence = geocoded && osmAvailable
           ? "Location matched on OpenStreetMap; visit facts are demo estimates"
           : "Location is the area center, not the exact venue; facts are demo estimates";
         experiences.push({
@@ -171,14 +228,14 @@ export function buildExperiences(
  * well a video's query tokens overlap the experience's area and category,
  * then assign the best-scoring video that satisfies two constraints:
  *
- *   1. No other place in the SAME AREA already uses it — two places in one
+ *   1. No other place in the SAME AREA already uses it - two places in one
  *      neighborhood never open onto the same video.
  *   2. Dataset-wide reuse stays under a ceiling (dataset size / pool size),
  *      so one broadly relevant video cannot cover a category in every area.
  *
  * If both constraints ever bind (an area needs more videos than remain under
  * the ceiling), the fallback keeps constraint 1 and picks the least-reused
- * video overall — area uniqueness always wins. Ties break deterministically
+ * video overall - area uniqueness always wins. Ties break deterministically
  * by pool order.
  */
 function tokenize(value: string): string[] {

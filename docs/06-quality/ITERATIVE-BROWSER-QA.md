@@ -1,6 +1,16 @@
-# Iterative Browser QA Loop
+# Iterative Browser QA Log
 
-This is the default development process for Ananta. A feature is not considered ready because the code compiles. It must be rendered, browsed, interacted with, and checked against the product rules.
+This is the default development process for Ananta. A feature is not considered
+ready because the code compiles. It must be rendered, browsed, interacted with,
+and checked against the product rules.
+
+**This is a manual log, not an automated loop.** Everything below was observed by
+a person in a browser on the date shown. It does not run in CI, and the numbers
+in the dated entries below are point-in-time facts about that day's build, not
+current claims. For the current dataset composition, read
+[Architecture, as it actually is](../03-technical/ARCHITECTURE-ACTUAL.md); for
+the current state of every acceptance criterion, read
+[Acceptance Criteria](ACCEPTANCE-CRITERIA.md).
 
 ## Required Loop
 
@@ -124,7 +134,31 @@ For each loop, check:
 - Stale or demo data labels
 - No fabricated claims
 
-Use the approved Playwright CLI or Playwright MCP from `/home/abhijitk20/plugins`. The current environment has the Playwright plugin dependencies but does not have a Chromium or Chrome executable installed. Until that is resolved, record HTTP/build checks separately and do not describe them as visual browser QA. Install/configure Chromium before treating screenshot, viewport, console, or interaction checks as complete. HTTP status checks alone are not browser QA.
+### Running the harness
+
+`playwright` is deliberately **not** a dependency of this repository, so this
+harness is a manual tool, not an automated loop, and it is not in CI. To run it:
+
+```
+npm i -D playwright && npx playwright install chromium
+npm run dev
+node scripts/qa-browser-pass.mjs http://localhost:3000
+node scripts/qa-audit-fixes.mjs http://localhost:3000
+```
+
+Both scripts resolve `playwright` from the current working directory, take the
+base URL as their first argument or from `ANANTA_BASE_URL`, write screenshots to
+the system temp directory rather than `/tmp`, and close the browser before
+exiting. Exit code 0 means every check passed, 1 means at least one failed, and
+2 means the harness itself could not run.
+
+Third-party network failures (OSRM, map tiles, YouTube thumbnails) are counted
+and printed separately as `thirdPartyNetworkErrors`. They do not fail the run,
+because failing a build because someone pulled the network cable measures the
+network, not the code. Exceptions thrown by the app itself do fail the run, and
+are printed as `pageerror`.
+
+HTTP status checks alone are not browser QA.
 
 ## Design Contract Check
 
@@ -155,7 +189,7 @@ After each verified slice, record:
 - Fixes made
 - Remaining limitation
 
-Use `docs/02-planning/DECISION-LOG.md` for architectural decisions and the task/session summary for short implementation results.
+Use [`DECISION-LOG.md`](../02-planning/DECISION-LOG.md) for architectural decisions and [`ACCEPTANCE-CRITERIA.md`](ACCEPTANCE-CRITERIA.md) for the current state of every criterion.
 
 ## Release Rule
 
@@ -163,7 +197,17 @@ Never call a feature Done from compilation alone. It is Done only when the featu
 
 ## Current QA Baseline
 
-The local Chromium binary is now installed through the approved Playwright setup. Stable isolated browser checks have passed at mobile and desktop sizes for the current route set, with no console errors on the isolated route checks.
+This file is a **manual QA log**, not a claim of continuous automated coverage.
+It records what a person saw in a browser, on a date, on a machine. It is not
+part of `npm test` and it does not run in CI, because doing that would require
+adding `playwright` as a dependency and the dependency set is frozen at five
+runtime packages by decision.
+
+What *is* automated is in `npm test`: the engine, the gate, the objective, the
+independent validator, the packing, the replanner, the dataset invariants, the
+provenance rules, the security headers and the eval report. Those are the parts
+where a regression is expensive and a human eye is not enough. Layout and visual
+polish are what this log is for.
 
 The save and draft-plan interaction has also passed in Chromium:
 

@@ -1,3 +1,80 @@
 {
-  "extends": ["next/core-web-vitals", "next"]
+  "extends": ["next/core-web-vitals", "next"],
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Literal[value=/\\u2014/]",
+        "message": "No em dash (U+2014) in product copy. Write two sentences, or use a colon. See docs/05-design/CONTENT-STYLE-GUIDE.md"
+      },
+      {
+        "selector": "TemplateElement[value.raw=/\\u2014/]",
+        "message": "No em dash (U+2014) in product copy. Write two sentences, or use a colon. See docs/05-design/CONTENT-STYLE-GUIDE.md"
+      },
+      {
+        "selector": "Literal[value=/[\\u2600-\\u27BF\\u2B00-\\u2BFF\\uFE0F\\uD800-\\uDBFF][\\uDC00-\\uDFFF]?/]",
+        "message": "No emoji in product copy. A record name and a number say it better."
+      },
+      {
+        "selector": "TemplateElement[value.raw=/[\\u2600-\\u27BF\\u2B00-\\u2BFF\\uFE0F\\uD800-\\uDBFF][\\uDC00-\\uDFFF]?/]",
+        "message": "No emoji in product copy. A record name and a number say it better."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["lib/engine/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "openai",
+                  "ai",
+                  "ai/*",
+                  "@ai-sdk/*",
+                  "@anthropic-ai/*",
+                  "@aws-sdk/client-bedrock-runtime",
+                  "@google/generative-ai",
+                  "@mistralai/*",
+                  "cohere-ai",
+                  "groq-sdk",
+                  "ollama",
+                  "langchain",
+                  "langchain/*",
+                  "@langchain/*",
+                  "llamaindex",
+                  "@llamaindex/*",
+                  "transformers",
+                  "@xenova/*",
+                  "@huggingface/*"
+                ],
+                "message": "No model in the decision path. The engine is deterministic TypeScript. An LLM may be used offline to author data, never at runtime. Enforced by lib/engine/guard/no-model.test.ts."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["lib/eval/**/*.ts"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "CallExpression[callee.name=/^(fetch|XMLHttpRequest|WebSocket)$/]",
+            "message": "The eval suite must pass with the network cable pulled. Take a number, do not fetch one."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "lib/data/**/*.generated.ts", "lib/seed.ts"],
+      "rules": {
+        "no-restricted-syntax": "off"
+      }
+    }
+  ]
 }

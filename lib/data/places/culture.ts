@@ -15,18 +15,17 @@ export const cultureNames: Record<string, string[]> = {
     "Bombay Samachar building walk",
     "Gateway of India heritage hour",
     "Regal Cinema art-deco visit",
-    "Fort art-deco trail",
     "Municipal Corporation building view stop",
-    "Kala Ghoda gallery evening",
     "Jehangir Art Gallery visit",
     "Bombay Natural History Society hall",
     "GPO heritage hall visit",
     "Flora Fountain art-deco stop",
+    "Dr. Bhau Daji Lad Mumbai City Museum",
+    "Bombay High Court building visit",
   ],
   "Colaba": [
     "Gateway of India morning walk",
     "Prince of Wales Museum courtyard",
-    "Colaba art gallery row",
     "Sassoon Docks early-morning walk",
     "Sassoon Docks fish-auction viewing",
     "Dhanraj Mahal art-deco walk",
@@ -47,7 +46,6 @@ export const cultureNames: Record<string, string[]> = {
     "Mumba Devi Temple visit",
     "Girgaon wada architecture walk",
     "Babulnath Temple quiet hour",
-    "Walkeshwar temple lane walk",
   ],
   "Bhendi Bazaar": [
     "Bhendi Bazaar heritage food-and-faith walk",
@@ -58,7 +56,6 @@ export const cultureNames: Record<string, string[]> = {
     "Mount Mary Basilica visit",
     "Bandra fort heritage hour",
     "St. Andrew's Church visit",
-    "Bandra east Indian village lanes",
     "Castella de Aguada ruin visit",
     "Bandra heritage home facades walk",
   ],
@@ -71,14 +68,18 @@ export const cultureNames: Record<string, string[]> = {
     "Versova koliwada temple visit",
     "Andheri east village church visit",
     "Jogeshwari caves visit",
+    "Christ Church Museum Andheri",
+    "Mani Bhavan Gandhi heritage visit",
   ],
   "Powai": [
     "Hiranandani heritage-style plaza walk",
     "IIT Bombay heritage buildings walk",
+    "IIT Bombay main building heritage visit",
   ],
   "Aarey": [
     "Aarey tribal heritage walk",
     "Aarey dairy heritage extension",
+    "Aarey Gandhi heritage village museum",
   ],
   "Dadar": [
     "Shivaji Park memorial circuit",
@@ -90,6 +91,7 @@ export const cultureNames: Record<string, string[]> = {
     "Matunga temple circuit",
     "Matunga Kirloskar lane heritage walk",
     "South Indian community heritage walk Matunga",
+    "Matunga Dr Ambedkar statue visit",
   ],
   "Lower Parel": [
     "Phoenix Mills chimney heritage stop",
@@ -100,10 +102,11 @@ export const cultureNames: Record<string, string[]> = {
     "Worli fort heritage visit",
     "Worli Koliwada heritage walk",
     "Haji Ali causeway walk",
+    "Nehru Science Centre NSCI Dome",
+    "Nehru Planetarium",
   ],
   "Walkeshwar": [
     "Banganga Tank heritage hour extension",
-    "Jogeshwari-style rock-cut visit Walkeshwar",
     "Babulnath temple extension visit",
   ],
   "Borivali East": [
@@ -124,6 +127,7 @@ export const cultureNames: Record<string, string[]> = {
   "Belapur": [
     "Belapur fort heritage extension",
     "Belapur village temple visit",
+    "CBD Belapur High Court building visit",
   ],
   "Kharghar": [
     "Kharghar ISKCON temple visit",

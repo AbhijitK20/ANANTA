@@ -1,4 +1,4 @@
-# API Specification
+﻿# API Specification
 
 ## Conventions
 
@@ -71,3 +71,13 @@
 - `UNAUTHORIZED`
 - `FORBIDDEN`
 - `RATE_LIMITED`
+
+
+---
+
+> **Archived. Not implemented.** This document describes a system that does not
+> exist in this repository. There are zero API routes, zero server code, and no
+> database. For what is actually built, read
+> [../03-technical/ARCHITECTURE-ACTUAL.md](../03-technical/ARCHITECTURE-ACTUAL.md).
+> This file is kept only as a record of what was considered, so nobody
+> re-derives it from scratch. Nothing here is a claim about the product.

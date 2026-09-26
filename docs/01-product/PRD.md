@@ -2,7 +2,7 @@
 
 ## Product
 
-**Local & Experiences** is a free-first local discovery and planning platform for Mumbai and Navi Mumbai. It helps travelers answer:
+**Ananta** is a free-first local discovery and planning platform for Mumbai and Navi Mumbai. It helps travelers answer:
 
 > What can I realistically experience right now, given my interests, location, time, budget, group, accessibility needs, and current conditions?
 
@@ -132,17 +132,14 @@ Needs to verify providers, review sources, resolve duplicates, expire events, an
 - `FR-018`: Users can report incorrect information.
 - `FR-019`: Admins can review duplicates, stale records, hidden-gem candidates, and event changes.
 - `FR-020`: The platform does not present unverified social discovery as confirmed availability.
-- `FR-025`: Users can view approved external videos attached to an experience, place, or event.
-- `FR-026`: Media displays platform, creator attribution, verification state, publish date, and last-checked date where available.
-- `FR-027`: The platform stores external media references and metadata, not downloaded or re-hosted videos.
-- `FR-028`: Unavailable, private, deleted, stale, or rejected media is not shown as active.
-
-### Provider and Admin
-
 - `FR-021`: Providers can create experiences with structured operational fields.
 - `FR-022`: Providers can update availability, capacity, hours, and price.
 - `FR-023`: Admins can approve, reject, suspend, and verify providers and listings.
 - `FR-024`: Admins can inspect a data-operations queue.
+- `FR-025`: Users can view approved external videos attached to an experience, place, or event.
+- `FR-026`: Media displays platform, creator attribution, verification state, publish date, and last-checked date where available.
+- `FR-027`: The platform stores external media references and metadata, not downloaded or re-hosted videos.
+- `FR-028`: Unavailable, private, deleted, stale, or rejected media is not shown as active.
 
 ## Non-Functional Requirements
 
@@ -155,12 +152,12 @@ Needs to verify providers, review sources, resolve duplicates, expire events, an
 - **Media compliance:** External media respects embedding, attribution, copyright, privacy, and platform usage requirements.
 - **Design consistency:** All screens follow the approved design contract and content style guide.
 - **Truthfulness:** No fabricated reviews, metrics, imagery, copy, availability, or testimonials.
-- **Security:** Role-based authorization, validation, rate limiting, secure sessions, and secret management.
+- **Security:** Input validation on every field that crosses a trust boundary. There is no authentication, no role-based authorization, no rate limiting and no session, because there is no server: the product is a static export and `/admin/operations` and `/provider` mutate `localStorage` on the visitor's own device. This is a scope decision (DEC-020), it is stated on both pages in the UI, and it is not safe to expose on a public URL as it stands.
 
 ## Success Metrics
 
 - Useful recommendation shown within the first session.
-- At least 80% of demo recommendation plans satisfy hard constraints.
+- At least 80% of demo recommendation plans satisfy hard constraints. **Measured**: the gate cannot emit a passing record that violates a hard constraint, so the rate is 100% by construction. The end-to-end figure across 22 eval scenarios is printed by `npm run eval` and pinned in `lib/eval/harness.test.ts`. **Measured**: the gate cannot emit a passing record that violates a hard constraint, so the rate is 100% by construction. The end-to-end figure across 22 eval scenarios is printed by `npm run eval` and pinned in `lib/eval/harness.test.ts`.
 - 100% of published demo events have source and expiry metadata.
 - A traveler can create a valid plan in under three minutes.
 - A disruption can produce a reviewed alternative in under one minute.

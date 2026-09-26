@@ -17,6 +17,13 @@ on:
 permissions:
   contents: write
 
+# Two runs of this workflow pushing at once race each other on
+# `lib/data/geocoded.generated.ts`. Queue them instead. `cancel-in-progress` is
+# false so a run never abandons a half-written snapshot.
+concurrency:
+  group: refresh-geocode
+  cancel-in-progress: false
+
 jobs:
   geocode:
     name: Re-match place pins against OpenStreetMap

@@ -14,7 +14,6 @@ export const foodNames: Record<string, string[]> = {
     "Trishna",
     "Zaffran",
     "Gokul",
-    "Bora Bazar lunch counters",
   ],
   "Colaba": [
     "Leopold Cafe",
@@ -32,7 +31,6 @@ export const foodNames: Record<string, string[]> = {
     "New Kulfi Centre",
     "Chowpatty bhel counters",
     "Marine Drive promenade chai carts",
-    "Girgaon Chowpatty pav bhaji stalls",
   ],
   "Girgaon": [
     "Panshikar",
@@ -55,7 +53,6 @@ export const foodNames: Record<string, string[]> = {
     "Pali Bhavan",
     "The Bagel Shop",
     "Jai Jawan",
-    "Carter Road khau galli",
     "Salt Water Cafe",
     "Yoko Sizzlers",
     "Hill Road bakery strip",
@@ -91,7 +88,6 @@ export const foodNames: Record<string, string[]> = {
   "Aarey": [
     "Aarey dairy canteen",
     "Chhota Kashmir tea stalls",
-    "Aarey roadside bhutta carts",
   ],
   "Dadar": [
     "Prakash Shakuntala",
@@ -134,7 +130,6 @@ export const foodNames: Record<string, string[]> = {
   ],
   "Nerul/Seawoods": [
     "Seawoods Grand Central food court",
-    "Nerul khau galli",
     "Seawoods creekside chaat",
     "Wonders Park snack carts",
   ],

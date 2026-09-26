@@ -14,6 +14,13 @@ on:
 permissions:
   contents: write
 
+# Two runs of this workflow pushing at once race each other on
+# `lib/data/images.generated.ts` and `lib/data/videos.generated.ts`. Queue them
+# instead. `cancel-in-progress` is false so a run never abandons a pruned pool.
+concurrency:
+  group: refresh-media
+  cancel-in-progress: false
+
 jobs:
   refresh:
     name: Re-verify media pools against live sources

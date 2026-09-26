@@ -82,15 +82,25 @@ Limit each contributor to one primary item in progress. Move unfinished work bac
 
 ## Story Allocation Summary
 
-| Sprint | Primary stories |
-|---|---|
-| Sprint 0 | Project setup, schema, seed format, delivery rules |
-| Sprint 1 | US-001, US-002, US-003, US-004 |
-| Sprint 2 | US-005, US-006, US-007, US-008, US-009 |
-| Sprint 3 | US-010, US-011, US-012, US-013 |
-| Sprint 4 | US-014, US-015, US-016, US-023 |
-| Sprint 5 | US-017, US-018, US-019, US-020, US-021, US-022, US-024, US-032, US-035, US-037 |
-| Sprint 6 | Regression, accessibility, fallback, media link checks, demo hardening |
+This table is the authority. It was previously a second, disagreeing allocation
+of the same stories, which is the kind of drift that makes a plan unfalsifiable.
+Where an earlier per-sprint backlog line disagreed with this table, this table
+wins.
+
+| Sprint | Primary stories | Status |
+|---|---|---|
+| Sprint 0 | Project setup, schema, seed format, delivery rules | shipped |
+| Sprint 1 | US-001, US-002, US-003, US-004 | shipped |
+| Sprint 2 | US-005, US-006, US-007, US-010, US-011 | shipped |
+| Sprint 3 | US-008, US-009, US-012, US-013, US-014, US-015 | shipped |
+| Sprint 4 | US-016, US-017, US-018, US-023, US-033 | shipped |
+| Sprint 5 | US-019, US-020, US-021, US-022, US-024, US-032, US-035, US-037 | shipped |
+| Sprint 6 | Regression, accessibility, fallback, media link checks, demo hardening | shipped |
+
+Every story above is implemented. The current, per-criterion state of the product
+is in
+[Acceptance Criteria](../06-quality/ACCEPTANCE-CRITERIA.md), which is the
+document to read for what is and is not finished.
 
 ## Ceremonies
 

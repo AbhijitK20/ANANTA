@@ -63,11 +63,13 @@
 
 ## Definition of Done
 
-- Acceptance criteria pass.
-- Loading, empty, and error states exist.
-- Mobile layout works.
-- Authorization and validation are applied.
-- Relevant automated or manual test exists.
-- Source and freshness metadata are preserved where applicable.
-- Demo path works without paid services.
-- Peer review is complete.
+One definition of done for the whole project, not a second one. See
+[Definition of Done](../06-quality/DEFINITION-OF-DONE.md). In short: it works in
+the product, it is tested with a real assertion, it typechecks and lints, its
+numbers are sourced or labelled as estimates, it has honest loading, empty and
+error states, it degrades with a labelled fallback, it meets the accessibility
+and responsive basics, and its copy carries no emoji, no em dash and no
+fabricated claim.
+
+The machine-checked version, with a Status and an Enforced by column for every
+criterion, is [Acceptance Criteria](../06-quality/ACCEPTANCE-CRITERIA.md).
