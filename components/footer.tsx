@@ -20,6 +20,7 @@ const PRODUCT = [
 const LEGAL = [
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const SIDES = [
@@ -54,6 +55,11 @@ export function Footer() {
   );
 }
 
+/**
+ * `grid-cols-2` at 390px with three groups means the third group wraps under
+ * the second, and the links stay two columns wide, which is 44px-plus per
+ * target. The list is the accessible path to every legal page at that width.
+ */
 function FooterGroup({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
     <div>
@@ -61,7 +67,10 @@ function FooterGroup({ title, links }: { title: string; links: { href: string; l
       <ul className="mt-3 space-y-2">
         {links.map((link) => (
           <li key={link.href}>
-            <a href={link.href} className="text-sm font-semibold text-ink hover:text-blue">
+            <a
+              href={link.href}
+              className="inline-block py-1 text-sm font-semibold text-ink transition-colors hover:text-blue"
+            >
               {link.label}
             </a>
           </li>

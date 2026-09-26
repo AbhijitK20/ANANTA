@@ -103,12 +103,13 @@ export function localMinutesOfDay(iso: string): number {
 
 const TIME_BUCKETS = ["morning", "afternoon", "evening", "night"] as const;
 
+/** The four slots of `objective-spec.md` section 5, in the order it numbers them. */
 function bucketOf(minutes: number): number {
-  if (minutes < 5 * 60) return 3;
-  if (minutes < 11 * 60) return 0;
-  if (minutes < 17 * 60) return 1;
-  if (minutes < 21 * 60) return 2;
-  return 3;
+  if (minutes < 5 * 60) return 3; // 0..4 night
+  if (minutes < 11 * 60) return 0; // 5..11 morning
+  if (minutes < 17 * 60) return 1; // 12..16 afternoon
+  if (minutes < 21 * 60) return 2; // 17..20 evening
+  return 3; // 21..23 night
 }
 
 const SEVERITY_LABEL: Record<NonNullable<DiscoveryContext["weatherSeverity"]>, string> = {
@@ -121,20 +122,25 @@ const SEVERITY_LABEL: Record<NonNullable<DiscoveryContext["weatherSeverity"]>, s
 /**
  * How well the record's best time of day matches the current time.
  *
- * The contract fixes the endpoints, 1.0 at the record's best time decaying to
- * 0.4 at the opposite end, but not the interpolation. This is the linear version
- * on a four position ring, so the two published numbers determine it entirely:
- * 1.0 aligned, 0.7 one step round the ring, 0.4 opposite. A record with
- * `bestTimeOfDay: "any"` has no opposite, so it scores 1.0 at all times.
+ * `objective-spec.md` section 5 is normative and fixes the interpolation:
+ *
+ *   slot(hour): 5..11 morning, 12..16 afternoon, 17..20 evening, 21..23 and
+ *               0..4 night
+ *   t          = clamp01(abs(slot(hour) - index(best)) / 3)
+ *   factor     = 1 - 0.6 * t
+ *
+ * Linear, not circular, and that is deliberate. On a four point ring the point
+ * farthest from morning is evening, not night, so a circular version cannot
+ * reach 0.4 anywhere. The written form is `1 - 0.6 * t`, and the `* t` at the
+ * end matters for bit identity: `1 - 0.3 * steps` is the same function to two
+ * decimals and a different function in the last bit.
  */
 export function peakHourFactor(now: string, best: ExperienceV2["bestTimeOfDay"]): number {
   if (best === "any") return 1;
   const bestIndex = TIME_BUCKETS.indexOf(best);
   if (bestIndex < 0) return 1;
-  const nowIndex = bucketOf(localMinutesOfDay(now));
-  const raw = Math.abs(bestIndex - nowIndex);
-  const steps = Math.min(raw, TIME_BUCKETS.length - raw);
-  return clamp01(1 - 0.3 * steps);
+  const t = clamp01(Math.abs(bucketOf(localMinutesOfDay(now)) - bestIndex) / 3);
+  return 1 - 0.6 * t;
 }
 
 /* ── interest ───────────────────────────────────────────────────────────── */
@@ -160,18 +166,33 @@ function weightForKey(table: Record<string, number>, key: string): number {
   return 0;
 }
 
+/**
+ * `objective-spec.md` section 4, normative:
+ *
+ *   base  = clamp01(ctx.profile.interests[category] ?? 0.5)
+ *   veto  = clamp01(ctx.profile.avoid[category] ?? 0)
+ *   value = clamp11((base - 0.5) * 2 - veto)
+ *
+ * An unlisted category scores 0, which is neutral: not disliked, not wanted. The
+ * old form, `matched - avoided`, scored an unlisted category 0 too but scored a
+ * half interest 0.5, so half the scale meant nothing. The rescale puts 0.5 at the
+ * midpoint and the ends at plus and minus 1, which is the only reading where the
+ * number a traveller sees means something.
+ */
 export const interestComponent: ComponentFn = (stop, ctx) => {
   const category = stop.record.category;
-  const matched = weightForKey(ctx.profile.interests, category);
-  const avoided = weightForKey(ctx.profile.avoid, category);
-  const value = clampSigned(matched - avoided);
+  const rawBase = weightForKey(ctx.profile.interests, category);
+  const rawVeto = weightForKey(ctx.profile.avoid, category);
+  const base = isFiniteNumber(rawBase) ? clamp01(rawBase) : 0.5;
+  const veto = isFiniteNumber(rawVeto) ? clamp01(rawVeto) : 0;
+  const value = clampSigned((base - 0.5) * 2 - veto);
   let sentence: string;
-  if (matched > 0 && avoided > 0) {
-    sentence = `Interest match ${num(value)}: ${category} carries ${num(matched)} of interest and ${num(avoided)} avoided.`;
-  } else if (matched > 0) {
-    sentence = `Interest match ${num(value)}, from ${num(matched)} of stated interest in ${category}.`;
-  } else if (avoided > 0) {
-    sentence = `Interest match ${num(value)}: only ${category} is on your avoid list, at ${num(avoided)}.`;
+  if (veto > 0 && base > 0.5) {
+    sentence = `Interest match ${num(value)}: ${category} carries ${num(base)} of interest and ${num(veto)} avoided.`;
+  } else if (base > 0.5) {
+    sentence = `Interest match ${num(value)}, from ${num(base)} of stated interest in ${category}.`;
+  } else if (veto > 0) {
+    sentence = `Interest match ${num(value)}: ${category} is on your avoid list, at ${num(veto)}.`;
   } else {
     sentence = `Interest match 0: ${category} is not on your interest list.`;
   }
@@ -200,19 +221,48 @@ export const ratingComponent: ComponentFn = (stop, ctx) => {
  * weaker still, so both are treated the same way, and a record with no
  * confidence entry at all is treated as `unverified` rather than trusted.
  */
+/**
+ * `objective-spec.md` section 4, normative:
+ *
+ *   pricePerPersonInr === null  ->  0     price unknown, no claim either way
+ *   pricePerPersonInr <= 0       ->  1     genuinely free is the best value
+ *   affordable = ctx.budgetInr / max(1, ctx.partySize)
+ *   ratio      = affordable / pricePerPersonInr
+ *   return clamp11(ratio / 4 * 2 - 1)
+ *
+ * The order `ratio / 4 * 2 - 1` is written as the spec writes it, left to right,
+ * because the alternative orderings differ in the last bit.
+ *
+ * Two rules the spec does not spell out, both of which the contract and the
+ * masterplan require and which this component used to break. An `estimate`
+ * confidence price is a price we guessed, and a guessed price must not be
+ * allowed to buy ranking, so it scores 0 exactly like an unknown one. And a
+ * genuinely free place scores 1, not 0, because "free" is the best possible
+ * answer to "is this good value" and the old form scored it 1 only by accident of
+ * the arithmetic.
+ */
 const UNPRICED: readonly string[] = ["estimate", "unverified"];
 
 export const valueComponent: ComponentFn = (stop, ctx) => {
   const record = stop.record;
-  const party = Math.max(1, ctx.partySize);
   const confidence = record.confidence.price ?? "unverified";
+  const perPerson = record.pricePerPersonInr;
+  const affordable = ctx.budgetInr / Math.max(1, ctx.partySize);
   if (UNPRICED.includes(confidence)) {
     const word = confidence === "estimate" ? "an estimate" : "unverified";
-    const sentence = `Price is ${word} at ${num(record.priceInr)} INR, so value counts 0 and cannot buy rank.`;
-    return component("value", ctx, 0, sentence);
+    return component("value", ctx, 0, `Price is ${word} at ${num(record.priceInr)} INR, so value counts 0 and cannot buy rank.`);
   }
-  const value = clamp01(1 - safeDiv(record.priceInr * party, ctx.budgetInr));
-  const sentence = `At ${num(record.priceInr)} INR each for ${party} against your ${num(ctx.budgetInr)} INR budget, value is ${num(value)}.`;
+  if (perPerson === null) {
+    return component("value", ctx, 0, "No per person price is recorded, so value counts 0 rather than a guess.");
+  }
+  if (perPerson <= 0) {
+    return component("value", ctx, 1, "This one is free, which is the best value there is.");
+  }
+  if (affordable <= 0) {
+    return component("value", ctx, 0, "No budget is set, so value cannot be scored.");
+  }
+  const value = clampSigned(affordable / perPerson / 4 * 2 - 1);
+  const sentence = `At ${num(perPerson)} INR each against ${num(affordable)} INR per person, value is ${num(value)}.`;
   return component("value", ctx, value, sentence);
 };
 
@@ -234,17 +284,32 @@ export const authenticityComponent: ComponentFn = (stop, ctx) => {
  * reaches 0. Every wetter severity pushes mixed space down and reaches 0 only
  * for genuinely outdoor records.
  */
+/**
+ * `objective-spec.md` section 4 says "copy the table, do not derive it", so it
+ * is copied verbatim:
+ *
+ *   "clear"      indoor 0.4   outdoor 1     mixed 0.7
+ *   "rain"       indoor 1     outdoor 0.2   mixed 0.6
+ *   "heavy_rain" indoor 1     outdoor -1    mixed -0.4
+ *   "storm"      indoor 0.8   outdoor -1    mixed -0.5
+ *
+ * Two rows changed and both matter. Outdoors in `heavy_rain` and `storm` is -1,
+ * a full penalty, not 0: a flat 0 let a storm score the same as clear weather for
+ * an outdoor record, which is the wrong answer in the one case where being wrong
+ * gets somebody wet. And unknown weather is 0, not the neutral 0.5 the old form
+ * used: we do not know, so we claim nothing, and a neutral score is a claim.
+ */
 const WEATHER_FIT: Record<NonNullable<DiscoveryContext["weatherSeverity"]>, Record<ExperienceV2["indoor"], number>> = {
-  clear: { indoor: 0.5, outdoor: 1, mixed: 0.75 },
-  rain: { indoor: 1, outdoor: 0, mixed: 0.6 },
-  heavy_rain: { indoor: 1, outdoor: 0, mixed: 0.4 },
-  storm: { indoor: 1, outdoor: 0, mixed: 0.25 },
+  clear: { indoor: 0.4, outdoor: 1, mixed: 0.7 },
+  rain: { indoor: 1, outdoor: 0.2, mixed: 0.6 },
+  heavy_rain: { indoor: 1, outdoor: -1, mixed: -0.4 },
+  storm: { indoor: 0.8, outdoor: -1, mixed: -0.5 },
 };
 
 export const weatherComponent: ComponentFn = (stop, ctx) => {
   const severity = ctx.weatherSeverity;
   if (severity === null) {
-    return component("weather", ctx, 0.5, "Weather is unknown, so weather fit counts a neutral 0.5.");
+    return component("weather", ctx, 0, "Weather is unknown, so weather fit counts 0 rather than a guess.");
   }
   const value = WEATHER_FIT[severity][stop.record.indoor];
   const sentence = `${SEVERITY_LABEL[severity]} weather, ${stop.record.indoor} place, weather fit ${num(value)}.`;
@@ -278,9 +343,23 @@ export const noveltyComponent: ComponentFn = (stop, ctx, position) => {
 
 /* ── group fit ──────────────────────────────────────────────────────────── */
 
-/** Widest positive spread the clauses can produce. The negative tail clamps at minus 1. */
-const GROUP_FIT_SPAN = 1.25;
-
+/**
+ * `objective-spec.md` section 4, normative, and the governing sentence is the
+ * one that matters for this product: **"a null fact never scores against the
+ * group, only a recorded false does."** The old form divided by a 1.25 span and
+ * scored an unrecorded fact as 0, which is arithmetically similar and evidentially
+ * different: it let a missing fact dilute a recorded one.
+ *
+ *   hasToddler  -> kidFriendly  true +1, null 0, false -1
+ *                  stroller_ok  true +0.5, null 0, false -0.5
+ *   hasElderly  -> low_walking  true +1, null 0, false -1
+ *   party > 1   -> capacity known and enough +0.25, known and short -1,
+ *                  unknown 0
+ *
+ * Diet is deliberately absent. It is a hard gate, so a record that does not
+ * satisfy it never reaches the objective at all, and scoring it here as well
+ * would charge twice for one fact.
+ */
 export const groupFitComponent: ComponentFn = (stop, ctx) => {
   const record = stop.record;
   const access = record.access;
@@ -289,62 +368,46 @@ export const groupFitComponent: ComponentFn = (stop, ctx) => {
 
   if (ctx.hasToddler) {
     if (record.kidFriendly === true) {
-      score += 0.5;
+      score += 1;
       clauses.push("a toddler is in the group and this is marked kid friendly");
     } else if (record.kidFriendly === false) {
-      score -= 0.5;
+      score -= 1;
       clauses.push("a toddler is in the group and this is marked not kid friendly");
     } else {
-      clauses.push("a toddler is in the group and kid friendliness is unrecorded, so the signal is skipped");
+      clauses.push("a toddler is in the group and kid friendliness is unrecorded, so it scores nothing either way");
     }
-    if (access.stroller_ok === false) {
-      score -= 0.25;
+    if (access.stroller_ok === true) {
+      score += 0.5;
+      clauses.push("stroller access is recorded");
+    } else if (access.stroller_ok === false) {
+      score -= 0.5;
       clauses.push("no stroller access is recorded");
     }
   }
 
   if (ctx.hasElderly) {
-    if (access.seating_available === true) {
-      score += 0.25;
-      clauses.push("an elderly traveller is in the group and seating is recorded");
-    } else if (access.seating_available === false) {
-      score -= 0.25;
-      clauses.push("an elderly traveller is in the group and seating is recorded as unavailable");
-    } else {
-      clauses.push("an elderly traveller is in the group and seating is unrecorded, so the signal is skipped");
-    }
-    if (record.indoor === "outdoor") {
-      score -= 0.25;
-      clauses.push("an elderly traveller is in the group and this is outdoors");
-    }
-  }
-
-  if (ctx.partySize >= 5) {
     if (access.low_walking === true) {
-      score += 0.25;
-      clauses.push("a party of 5 or more and low walking is recorded");
+      score += 1;
+      clauses.push("an elderly traveller is in the group and low walking is recorded");
     } else if (access.low_walking === false) {
-      score -= 0.25;
-      clauses.push("a party of 5 or more and low walking is recorded as unavailable");
+      score -= 1;
+      clauses.push("an elderly traveller is in the group and low walking is recorded as unavailable");
     } else {
-      clauses.push("a party of 5 or more and low walking is unrecorded, so the signal is skipped");
+      clauses.push("an elderly traveller is in the group and low walking is unrecorded, so it scores nothing either way");
     }
   }
 
-  if (ctx.diets.length > 0) {
-    const met = ctx.diets.filter((need) => record.diets.includes(need)).length;
-    if (met === ctx.diets.length) {
+  if (ctx.partySize > 1 && record.capacity !== null) {
+    if (record.capacity >= ctx.partySize) {
       score += 0.25;
-      clauses.push(`all ${met} dietary needs are covered`);
-    } else if (met === 0) {
-      score -= 0.25;
-      clauses.push(`none of the ${ctx.diets.length} dietary needs are covered`);
+      clauses.push(`seats ${record.capacity} for a party of ${ctx.partySize}`);
     } else {
-      clauses.push(`${met} of ${ctx.diets.length} dietary needs are covered`);
+      score -= 1;
+      clauses.push(`seats ${record.capacity} for a party of ${ctx.partySize}`);
     }
   }
 
-  const value = clampSigned(safeDiv(score, GROUP_FIT_SPAN));
+  const value = clampSigned(score);
   const sentence = clauses.length === 0
     ? "Nothing in the group profile points either way here, so group fit is 0."
     : `${capitalise(clauses.join(", "))}, so group fit is ${num(value)}.`;
@@ -354,20 +417,24 @@ export const groupFitComponent: ComponentFn = (stop, ctx) => {
 /* ── travel friction ────────────────────────────────────────────────────── */
 
 /**
- * Friction is the share of the traveller's whole window that this one leg eats.
- * Scale free on purpose: a 25 minute leg in a 300 minute afternoon is mild and
- * the same leg in a 90 minute window is not. The quadratic in distance is
- * already carried once at plan level by `superlinearTravel`, so it is not
- * counted twice here.
+ * Friction is proximity, per `objective-spec.md` rule W-1: the per stop term is
+ * `1 / (1 + travelKm)`, weighted by `w.travelFriction`, and it is **positive**.
+ *
+ * The old form was `-(travelMinutes / availableMinutes)`, which was wrong twice.
+ * It made a long journey to a good place look bad, when the distance term is
+ * already charged once at plan level by `superlinearTravel`, and it was signed
+ * negative, so a component that reads "how close is this" was being presented as
+ * a penalty. A 12 minute walk and a 12 minute metro are the same friction here,
+ * which is the intended reading: this is about how far, not how slow.
+ *
+ * Zero distance is exactly 1, and the first stop is not special cased, because
+ * rule G-3 already fixes the origin leg at `travelMinutes === 0`.
  */
-export const travelFrictionComponent: ComponentFn = (stop, ctx, position) => {
-  const available = Math.max(1, ctx.availableMinutes);
-  if (position.index === 0 && stop.travelMinutes <= 0) {
-    return component("travelFriction", ctx, 0, "This is the first stop, so there is no travel leg and friction is 0.");
-  }
-  const value = clamp01(safeDiv(stop.travelMinutes, available));
-  const sentence = `This leg is ${num(stop.travelMinutes)} of your ${num(available)} available minutes, a friction of ${num(value)}.`;
-  return component("travelFriction", ctx, -value, sentence);
+export const travelFrictionComponent: ComponentFn = (stop, ctx) => {
+  const km = isFiniteNumber(stop.travelKm) ? Math.max(0, stop.travelKm) : 0;
+  const value = safeDiv(1, 1 + km);
+  const sentence = `This stop is ${num(km)} km away, a proximity of ${num(value)}.`;
+  return component("travelFriction", ctx, value, sentence);
 };
 
 /* ── reliability ────────────────────────────────────────────────────────── */

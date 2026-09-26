@@ -13,6 +13,42 @@
   --color-blue: #175cd3;
   --color-blue-soft: #e8f0ff;
   --font-sans: Arial, Helvetica, sans-serif;
+
+  /*
+   * Ambient occlusion. One flat shadow reads as a sticker, stacked shadows read
+   * as a surface. Light from the top-left throughout, which is the near
+   * universal convention. Offset and blur rise together while alpha falls:
+   * that gradient is what produces the occlusion read.
+   *
+   * These literals are mirrored in `tailwind.config.ts` so `shadow-raised` and
+   * friends work without a stylesheet load order dependency, and
+   * `lib/ui-guard/spatial-primitives.test.ts` asserts the two agree, so the
+   * duplication cannot drift.
+   */
+  --ink-rgb: 24, 32, 43;
+
+  --shadow-z-flush: 0 1px 2px rgba(var(--ink-rgb), 0.04);
+  --shadow-z-recessed: inset 0 2px 4px rgba(var(--ink-rgb), 0.05), inset 0 1px 1px rgba(var(--ink-rgb), 0.04);
+  --shadow-z-raised: 0 1px 2px rgba(var(--ink-rgb), 0.05), 0 2px 4px rgba(var(--ink-rgb), 0.04),
+    0 4px 8px rgba(var(--ink-rgb), 0.03);
+  --shadow-z-lifted: 0 1px 2px rgba(var(--ink-rgb), 0.05), 0 2px 6px rgba(var(--ink-rgb), 0.05),
+    0 6px 12px rgba(var(--ink-rgb), 0.04), 0 12px 24px rgba(var(--ink-rgb), 0.03);
+  --shadow-z-floating: 0 2px 4px rgba(var(--ink-rgb), 0.05), 0 4px 10px rgba(var(--ink-rgb), 0.05),
+    0 10px 20px rgba(var(--ink-rgb), 0.04), 0 20px 40px rgba(var(--ink-rgb), 0.04),
+    0 32px 64px rgba(var(--ink-rgb), 0.03);
+  --shadow-z-foreground: 0 4px 8px rgba(var(--ink-rgb), 0.05), 0 8px 20px rgba(var(--ink-rgb), 0.05),
+    0 16px 40px rgba(var(--ink-rgb), 0.04), 0 32px 80px rgba(var(--ink-rgb), 0.04),
+    0 48px 120px rgba(var(--ink-rgb), 0.03);
+
+  /* The recession shadow. Named separately because it is the only inset one. */
+  --shadow-inset: inset 0 2px 4px rgba(var(--ink-rgb), 0.05), inset 0 1px 1px rgba(var(--ink-rgb), 0.04);
+
+  /* Motion. Two durations for interaction, one for a scene change, three curves. */
+  --motion-hover: 120ms;
+  --motion-state: 200ms;
+  --motion-scene: 320ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 * { box-sizing: border-box; }
@@ -125,9 +161,43 @@ a { color: inherit; text-decoration: none; }
   to { top: calc(100% - 8px); opacity: 0; }
 }
 
+/*
+ * Reduced motion kills the animation and must not kill the meaning.
+ *
+ * Depth and status are redundant encodings: a verified record is still green
+ * and an unverified one is still dashed and desaturated once the transform is
+ * gone, because the chip colour and the dashed border are separate channels.
+ * That redundancy is what makes this accessible rather than merely decorated.
+ *
+ * The blanket reset below neutralises animation, transition and smooth scroll.
+ * The rules after it neutralise the depth transforms one class at a time, so a
+ * reduced-motion visitor gets a flat layout that still carries every fact.
+ * Nothing in this block touches a colour, a border or a filter, because
+ * greying out the verified state would destroy the state rather than the motion.
+ */
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .travel-dot { display: none; }
   .travel-connector-dot { animation: none; top: 40%; }
+  .depth-flush,
+  .depth-raised,
+  .depth-lifted,
+  .depth-floating,
+  .depth-foreground { transform: none; }
+  .depth-recessed { transform: none; }
+  .tilt-by-drift-0,
+  .tilt-by-drift-1,
+  .tilt-by-drift-2,
+  .tilt-by-drift-3,
+  .tilt-by-drift-4,
+  .tilt-by-drift-5,
+  .tilt-by-drift-6 { transform: none; }
+  .lift { transform: none; }
 }
 
 .skip-link {
@@ -177,6 +247,129 @@ textarea:focus-visible {
   border-width: 0;
 }
 
+/*
+ * The 3D container. `perspective: 1200px` is the default from the spatial
+ * contract: below 600 is cartoonish, above 2000 is imperceptible, and the whole
+ * usable band is 900 to 1400.
+ *
+ * `preserve-3d` is here and nowhere on a card, because it creates a stacking
+ * context and breaks `position: fixed` descendants. A card that needs its own 3D
+ * context gets a nested container, never `preserve-3d` on the card.
+ *
+ * `.stage-3d` is the same rule under the name session 4 is already using in six
+ * places. One declaration, two class names, so a container can be either and the
+ * contract's intent, never on a card, is what the guard enforces. Collapsing the
+ * two names is written up in `UI-UX-Fix-Prompts/BLOCKERS/1.md`.
+ */
+.stage,
+.stage-3d {
+  perspective: 1200px;
+  perspective-origin: 50% 40%;
+  transform-style: preserve-3d;
+}
+
+/*
+ * The depth scale. Six steps, no more, because a six step scale is legible and a
+ * twelve step scale is noise.
+ *
+ * Depth encodes what we know, never how large a number is. A recessed card is
+ * unknown or rejected. A raised card is verified. A lifted card is primary right
+ * now. Nothing is ever pushed away because its number is smaller, because
+ * perspective makes a mark ambiguous between "small value" and "far off".
+ *
+ * `box-shadow` is set per step and never transitioned: animating a five layer
+ * stack repaints on every frame. Only `transform` and `opacity` transition here.
+ */
+.depth-recessed {
+  transform: translateZ(-10px);
+  box-shadow: var(--shadow-inset);
+  filter: saturate(0.6);
+}
+.depth-flush {
+  transform: translateZ(0);
+  box-shadow: var(--shadow-z-flush);
+}
+.depth-raised {
+  transform: translateZ(8px);
+  box-shadow: var(--shadow-z-raised);
+}
+.depth-lifted {
+  transform: translateZ(18px);
+  box-shadow: var(--shadow-z-lifted);
+}
+.depth-floating {
+  transform: translateZ(32px);
+  box-shadow: var(--shadow-z-floating);
+}
+.depth-foreground {
+  transform: translateZ(48px);
+  box-shadow: var(--shadow-z-foreground);
+}
+
+/*
+ * Plan integrity is tilt, and this is the best idea in the spatial layer. The
+ * validation stamp tilts by an angle proportional to drift: at zero drift the
+ * two independent derivations agree exactly and the plan is perfectly flat, and
+ * as drift approaches the tolerance it visibly leans.
+ *
+ * `driftTilt()` in `components/ananta/tokens.ts` picks the class, so nothing
+ * computes a style at runtime. Six degrees is the ceiling, because a card that
+ * stays tilted reads as broken.
+ */
+.tilt-by-drift-0 { transform: rotateX(0deg); }
+.tilt-by-drift-1 { transform: rotateX(1deg); }
+.tilt-by-drift-2 { transform: rotateX(2deg); }
+.tilt-by-drift-3 { transform: rotateX(3deg); }
+.tilt-by-drift-4 { transform: rotateX(4deg); }
+.tilt-by-drift-5 { transform: rotateX(5deg); }
+.tilt-by-drift-6 { transform: rotateX(6deg); }
+
+/*
+ * Hover raises one step and adds at most 3 degrees. Never more than one card
+ * lifted at a time, or nothing reads as primary.
+ */
+.lift {
+  transition: transform var(--motion-hover) var(--ease-out-soft);
+  will-change: transform;
+}
+.lift:hover,
+.lift:focus-within {
+  transform: translateZ(26px) rotateX(3deg);
+}
+
+/*
+ * Shared panel and chip primitives. Every panel under `components/ananta/`
+ * repeated this string inline; it is here once so a chip in a badge and a chip
+ * in a rejection cannot drift apart.
+ *
+ * `.card` is a plain class, not a component, so it composes with the utilities
+ * in `tokens.ts` and needs no import.
+ */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  box-shadow: var(--shadow-z-raised);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+}
+/* The standard 12px muted explanatory line. */
+.prose-note {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--color-muted);
+}
+.hairline {
+  border-top: 1px solid var(--color-line);
+}
 
 @media (max-width: 768px) {
   .hide-mobile { display: none; }

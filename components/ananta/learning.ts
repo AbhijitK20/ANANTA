@@ -1,50 +1,75 @@
 import type { BanditArm, BanditState, ComponentId, Weights } from "@/lib/engine";
 import { COMPONENT_IDS } from "@/lib/engine";
+/*
+ * The five scoring symbols below are imported from the stage barrel rather than
+ * from `@/lib/engine`, because the engine barrel has not re-exported
+ * `lib/engine/scoring` yet: every stage line in `lib/engine/index.ts` is still
+ * commented out, session 4's file included. Nothing is reimplemented here, so
+ * `lib/ui-guard/no-engine-fork.test.ts` is satisfied either way, and when the
+ * barrel lands this one import path is the whole change. See
+ * `UI-UX-Fix-Prompts/BLOCKERS/7.md`.
+ */
+import {
+  PRIOR_WEIGHTS as ENGINE_PRIOR_WEIGHTS,
+  WEIGHT_KEYS,
+  banditFromWeights,
+  clampWeights,
+  sampleWeights as engineSampleWeights,
+  updateBandit as engineUpdateBandit,
+} from "@/lib/engine/scoring";
 
 /**
- * The prior and the learning surface.
+ * The learner: storage and surface only.
  *
- * Session 4 owns `scoring/weights.ts` and `scoring/thompson.ts` and exports
- * `PRIOR_WEIGHTS`, `sampleWeights(bandit, rng)`, and
- * `updateBandit(bandit, rewards)`. Those have not landed, so this file mirrors
- * the frozen signatures. Every call site goes through the exported functions
- * and none of them widens a contract type.
+ * The pure half of learning is the engine's. `scoring/weights.ts` owns
+ * `PRIOR_WEIGHTS`, `WEIGHT_KEYS` and `clampWeights`; `scoring/thompson.ts` owns
+ * `sampleWeights`, `updateBandit` and `banditFromWeights`. This file used to
+ * declare its own copies of all five, plus a local Beta sampler behind them.
+ * That meant the weights the panel showed were not the weights the engine
+ * scored with, which is the one failure this feature cannot have, so every one
+ * of them is now imported and none of them is reimplemented.
  *
- * `ponytail:` ceiling. `sampleWeights` uses Johnk's theorem for an exact Beta
- * draw, which is correct but assumes independent uniforms. Once session 4
- * lands, delete this file and point the three call sites at `@/lib/engine`.
+ * What genuinely belongs here is the part the engine must not know about: which
+ * key the state lives under, how a corrupt or older stored value becomes a prior
+ * instead of an exception, and the words a slider is labelled with.
+ *
+ * The trust rule, and why `LearnerState.weights` is derived rather than stored:
+ * **nothing is learned without being visible and editable.** Only the bandit is
+ * written to storage. The weights on the state are recomputed from that bandit
+ * on every read, by the engine's own sampler, so they cannot drift away from
+ * what the objective does. The previous shape also persisted a `weights` blob
+ * beside the bandit, which was a second source of truth that could disagree with
+ * both the engine and itself.
  */
 
-/** Weights are visible, so a wrong default is a bug a traveller can see. */
-export const PRIOR_WEIGHTS: Weights = {
-  interest: 1,
-  rating: 0.8,
-  value: 0.7,
-  authenticity: 0.6,
-  weather: 0.9,
-  crowd: 0.6,
-  novelty: 0.8,
-  groupFit: 0.8,
-  travelFriction: 0.5,
-  reliability: 0.5,
-  travelPenalty: 0.012,
-  pacePenalty: 0.7,
-};
+/* ── re-exports, so the existing call sites keep resolving ──────────────── */
 
-export const WEIGHT_IDS = [
-  "interest",
-  "rating",
-  "value",
-  "authenticity",
-  "weather",
-  "crowd",
-  "novelty",
-  "groupFit",
-  "travelFriction",
-  "reliability",
-  "travelPenalty",
-  "pacePenalty",
-] as const satisfies readonly (keyof Weights)[];
+/** The engine's prior, passed through so one hop still finds one definition. */
+export const PRIOR_WEIGHTS: Weights = ENGINE_PRIOR_WEIGHTS;
+
+/** A cold start, from the engine. `pipeline-run.ts` builds its context with it. */
+export const priorBandit = (now: string): BanditState => banditFromWeights(PRIOR_WEIGHTS, now);
+
+/**
+ * `sampleWeights` with the base-vector overlay the pipeline still calls, in one
+ * argument. The draw is entirely the engine's; the overlay answers a different
+ * question, which is "how do the learned shares sit against the weights this
+ * context already carries", and that is a view concern.
+ */
+export function sampleWeights(bandit: BanditState, rng: () => number, base: Weights = PRIOR_WEIGHTS): Weights {
+  return clampWeights({ ...base, ...engineSampleWeights(bandit, rng) });
+}
+
+/** One interaction, handed to the engine's pure updater. */
+export function recordChoice(
+  bandit: BanditState,
+  rewards: Record<ComponentId, number>,
+  now?: string,
+): BanditState {
+  return engineUpdateBandit(bandit, rewards, now);
+}
+
+/* ── the surface a slider needs ─────────────────────────────────────────── */
 
 /** What each weight is allowed to reach. Sliders read these bounds. */
 export const WEIGHT_BOUNDS: Record<keyof Weights, { min: number; max: number; step: number }> = {
@@ -78,21 +103,16 @@ export const WEIGHT_MEANING: Record<keyof Weights, string> = {
   pacePenalty: "How hard a plan is penalised for missing the stop count you wanted.",
 };
 
-function arm(component: ComponentId, pulls = 0): BanditArm {
-  return { component, alpha: 1, beta: 1, pulls };
-}
-
-export function priorBandit(now: string): BanditState {
-  return {
-    arms: COMPONENT_IDS.map((component) => arm(component)),
-    observations: 0,
-    updatedAt: now,
-  };
-}
+/** The keys a slider renders, in the order the panel shows them. */
+export const WEIGHT_IDS = WEIGHT_KEYS;
 
 /**
- * Seeded 32-bit LCG. Deterministic runs mean a demo replays identically, which
- * is what makes the drift and screenshot comparisons meaningful.
+ * Seeded 32-bit LCG, so every derivation is deterministic.
+ *
+ * `sampleWeights` is a real Thompson draw and it needs randomness. A stored
+ * bandit that produced a different weight on every page load would make the
+ * panel flicker and would make an edit look like it did nothing, so the seed
+ * comes from the state rather than from the clock.
  */
 export function lcg(seed: number): () => number {
   let state = (seed >>> 0) || 1;
@@ -102,75 +122,27 @@ export function lcg(seed: number): () => number {
   };
 }
 
-/**
- * Exact Beta(alpha, beta) draw by Johnk's theorem: two independent uniforms
- * raised to inverse shape parameters and normalised. Three lines, no rejection
- * loop, no allocation, and it is the real distribution rather than a bell curve
- * standing in for it.
- */
-function betaSample(alpha: number, beta: number, u: number, v: number): number {
-  const a = u ** (1 / alpha);
-  const b = v ** (1 / beta);
-  const total = a + b;
-  return total > 0 ? a / total : 0.5;
-}
-
-/**
- * Thompson-sample every weight. The perturbation shrinks as observations grow,
- * so an untouched prior stays put and a well-observed arm explores narrowly.
- */
-export function sampleWeights(
-  bandit: BanditState,
-  rng: () => number,
-  base: Weights = PRIOR_WEIGHTS,
-): Weights {
-  const out = { ...base };
-  for (const item of bandit.arms) {
-    const key = item.component as keyof Weights;
-    if (!(key in out)) continue;
-    const spread = 1 / (1 + item.pulls);
-    const drawn = betaSample(item.alpha, item.beta, rng(), rng());
-    const jitter = (drawn - 0.5) * 2 * spread * WEIGHT_BOUNDS[key].max * 0.25;
-    out[key] = clampWeight(key, out[key] + jitter);
+const seedFrom = (bandit: BanditState): number => {
+  let hash = 0x811c9dc5;
+  const text = `${bandit.observations}|${bandit.updatedAt}|${bandit.arms
+    .map((arm) => `${arm.component}:${arm.alpha}:${arm.beta}:${arm.pulls}`)
+    .join(",")}`;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return out;
-}
+  return hash;
+};
 
-export function clampWeight(key: keyof Weights, value: number): number {
-  const bounds = WEIGHT_BOUNDS[key];
-  const rounded = Math.round(value / bounds.step) * bounds.step;
-  const fixed = Number(rounded.toFixed(4));
-  if (!Number.isFinite(fixed)) return PRIOR_WEIGHTS[key];
-  return Math.min(bounds.max, Math.max(bounds.min, fixed));
-}
-
-/** One interaction: the arm won if its reward cleared the 0.5 line. */
-export function updateBandit(
-  bandit: BanditState,
-  rewards: Partial<Record<ComponentId, number>>,
-  now: string,
-): BanditState {
-  return {
-    observations: bandit.observations + 1,
-    updatedAt: now,
-    arms: bandit.arms.map((item) => {
-      const reward = rewards[item.component];
-      if (reward === undefined) return item;
-      const good = reward > 0.5;
-      return {
-        ...item,
-        alpha: item.alpha + (good ? 1 : 0),
-        beta: item.beta + (good ? 0 : 1),
-        pulls: item.pulls + 1,
-      };
-    }),
-  };
+/** The weights the panel shows and the engine scores with, derived from a state. */
+export function weightsFor(bandit: BanditState): Weights {
+  return engineSampleWeights(bandit, lcg(seedFrom(bandit)));
 }
 
 /**
  * A traveller choosing a place is a positive signal for the components that
- * actually drove that place up. Only components with a non-zero contribution
- * count, so a neutral 0.5 never masquerades as a preference.
+ * actually drove that place up. Only components above a real threshold count, so
+ * a neutral score never masquerades as a preference.
  */
 export function rewardForChoice(
   contributions: { id: ComponentId; contribution: number }[],
@@ -187,38 +159,119 @@ export function rewardForChoice(
 export const LEARNER_KEY = "ananta-learner";
 
 export type LearnerState = {
-  weights: Weights;
+  /** The only stored truth. */
   bandit: BanditState;
+  /**
+   * Derived from `bandit` on every read, never written. Present on the type
+   * because the panel and the pipeline read it, and derived rather than
+   * persisted because a stored copy is a second truth that can go stale.
+   */
+  weights: Weights;
   /** Ids already counted, so a re-render never double-counts one choice. */
   countedChoices: string[];
+  /**
+   * Set when a stored value was unusable and the prior was substituted. The
+   * panel says so rather than pretending the traveller's history survived.
+   */
+  resetReason: string | null;
 };
 
+const priorState = (now: string, resetReason: string | null = null): LearnerState => {
+  const bandit = banditFromWeights(PRIOR_WEIGHTS, now);
+  return { bandit, weights: weightsFor(bandit), countedChoices: [], resetReason };
+};
+
+const isArm = (value: unknown): value is BanditArm => {
+  if (!value || typeof value !== "object") return false;
+  const arm = value as Partial<BanditArm>;
+  return (
+    typeof arm.component === "string" &&
+    COMPONENT_IDS.includes(arm.component as ComponentId) &&
+    typeof arm.alpha === "number" && Number.isFinite(arm.alpha) && arm.alpha >= 0 &&
+    typeof arm.beta === "number" && Number.isFinite(arm.beta) && arm.beta >= 0 &&
+    typeof arm.pulls === "number" && Number.isFinite(arm.pulls) && arm.pulls >= 0
+  );
+};
+
+/**
+ * Reads the stored learner. **This never throws.**
+ *
+ * `localStorage` is untrusted input. It can hold a truncated string from a killed
+ * write, a shape from a previous build, a hand-edited value, or nothing. Every
+ * one of those resolves to the prior, and the cases where the traveller lost
+ * something real say so in `resetReason` rather than quietly starting again.
+ *
+ * A state that parses but whose arms are not a complete, well-formed set for
+ * the ten known components is treated as unusable rather than partial. Half a
+ * bandit is not a smaller bandit, it is a corrupt one, and scoring against it
+ * would move every recommendation with nothing the traveller could see.
+ */
 export function readLearner(now: string): LearnerState {
-  const fallback: LearnerState = {
-    weights: { ...PRIOR_WEIGHTS },
-    bandit: priorBandit(now),
-    countedChoices: [],
-  };
-  if (typeof window === "undefined") return fallback;
+  if (typeof window === "undefined") return priorState(now);
+
+  let raw: string | null = null;
   try {
-    const raw = window.localStorage.getItem(LEARNER_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as Partial<LearnerState>;
-    if (!parsed || typeof parsed !== "object") return fallback;
-    return {
-      weights: { ...PRIOR_WEIGHTS, ...(parsed.weights ?? {}) },
-      bandit: parsed.bandit?.arms?.length ? parsed.bandit : fallback.bandit,
-      countedChoices: Array.isArray(parsed.countedChoices) ? parsed.countedChoices : [],
-    };
+    raw = window.localStorage.getItem(LEARNER_KEY);
   } catch {
-    return fallback;
+    return priorState(now, "Your saved preferences could not be read, so this is the starting point.");
   }
+  if (!raw) return priorState(now);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return priorState(now, "Your saved preferences were unreadable, so this is the starting point.");
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return priorState(now, "Your saved preferences were unreadable, so this is the starting point.");
+  }
+
+  const candidate = parsed as { bandit?: unknown; countedChoices?: unknown };
+  if (!candidate.bandit || typeof candidate.bandit !== "object") {
+    return priorState(
+      now,
+      "Your saved preferences were from an older version and could not be carried over, so this is the starting point.",
+    );
+  }
+
+  const stored = candidate.bandit as Partial<BanditState>;
+  const byComponent = new Map<string, BanditArm>();
+  if (Array.isArray(stored.arms)) {
+    for (const arm of stored.arms) {
+      if (isArm(arm)) byComponent.set(arm.component, arm);
+    }
+  }
+  if (byComponent.size !== COMPONENT_IDS.length) {
+    return priorState(now, "Your saved preferences were incomplete, so this is the starting point.");
+  }
+
+  const bandit: BanditState = {
+    arms: COMPONENT_IDS.map((component) => byComponent.get(component) as BanditArm),
+    observations:
+      typeof stored.observations === "number" && Number.isFinite(stored.observations) && stored.observations >= 0
+        ? Math.floor(stored.observations)
+        : 0,
+    updatedAt: typeof stored.updatedAt === "string" && stored.updatedAt ? stored.updatedAt : now,
+  };
+
+  return {
+    bandit,
+    weights: weightsFor(bandit),
+    countedChoices: Array.isArray(candidate.countedChoices)
+      ? candidate.countedChoices.filter((id): id is string => typeof id === "string")
+      : [],
+    resetReason: null,
+  };
 }
 
-export function writeLearner(state: LearnerState) {
+export function writeLearner(state: LearnerState): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(LEARNER_KEY, JSON.stringify(state));
+    window.localStorage.setItem(
+      LEARNER_KEY,
+      JSON.stringify({ bandit: state.bandit, countedChoices: state.countedChoices, version: 2 }),
+    );
     window.dispatchEvent(new Event("ananta-learner-change"));
   } catch {
     /* A full or blocked localStorage must not break the page. */
@@ -226,16 +279,38 @@ export function writeLearner(state: LearnerState) {
 }
 
 export function resetLearner(now: string): LearnerState {
-  const fresh: LearnerState = {
-    weights: { ...PRIOR_WEIGHTS },
-    bandit: priorBandit(now),
-    countedChoices: [],
-  };
+  const fresh = priorState(now);
   writeLearner(fresh);
   return fresh;
 }
 
+/**
+ * Clamp one weight to its own bounds.
+ *
+ * A slider moves one key at a time and needs that key back on its own, while the
+ * engine's `clampWeights` is a whole-vector operation. This is the adapter
+ * between the two, and it deliberately has no bounds of its own: the step and the
+ * limits come from `clampWeights`, so there is still exactly one place in the
+ * project that decides how far a weight may travel.
+ */
+export const clampWeight = (key: keyof Weights, value: number): number =>
+  clampWeights({ ...PRIOR_WEIGHTS, [key]: value })[key];
+
+/**
+ * An explicit override, for a traveller who drags a slider.
+ *
+ * The engine's `banditFromWeights` folds a weight vector back into a bandit, so
+ * a manual edit is stored as state like any other observation rather than as a
+ * value that bypasses the sampler. That is what keeps "what you set" and "what
+ * the engine scores with" the same number.
+ */
+export function overrideWeight(key: keyof Weights, value: number, now: string): BanditState {
+  const step = WEIGHT_BOUNDS[key].step;
+  const stepped = Math.round(value / step) * step;
+  return banditFromWeights(clampWeights({ ...PRIOR_WEIGHTS, [key]: Number(stepped.toFixed(4)) }), now);
+}
+
 /** Successive clicks on the same control must not land on the same tick. */
-export function isNewChoice(counted: string[], key: string, max = 40): boolean {
+export function isNewChoice(counted: readonly string[], key: string, max = 40): boolean {
   return !counted.includes(key) && counted.length < max;
 }

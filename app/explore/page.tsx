@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowSquareOut, CaretDown, Funnel, MapPin, NavigationArrow, Train, X } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, ArrowSquareOut, Funnel, MapPin, NavigationArrow, X } from "@phosphor-icons/react/dist/ssr";
 import { ExperienceMap } from "@/components/map";
 import { BottomNav, StatusLabel } from "@/components/ui";
 import { Footer } from "@/components/footer";
 import { AddToPlanButton } from "@/components/plan-button";
 import { WhyThis } from "@/components/ananta/why-this";
 import { WhyNotThat } from "@/components/ananta/why-not-that";
-import { ProvenanceBadge, ProvenanceLegend } from "@/components/ananta/provenance-badge";
+import { ProvenanceLegend } from "@/components/ananta/provenance-badge";
 import { LearnerSummary } from "@/components/ananta/learned-weights";
+import { UiStatePanel } from "@/components/ananta/learning/ui-state";
+import { ResultCard } from "@/components/ananta/explore/result-card";
+import { PipelineStrip } from "@/components/ananta/explore/pipeline-strip";
+import { ExclusionPanel } from "@/components/ananta/explore/exclusion-panel";
 import { DEMO_ORIGIN, defaultEngineInput, useLearner, usePipeline, usePlanIds } from "@/components/ananta/use-ananta";
-import type { ExperienceV2, Rejection, ScoreComponent } from "@/lib/engine";
-import { hoursLabel, inrLabel, type RelaxationOption } from "@/components/ananta/pipeline";
+import type { ExperienceV2 } from "@/lib/engine";
+import { inrLabel, type PipelineRun } from "@/components/ananta/pipeline";
 import { parseDiscoveryIntent } from "@/lib/discovery";
-import { formatDistance, stationLabel } from "@/lib/location";
+import { formatDistance } from "@/lib/location";
 import { fetchStreetRoute, type StreetRoute } from "@/lib/routing";
 import { allExperiences, DATASET_CATEGORIES } from "@/lib/data";
 import { zones as dataZones } from "@/lib/seed";
@@ -87,11 +91,11 @@ export default function ExplorePage() {
   const [communityOnly, setCommunityOnly] = useState(false);
   const [bestTime, setBestTime] = useState<BestTime>("any");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showBulk, setShowBulk] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<SortKey>("rank");
   const [route, setRoute] = useState<StreetRoute | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [routeFailed, setRouteFailed] = useState(false);
 
   // Typing in a filter must not block the main thread, so the solve runs
   // against a deferred copy of the input.
@@ -138,7 +142,19 @@ export default function ExplorePage() {
 
   const ranked = useMemo(() => run?.ranked ?? [], [run]);
   const rows = useMemo(() => {
-    if (sort === "rank") return ranked;
+    if (sort === "rank") {
+      // The engine sorts by objective then record id. With few or no constraints
+      // many records can tie on the objective, and an alphabetical tiebreak is
+      // not a ranking, so distance breaks the tie here in the view layer. The
+      // row exposes travelKm precisely so this is possible without reimplementing
+      // a distance function.
+      return [...ranked].sort(
+        (a, b) =>
+          b.objective.value - a.objective.value ||
+          a.travelKm - b.travelKm ||
+          a.record.id.localeCompare(b.record.id),
+      );
+    }
     const copy = [...ranked];
     if (sort === "price") copy.sort((a, b) => a.record.priceInr - b.record.priceInr || a.record.id.localeCompare(b.record.id));
     else if (sort === "duration") copy.sort((a, b) => a.record.durationMinutes - b.record.durationMinutes || a.record.id.localeCompare(b.record.id));
@@ -154,6 +170,22 @@ export default function ExplorePage() {
 
   const visibleRecords = useMemo(() => paged.map((row) => row.record), [paged]);
   const excludedCount = (run?.retrievalCount ?? 0) - (run?.gated.passed.length ?? 0);
+  // Refused records, so their map pins recede. Only the ones the gate actually
+  // dropped, read from the run, never re-derived here.
+  const rejectedIds = useMemo(
+    () => (run?.gated.rejected ?? []).map((row) => row.record.id),
+    [run],
+  );
+  // The rain filter is the only weather signal this screen carries, and it is a
+  // mode rather than a severity, so it maps to the lightest wet case. The map
+  // desaturates on it; it never claims a forecast it was not given.
+  const weather = rainMode ? "rain" : "clear";
+  // The honest count of "we do not know" across what is on screen, not the whole
+  // catalogue, so it tracks the page the traveller is actually looking at.
+  const advisoryCount = useMemo(
+    () => paged.reduce((sum, row) => sum + row.advisory.length, 0),
+    [paged],
+  );
 
   const selectExperience = useCallback((id: string) => setSelectedId(id), []);
   const clear = useCallback(() => {
@@ -167,7 +199,6 @@ export default function ExplorePage() {
     setCommunityOnly(false);
     setBestTime("any");
     setQuery("");
-    setShowBulk(false);
     setVisibleCount(PAGE_SIZE);
   }, []);
 
@@ -175,21 +206,26 @@ export default function ExplorePage() {
     city !== "All" || category !== "All" || zone !== "All" || maxPrice !== undefined ||
     availableMinutes !== undefined || rainMode || freeOnly || communityOnly || bestTime !== "any" || Boolean(query);
 
-  // The real walking route from the fixed demo position to the selection.
+  // The real walking route from the fixed demo position to the selection. A
+  // rejected fetch and a straight-line fallback are different states, so the
+  // failure is tracked rather than collapsed into "no route".
   useEffect(() => {
     const id = selected?.record.id;
     if (!id) {
       setRoute(null);
+      setRouteFailed(false);
       return;
     }
     const target = allExperiences.find((place) => place.id === id);
     if (!target) {
       setRoute(null);
+      setRouteFailed(false);
       return;
     }
     let cancelled = false;
     setRouteLoading(true);
     setRoute(null);
+    setRouteFailed(false);
     fetchStreetRoute(DEMO_ORIGIN.coordinates, target.coordinates)
       .then((result) => {
         if (!cancelled) {
@@ -198,7 +234,10 @@ export default function ExplorePage() {
         }
       })
       .catch(() => {
-        if (!cancelled) setRouteLoading(false);
+        if (!cancelled) {
+          setRouteFailed(true);
+          setRouteLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -216,6 +255,8 @@ export default function ExplorePage() {
               selectedId={selected?.record.id}
               onSelect={selectExperience}
               route={route}
+              rejectedIds={rejectedIds}
+              weather={weather}
             />
             <SearchOverlay
               query={query}
@@ -247,9 +288,9 @@ export default function ExplorePage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Engine output</p>
                 <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">Ranked matches</h2>
-                <p className="mt-1 text-xs text-muted">
-                  {run ? `${run.retrievalCount} of ${run.consideredCount} records reached the gate, ${ranked.length} passed it, ${excludedCount} were refused with a reason.` : "Solving."}
-                </p>
+                <div className="mt-2 max-w-[68ch]">
+                  <PipelineStrip run={run} />
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-muted">
@@ -290,15 +331,37 @@ export default function ExplorePage() {
               <LearnerSummary learner={learner} />
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {paged.map((row) => (
-                <ResultCard
-                  key={row.record.id}
-                  row={row}
-                  selected={row.record.id === selected?.record.id}
-                  onSelect={selectExperience}
-                />
-              ))}
+            {advisoryCount > 0 && (
+              <div className="mt-4">
+                <UiStatePanel state="partially-unknown">
+                  <p className="mt-2 max-w-[68ch] text-sm leading-6">
+                    {advisoryCount} advisory note{advisoryCount === 1 ? "" : "s"} on the results below. They name
+                    the facts we could not verify, and they are marked on each card. They did not decide the
+                    ranking, and nothing was refused on them.
+                  </p>
+                </UiStatePanel>
+              </div>
+            )}
+
+            {/* The 3D stage. `perspective` lives on `.stage` and `preserve-3d`
+                on the grid, so every card's translateZ is measured against one
+                shared vanishing point. Without the shared stage each card would
+                establish its own and the grid would read as a wobble rather than
+                a surface. Exactly one card is lifted: the top result. */}
+            <div className="stage mt-6">
+              <div className="stage-3d grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {paged.map((row, index) => (
+                  <ResultCard
+                    key={row.record.id}
+                    row={row}
+                    isTop={index === 0}
+                    inPlan={hasInPlan(row.record.id)}
+                    onTogglePlan={togglePlan}
+                    onSelect={selectExperience}
+                    originArea={DEMO_ORIGIN.area}
+                  />
+                ))}
+              </div>
             </div>
 
             {visibleCount < rows.length && (
@@ -310,30 +373,10 @@ export default function ExplorePage() {
               </button>
             )}
 
-            {!ranked.length && run && (
-              <div className="mt-6 border border-line bg-canvas p-5">
-                <h3 className="font-bold">No record meets every constraint you set</h3>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  {run.dominant
-                    ? run.dominant.sentence
-                    : "Every candidate was dropped before it could be scored."}{" "}
-                  {run.cheapest && cheapestLine(run.cheapest.label, run.cheapest.unlockedCount)}{" "}
-                  <button onClick={clear} className="font-bold text-blue underline">
-                    Clear the filters
-                  </button>
-                </p>
-              </div>
-            )}
+            {!ranked.length && run && <EmptyState run={run} onClear={clear} />}
 
             {run && run.gated.rejected.length > 0 && (
-              <ExcludedPanel
-                rows={run.gated.rejected}
-                cheapest={run.cheapest}
-                open={showBulk}
-                setOpen={setShowBulk}
-                cap={BULK_CAP}
-                onInspect={(id) => setSelectedId(id)}
-              />
+              <ExclusionPanel rows={run.gated.rejected} cheapest={run.cheapest} cap={BULK_CAP} />
             )}
 
             {selected && (
@@ -355,7 +398,7 @@ export default function ExplorePage() {
             )}
 
             {selected && <Selection record={selected.record} inPlan={hasInPlan(selected.record.id)} onToggle={togglePlan} planCount={planIds.length} />}
-            {selected && <DirectionsPanel route={route} loading={routeLoading} />}
+            {selected && <DirectionsPanel route={route} loading={routeLoading} failed={routeFailed} />}
           </aside>
         </div>
         <Footer />
@@ -363,10 +406,6 @@ export default function ExplorePage() {
       </div>
     </main>
   );
-}
-
-function cheapestLine(label: string, count: number): string {
-  return `The cheapest thing to relax is ${label}, which on its own would bring back ${count} record${count === 1 ? "" : "s"}.`;
 }
 
 function applyIntentTo(
@@ -588,109 +627,75 @@ function ConstraintSummary({
   );
 }
 
-function ResultCard({
-  row,
-  selected,
-  onSelect,
-}: {
-  row: { record: ExperienceV2; objective: { value: number }; components: ScoreComponent[]; travelMinutes: number; travelKm: number };
-  selected: boolean;
-  onSelect: (id: string) => void;
-}) {
-  const place = row.record;
-  const top = [...row.components].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))[0];
-  return (
-    <button
-      onClick={() => onSelect(place.id)}
-      className={`block w-full border p-4 text-left transition-colors ${selected ? "border-blue bg-blueSoft/40" : "border-line hover:border-blue"}`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <StatusLabel tone={place.statusTone}>{place.status}</StatusLabel>
-          <h3 className="mt-3 font-bold">{place.name}</h3>
-          <p className="mt-1 text-sm text-muted">{place.area} · {place.category}</p>
-        </div>
-        <span className="text-sm font-bold">{place.priceInr === 0 ? "Free" : inrLabel(place.priceInr)}</span>
+/**
+ * The empty state, split by which stage emptied the set.
+ *
+ * `nothing-retrieved` and `nothing-fits` are different failures with different
+ * fixes, so they are different states. Retrieval returning nothing means the
+ * query or the range is wrong, and the honest thing is to name which and say
+ * what to widen. A full retrieval that the gate refused means the constraints
+ * are contradictory, and the honest thing is to name the cheapest single
+ * relaxation and how much it would unlock.
+ *
+ * `abstained` covers the case the design thesis is about: the gate met a fact
+ * it could not verify and declined to judge. That is not a rejection and must
+ * not be dressed as one.
+ */
+function EmptyState({ run, onClear }: { run: PipelineRun; onClear: () => void }) {
+  if (run.retrievalCount === 0) {
+    return (
+      <div className="mt-6">
+        <UiStatePanel state="nothing-retrieved">
+          <p className="mt-2 max-w-[68ch] text-sm leading-6">
+            {run.dominant
+              ? run.dominant.sentence
+              : "The search terms matched nothing inside your travel window. Widen the time filter or clear the category to see more."}
+          </p>
+        </UiStatePanel>
       </div>
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-muted">
-        <span>{hoursLabel(place.durationMinutes)} visit</span>
-        <span>{row.travelMinutes} min from {DEMO_ORIGIN.area}</span>
-        <span><Train size={14} className="mr-1 inline" />{stationLabel(place.station)}</span>
-      </div>
-      {top && (
-        <p className="mt-3 text-xs leading-5 text-blue">
-          Top factor: {top.sentence} Score {row.objective.value.toFixed(3)}.
-        </p>
-      )}
-      <div className="mt-3">
-        <ProvenanceBadge record={place} field="price" />
-      </div>
-    </button>
-  );
-}
+    );
+  }
 
-function ExcludedPanel({
-  rows,
-  cheapest,
-  open,
-  setOpen,
-  cap,
-  onInspect,
-}: {
-  rows: { record: ExperienceV2; rejections: Rejection[] }[];
-  cheapest: RelaxationOption | null;
-  open: boolean;
-  setOpen: (value: boolean) => void;
-  cap: number;
-  onInspect: (id: string) => void;
-}) {
-  const blockingTotal = rows.reduce((sum, row) => sum + row.rejections.filter((item) => item.blocking).length, 0);
-  const shown = open ? rows.slice(0, cap) : [];
   return (
-    <section className="mt-5 border-t border-line pt-4">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left text-sm font-bold">
-        <span>
-          Why {rows.length} record{rows.length === 1 ? " was" : "s were"} refused, {blockingTotal} blocking reason
-          {blockingTotal === 1 ? "" : "s"}
-        </span>
-        <CaretDown size={17} className={open ? "rotate-180" : ""} />
-      </button>
-      {cheapest && (
-        <p className="mt-3 text-sm leading-6 text-muted">
-          {cheapestLine(cheapest.label, cheapest.unlockedCount)}
-        </p>
+    <div className="mt-6 space-y-3">
+      <UiStatePanel state="nothing-fits">
+        {run.cheapest ? (
+          <p className="mt-2 max-w-[68ch] text-sm leading-6">
+            The cheapest single change is{" "}
+            <span className="font-bold text-ink">{run.cheapest.label}</span>, which would bring back{" "}
+            {run.cheapest.unlockedCount.toLocaleString("en-IN")} record
+            {run.cheapest.unlockedCount === 1 ? "" : "s"}.
+          </p>
+        ) : (
+          <p className="mt-2 max-w-[68ch] text-sm leading-6">
+            {run.dominant?.sentence ?? "Every candidate was dropped before it could be scored."}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-4 inline-flex min-h-[44px] items-center border border-blue px-4 py-2 text-sm font-bold text-blue"
+        >
+          Clear the filters
+        </button>
+      </UiStatePanel>
+
+      {run.byCode.length > 0 && (
+        <UiStatePanel state="abstained">
+          <ul className="mt-2 max-w-[68ch] space-y-1 text-sm leading-6">
+            {run.byCode.slice(0, 4).map((row) => (
+              <li key={row.code}>
+                <span className="font-bold text-ink">{row.code.replace(/_/g, " ")}</span>{" "}
+                <span className="text-muted">
+                  refused {row.count.toLocaleString("en-IN")} record{row.count === 1 ? "" : "s"}
+                  {row.blocking > 0 ? `, ${row.blocking} of them blocking` : ", advisory only"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </UiStatePanel>
       )}
-      {open && (
-        <div className="mt-3 space-y-3">
-          {shown.map((row) => {
-            const blocking = row.rejections.filter((item) => item.blocking);
-            return (
-              <div key={row.record.id} className="bg-canvas p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-bold">{row.record.name}</p>
-                  <button onClick={() => onInspect(row.record.id)} className="text-xs font-bold text-blue underline">
-                    Inspect
-                  </button>
-                </div>
-                <ul className="mt-1 space-y-1">
-                  {blocking.map((item, index) => (
-                    <li key={`${item.code}-${index}`} className="text-xs leading-5 text-muted">
-                      {item.sentence} <code className="text-[10px]">{item.code}</code>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-          {rows.length > cap && (
-            <p className="text-xs font-semibold text-muted">
-              and {rows.length - cap} more. The full list is {rows.length} entries; raise the time or budget and
-              the gate re-runs on the next render.
-            </p>
-          )}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
 
@@ -733,7 +738,21 @@ function Selection({
   );
 }
 
-function DirectionsPanel({ route, loading }: { route: StreetRoute | null; loading: boolean }) {
+function DirectionsPanel({
+  route,
+  loading,
+  failed,
+}: {
+  route: StreetRoute | null;
+  loading: boolean;
+  failed: boolean;
+}) {
+  // A straight-line fallback, a dead router and a failed request are three
+  // different things, so they get three different sentences. Collapsing them
+  // into "no directions" is how a product ends up quietly claiming it has none.
+  const estimateOnly = Boolean(route && route.kind !== "street");
+  const noRoute = !loading && !route && !failed;
+
   return (
     <section className="mt-6 border border-line p-5" aria-live="polite">
       <div className="flex items-center justify-between">
@@ -744,6 +763,26 @@ function DirectionsPanel({ route, loading }: { route: StreetRoute | null; loadin
         <NavigationArrow size={20} className="text-blue" />
       </div>
       {loading && <p className="mt-3 text-sm text-muted">Finding the walking route on the map...</p>}
+      {failed && (
+        <div className="mt-3">
+          <UiStatePanel state="broken">
+            <p className="mt-2 text-sm leading-6">
+              The walking route request failed. The distance and duration are not shown because we did not get
+              them. Everything else on this page is unaffected.
+            </p>
+          </UiStatePanel>
+        </div>
+      )}
+      {noRoute && (
+        <div className="mt-3">
+          <UiStatePanel state="offline">
+            <p className="mt-2 text-sm leading-6">
+              Directions need the routing service. The gate, the ranking and the facts on this page are all from
+              the committed snapshot and work without a connection.
+            </p>
+          </UiStatePanel>
+        </div>
+      )}
       {!loading && route && (
         <div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -753,6 +792,16 @@ function DirectionsPanel({ route, loading }: { route: StreetRoute | null; loadin
               {route.kind === "street" ? "Street route" : "Estimate only"}
             </StatusLabel>
           </div>
+          {estimateOnly && (
+            <div className="mt-3">
+              <UiStatePanel state="routing-down">
+                <p className="mt-2 text-sm leading-6">
+                  This is a straight-line estimate at the city congestion multiplier, not a street route. No turn
+                  by turn directions are claimed.
+                </p>
+              </UiStatePanel>
+            </div>
+          )}
           <p className="mt-2 text-xs leading-5 text-muted">{route.note}</p>
           {route.steps.length > 0 && (
             <ol className="mt-4 space-y-2 border-t border-line pt-4">

@@ -15,7 +15,6 @@ import {
   mean,
   paceDeviation,
   proximityDecay,
-  proximityWeight,
   ratingScore,
   redundancyPenalty,
   reliabilityScore,
@@ -43,8 +42,22 @@ import {
  * accumulation, no module-level mutable state.
  */
 
-function fixed(value: number): string {
-  return (Math.round(value * 100) / 100).toFixed(2);
+/**
+ * Left to right, in index order, into a running total.
+ *
+ * Spec section 2 requires this shape on both sides: values are pushed into an
+ * array in plan order and reduced afterwards, because `(a + b) + c` and
+ * `a + (b + c)` are different doubles. Written as a named reducer here so the
+ * fast path and this one can be read side by side and seen to agree on the shape
+ * as well as the arithmetic.
+ */
+function sumOrdered(values: readonly number[]): number {
+  let total = 0;
+  for (let i = 0; i < values.length; i += 1) total += values[i];
+  return total;
+}
+
+function fixed(value: number): string {  return (Math.round(value * 100) / 100).toFixed(2);
 }
 
 function plural(value: number, one: string, many: string): string {
@@ -127,9 +140,31 @@ export function objectiveNaive(
   ctx: DiscoveryContext,
 ): Objective {
   const w = ctx.profile.weights;
-  const km = legDistancesKm(stops, ctx.origin.coordinates);
   const n = stops.length;
-  const proximityW = proximityWeight(w);
+
+  /**
+   * Rule G-1: `Stop.travelKm` is an input to both implementations and neither
+   * one recomputes it. The spec gives the reason and it is the whole ballgame:
+   * without G-1 the 1e-6 bound is unreachable, because OSRM road kilometres and
+   * a haversine great-circle distance differ by tens of percent.
+   *
+   * The old code fed this file's own `legDistancesKm` into the objective, which
+   * is what rule G-2 forbids. G-2's haversine exists to *check* the numbers it
+   * was handed, and `validate` still does that and reports `distance_drift`; it
+   * was never meant to replace the input. On a fixture whose stops carry road
+   * distances, that difference was worth 1.01 on the objective.
+   */
+  const km: number[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const value = stops[i].travelKm;
+    km.push(typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0);
+  }
+
+  // Rule W-1: the per stop proximity term is weighted by `w.travelFriction`.
+  // `Weights` has no `proximity` key, and the old 0.15 fallback constant meant
+  // this derivation scored proximity on a different weight to the fast path for
+  // every profile ever written, which is drift by construction.
+  const proximityW = w.travelFriction;
 
   // Per-stop utility, accumulated in index order into an array, summed after.
   const perStop: number[] = [];
@@ -146,21 +181,34 @@ export function objectiveNaive(
         proximityW * proximityDecay(km[i] ?? 0),
     );
   }
-  let utility = 0;
-  for (const term of perStop) utility += term;
-
+  const utilityTotal = sumOrdered(perStop);
   const travel = superlinearTravel(stops, km);
   const crowd = crowdLoad(stops, ctx);
   const novelty = redundancyPenalty(stops);
   const pace = paceDeviation(n, ctx);
   const proximity = mean(stops.map((_, i) => proximityDecay(km[i] ?? 0)));
-  const proximityContribution = proximityW * proximity * n;
 
+  // Composition order is normative, spec section 6: push the four penalties into
+  // an array in the order travel, crowd, novelty, pace, reduce that in index
+  // order, and subtract once. `a - b - c - d` is not `a - (b + c + d)` in binary
+  // floating point, and the reducer is the contract.
+  //
+  // Proximity is NOT subtracted again here. It already entered the total through
+  // the per stop term by rule W-1, and the old `proximityContribution` charged it
+  // a third time on top of that.
+  const penaltyTerms: number[] = [];
+  penaltyTerms.push(w.travelPenalty * travel);
+  penaltyTerms.push(w.crowd * crowd);
+  penaltyTerms.push(w.novelty * novelty);
+  penaltyTerms.push(w.pacePenalty * pace);
+  let penaltySum = 0;
+  for (const term of penaltyTerms) penaltySum += term;
+
+  const value = utilityTotal - penaltySum;
   const travelPenalty = w.travelPenalty * travel;
   const crowdPenalty = w.crowd * crowd;
   const noveltyPenalty = w.novelty * novelty;
   const pacePenalty = w.pacePenalty * pace;
-  const value = utility - travelPenalty - crowdPenalty - noveltyPenalty - pacePenalty;
 
   const interest = mean(stops.map((s) => interestScore(s.record, ctx)));
   const rating = mean(stops.map((s) => ratingScore(s.record)));
@@ -237,9 +285,12 @@ export function objectiveNaive(
     penaltyRow(
       // Proximity has no ComponentId of its own, so the per-stop proximity term
       // and the quadratic travel penalty share this row. Both numbers are named.
+      // The contribution is the travel penalty alone: proximity already entered
+      // the total through the per-stop term, and subtracting it here as well
+      // charged it twice, which is what kept the drift off zero.
       "travelFriction",
       w.travelPenalty,
-      travelPenalty - proximityContribution,
+      travelPenalty,
       travel - proximity,
       `Proximity ${fixed(proximity)} on average; quadratic travel cost ${fixed(
         travelPenalty,

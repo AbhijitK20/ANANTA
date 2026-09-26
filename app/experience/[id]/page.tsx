@@ -6,13 +6,16 @@ import { AddToPlanButton } from "@/components/plan-button";
 import { ReportButton } from "@/components/report-button";
 import { SaveButton } from "@/components/save-button";
 import { ShareButton } from "@/components/share-button";
-import { BottomNav, StatusLabel } from "@/components/ui";
+import { BottomNav, StateNote, StatusLabel, buttonClass } from "@/components/ui";
 import { Footer } from "@/components/footer";
 import { TravelOptions } from "@/components/travel-options";
-import { AccessFacts, ProvenanceBadge, ProvenanceTable } from "@/components/ananta/provenance-badge";
+import { ProvenanceLegend } from "@/components/ananta/provenance-badge";
+import { GradedAccess, GradedFacts, ProvenanceStrip } from "@/components/ananta/provenance/graded-facts";
+import { AbstainedPanel, PartiallyUnknownPanel } from "@/components/ananta/provenance/state-panel";
 import { WhyThisLive } from "@/components/ananta/why-this-live";
 import { anantaById } from "@/components/ananta/records";
 import { clockLabel, hoursLabel, inrLabel, type EngineInput } from "@/components/ananta/pipeline";
+import { TONE_TEXT, typeScale } from "@/components/ananta/tokens";
 import { demoUserLocation, estimateFromUser, stationLabel } from "@/lib/location";
 import { allExperiences } from "@/lib/data";
 
@@ -21,11 +24,17 @@ import { allExperiences } from "@/lib/data";
  *
  * Three fixes live here. `allExperiences[0]` used to be the fallback, so
  * `/experience/anything-garbage` returned HTTP 200 rendering Kala Ghoda Art
- * Walk; that is now `notFound()`. The "Share experience" button had no handler;
+ * Walk; that is now `notFound()`, backed by a real 404 in
+ * `app/experience/not-found.tsx`. The "Share experience" button had no handler;
  * it now shares, and says so when the browser cannot. And the four hardcoded
  * "Why this is recommended" bullets are gone, replaced by the real ranked
- * components from the same objective the ranking used, plus the per-field
- * provenance for every fact on the page.
+ * components from the same objective the ranking used.
+ *
+ * The fourth thing this page now carries is the graded-facts table, which is the
+ * part of the product that answers "can I trust this?". Every row has a value,
+ * an honest absence, and a badge for that field alone. A record with real
+ * coordinates and a generated price has two different stories and one badge at
+ * the top of the page can only tell one of them.
  */
 
 /** About copy is derived only from fields the record actually has. */
@@ -46,6 +55,15 @@ function aboutLinesFor(place: (typeof allExperiences)[number]): string[] {
   if (place.confidence.startsWith("Location matched on OpenStreetMap")) lines.push("The pin on the map matches this place's OpenStreetMap location; the area photo shows the neighborhood around it.");
   else if (place.confidence.includes("area center")) lines.push(`The pin marks the ${place.area} area center, not the exact venue; treat the map position as approximate.`);
   return lines;
+}
+
+/** Fields the gate would not judge, named so the abstention is itemised. */
+function abstainedFields(place: (typeof allExperiences)[number]): string[] {
+  const fields: string[] = [];
+  if (!place.bestTime) fields.push("Best time of day");
+  if (place.sourceUrl.includes("example.com")) fields.push("Source link");
+  if (place.confidence === "Demo data, not live") fields.push("Operator confirmation");
+  return fields;
 }
 
 export default function ExperiencePage({ params }: { params: { id: string } }) {
@@ -84,6 +102,7 @@ export default function ExperiencePage({ params }: { params: { id: string } }) {
     originArea: demoUserLocation.area,
   };
   const estimate = estimateFromUser(place.coordinates);
+  const soldOutAt = record.availability.soldOutAt;
 
   return (
     <main id="main-content" className="min-h-screen bg-canvas">
@@ -124,12 +143,7 @@ export default function ExperiencePage({ params }: { params: { id: string } }) {
               </span>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <ProvenanceBadge record={record} field="price" />
-              <ProvenanceBadge record={record} field="duration" />
-              <ProvenanceBadge record={record} field="coordinates" />
-              <ProvenanceBadge record={record} field="openingHours" />
-            </div>
+            <ProvenanceStrip record={record} />
 
             <div className="mt-7 grid grid-cols-2 gap-3 border-y border-line py-5 text-sm sm:grid-cols-4">
               <div>
@@ -169,8 +183,31 @@ export default function ExperiencePage({ params }: { params: { id: string } }) {
               )}
             </div>
 
-            <ProvenanceTable record={record} />
-            <AccessFacts record={record} />
+            {/*
+              The two states that are specifically this page's to render. Both
+              are quiet on purpose: a record with a few estimated fields is a
+              good record, and an abstention is the engine being careful rather
+              than the engine being broken. The distinction has to be the
+              reader's realisation, not a caveat they have to infer.
+            */}
+            <div className="mt-4 space-y-3">
+              {soldOutAt !== null ? (
+                <StateNote state="sold-out">
+                  <p className={`${typeScale.meta} text-muted`}>
+                    Recorded sold out from {soldOutAt}. Everything below is still shown on purpose,
+                    because removing a place on a stale feed is worse than an error that is labelled.
+                  </p>
+                </StateNote>
+              ) : null}
+              <PartiallyUnknownPanel record={record} />
+              <AbstainedPanel
+                fields={abstainedFields(place)}
+                count={abstainedFields(place).length}
+              />
+            </div>
+
+            <GradedFacts record={record} />
+            <GradedAccess record={record} />
 
             <section className="mt-8">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">About this place</p>
@@ -227,6 +264,14 @@ export default function ExperiencePage({ params }: { params: { id: string } }) {
             <div className="mt-5 text-center">
               <ReportButton recordId={place.id} recordTitle={place.name} />
             </div>
+
+            {/*
+              The legend belongs here as well as on Explore. A sceptical reader
+              arrives at a record before they arrive at a legend, and the badges
+              are meaningless without it. It is a <details>, so it costs no
+              vertical space until it is opened.
+            */}
+            <ProvenanceLegend />
           </aside>
         </div>
         <Footer />

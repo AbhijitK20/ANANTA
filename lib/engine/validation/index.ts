@@ -4,7 +4,6 @@ export {
   distanceFromOriginKm,
 } from "./distance-naive";
 export {
-  PROXIMITY_WEIGHT_FALLBACK,
   authenticityScore,
   clamp01,
   clampSigned,
@@ -15,7 +14,6 @@ export {
   paceDeviation,
   peakHourFactor,
   proximityDecay,
-  proximityWeight,
   ratingScore,
   redundancyPenalty,
   reliabilityScore,

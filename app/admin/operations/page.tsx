@@ -11,12 +11,13 @@ import {
   PlayCircle,
   RocketLaunch,
   ShieldCheck,
-  ShieldWarning,
   Sparkle,
   Warning,
   X,
 } from "@phosphor-icons/react/dist/ssr";
-import { StatusLabel } from "@/components/ui";
+import { StateNote, StatusLabel } from "@/components/ui";
+import { LocalDemoNotice } from "@/components/ananta/provider/local-demo-notice";
+import { UnmetDemandFeed } from "@/components/ananta/provider/unmet-demand-feed";
 import {
   operationSeed,
   publishableSubmissions,
@@ -25,7 +26,6 @@ import {
   readStaleIds,
   setStale,
   writeOperations,
-  writeStaleIds,
   type OperationRecord,
 } from "@/lib/operations";
 import { readReports } from "@/lib/reports";
@@ -166,12 +166,21 @@ export default function OperationsPage() {
   };
 
   /**
-   * Stale now means what the label says. A stale mark writes an id into the
-   * stale set, and `applyStaleMarks` in `lib/operations.ts` is what turns that
-   * into `statusTone: "amber"` on the real record. Amber is what the gate and
-   * the travel options already treat as weather or season dependent, so a stale
+   * Stale means what the label says, and the label is honest about the one step
+   * that is not mine.
+   *
+   * `setStale` writes the id into `ananta-stale-ids`, and `applyStaleMarks` in
+   * `lib/operations.ts` is the pure function that turns that set into
+   * `statusTone: "amber"` on the real record. Amber is what the gate and the
+   * travel options already treat as weather or season dependent, so a stale
    * record leaves a rain-sensitive plan and carries a visible doubt on one that
    * is not.
+   *
+   * `applyStaleMarks` has no caller yet, because the file that builds the
+   * catalogue Explore indexes belongs to another session. The exact one-line
+   * fix is in `UI-UX-Fix-Prompts/BLOCKERS/10.md`. The button below therefore
+   * says plainly that the mark is recorded and where it takes effect, rather
+   * than claiming a ranking change the code does not yet perform.
    */
   const markStale = (record: OperationRecord) => {
     setStaleIds((current) => setStale(current, record.id, !current.includes(record.id)));
@@ -243,21 +252,15 @@ export default function OperationsPage() {
         <section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Source and freshness</p>
-            <h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep local information trustworthy.</h2>
-            <p className="mt-4 leading-7 text-muted">
-              Review events, experiences, submissions, and media before they influence traveller
-              recommendations. Publishing a submission is the only action on this page that changes
-              what a traveller sees, and it is the one that used to be missing.
+            <h2 className="mt-3 text-[28px] font-bold leading-[34px] tracking-[-0.04em]">Keep local information trustworthy.</h2>
+            <p className="mt-4 text-[17px] leading-7 text-muted">
+              Review events, experiences, submissions and media before they influence traveller
+              recommendations. Publishing a submission is the only action here that puts something
+              new in front of a traveller, and it is the one that used to be missing entirely.
             </p>
           </div>
-          <p className="mt-5 flex max-w-2xl items-start gap-2 border border-line bg-[#fbfcfd] p-3 text-xs leading-5 text-muted">
-            <ShieldWarning size={16} className="mt-0.5 shrink-0 text-amber" />
-            <span>
-              No accounts, no roles, no server. Every button here writes this browser&apos;s
-              storage and any visitor can press them. This is a local demo surface by decision, and
-              it is not safe to expose on a public URL as it stands.
-            </span>
-          </p>
+
+          <LocalDemoNotice variant="admin" className="mt-5 max-w-2xl" />
           <div className="mt-8 flex items-center gap-3 border-b border-line pb-5">
             <MagnifyingGlass size={20} className="text-muted" />
             <input
@@ -276,11 +279,15 @@ export default function OperationsPage() {
             completes the provider loop rather than completing a queue.
           </p>
           <div className="mt-4 grid gap-4">
-            {submissions.length === 0 && (
-              <p className="border border-line bg-canvas p-5 text-sm text-muted">
-                Nothing waiting to be published. Submissions made on the provider page land here.
-              </p>
-            )}
+            {submissions.length === 0 ? (
+              <StateNote state="nothing-fits" className="max-w-2xl">
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  Nothing is waiting to be published. A submission made on the provider page appears
+                  here within a second, and publishing it is the step that puts it in front of a
+                  traveller.
+                </p>
+              </StateNote>
+            ) : null}
             {submissions.map((record) => (
               <article key={record.id} className="border border-line p-5">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -352,51 +359,22 @@ export default function OperationsPage() {
             </button>
           </div>
           {scanNote && <p className="mt-3 text-sm leading-6 text-muted">{scanNote}</p>}
-          <div className="mt-4 grid gap-3">
-            {demand.length === 0 && (
-              <p className="border border-line bg-canvas p-5 text-sm text-muted">
-                Nothing recorded yet. Run the scan, or use the provider page, and real refusals appear
-                here.
-              </p>
-            )}
-            {demand.map((item) => (
-              <article key={item.id} className="border border-line p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <StatusLabel tone={item.actionableFor.length ? "amber" : "blue"}>{item.area}</StatusLabel>
-                    <h3 className="mt-3 text-lg font-bold">{item.query || "A general search in this area"}</h3>
-                    <p className="mt-1 text-sm text-muted">
-                      {item.demandCount} traveller{item.demandCount === 1 ? "" : "s"} wanted this and
-                      could not get it. First seen {item.firstSeenAt}, last seen {item.lastSeenAt}.
-                    </p>
-                  </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
-                      The one thing that blocked it
-                    </p>
-                    <p className="mt-1 max-w-xs text-sm font-semibold text-ink">
-                      {item.dominantRejection.sentence}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 border-t border-line pt-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
-                    Full distribution
-                  </p>
-                  <ul className="mt-2 flex flex-wrap gap-2">
-                    {item.rejectionMix.map((entry) => (
-                      <li key={entry.code} className="rounded bg-canvas px-2 py-1 text-xs font-semibold text-muted">
-                        {entry.code.replace(/_/g, " ")} x{entry.count}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="mt-3 text-xs text-muted">
-                  {actionabilitySentence(item.actionableFor.length)}
-                </p>
-              </article>
-            ))}
-          </div>
+          {scanNote && (
+            <p className="mt-3 text-sm leading-6 text-muted" role="status">
+              {scanNote}
+            </p>
+          )}
+
+          {/* The same component the provider page renders, so an operator and a
+              provider are reading one number rather than two. The provider page
+              is where the feed earns its keep; here it is the operator's view of
+              what the catalogue is refusing and why. */}
+          <UnmetDemandFeed
+            demand={demand}
+            totalRows={rows.length}
+            scanning={scanning}
+            onRunScan={scanDemand}
+          />
 
           <h2 className="mt-10 text-xl font-bold tracking-[-0.02em]">Records and reports</h2>
           <div className="mt-4 grid gap-4">
@@ -411,10 +389,12 @@ export default function OperationsPage() {
             ))}
           </div>
           {!filtered.length && (
-            <div className="mt-4 border border-line bg-canvas p-8">
-              <h3 className="text-xl font-bold">No records match this search</h3>
-              <p className="mt-2 text-muted">Try the name, area, record type, or review status.</p>
-            </div>
+            <StateNote state="nothing-retrieved" className="mt-4 max-w-2xl">
+              <p className="mt-3 text-sm leading-6 text-muted">
+                {records.length} record{records.length === 1 ? " is" : "s are"} in the queue, and
+                none match &quot;{query}&quot;. Clearing the search box shows all of them again.
+              </p>
+            </StateNote>
           )}
 
           <h2 className="mt-10 text-xl font-bold tracking-[-0.02em]">External media verification</h2>
@@ -453,20 +433,6 @@ export default function OperationsPage() {
       </div>
     </main>
   );
-}
-
-/**
- * How many providers could act, in a sentence. Zero gets its own wording rather
- * than "0 providers could act on this", which reads like a bug and is the most
- * important fact on the card.
- */
-function actionabilitySentence(count: number): string {
-  if (count === 0) {
-    return "No provider can act on this from the catalogue. The blocker is weather, season, distance, or the traveller's own party.";
-  }
-  return count === 1
-    ? "1 provider in this area could act on this."
-    : count + " providers in this area could act on this.";
 }
 
 /** The interest name a traveller weighted highest, or an empty string. */
@@ -531,7 +497,7 @@ function ReviewCard({
             {isVerified
               ? "Facts checked against the source"
               : isStale
-                ? "Stale: excluded from ranking and carries a visible doubt until rechecked"
+                ? "Marked stale. Excluded from ranking and shown with a visible doubt once the catalogue merge lands, which is tracked in BLOCKERS/10.md"
                 : "Review before publishing"}
           </span>
         </div>

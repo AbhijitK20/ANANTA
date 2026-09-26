@@ -10,6 +10,11 @@ import { type EngineInput, runPipeline, todayStamp, type PipelineRun } from "@/c
  * The two client-side stores the traveller screens share: the draft plan and the
  * learner's weights. Both live in `localStorage`, both broadcast an event, and
  * both are read through one hook so no screen writes its own copy.
+ *
+ * This file imports nothing from `lib/engine`. Every engine symbol it needs
+ * arrives through `@/components/ananta/pipeline`, which is the single import
+ * path for the view layer, so there is exactly one place where the engine and
+ * the screens meet.
  */
 
 export function useLearner(): [LearnerState, (next: LearnerState) => void] {
@@ -23,7 +28,11 @@ export function useLearner(): [LearnerState, (next: LearnerState) => void] {
   }, []);
 
   const value = useMemo<LearnerState>(
-    () => state ?? { weights: readLearner("").weights, bandit: { arms: [], observations: 0, updatedAt: "" }, countedChoices: [] },
+    // The fallback asks `readLearner` for an empty state rather than building
+    // one here. A hand-written default has to be kept in step with
+    // `LearnerState`, and when session 7 added `resetReason` this line was the
+    // only thing that broke. Reading the prior keeps the shape in one place.
+    () => state ?? readLearner(`${todayStamp()}T00:00:00+05:30`),
     [state],
   );
   return [value, setState];

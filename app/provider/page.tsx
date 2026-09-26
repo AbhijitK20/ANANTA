@@ -9,12 +9,11 @@ import {
   EnvelopeOpen,
   MapPin,
   Plus,
-  ShieldWarning,
   Storefront,
   Warning,
   XCircle,
 } from "@phosphor-icons/react/dist/ssr";
-import { StatusLabel } from "@/components/ui";
+import { StateNote, StatusLabel } from "@/components/ui";
 import { providerAlerts } from "@/lib/alerts";
 import {
   createRequest,
@@ -36,31 +35,32 @@ import {
 } from "@/lib/provider";
 import { readOperations, writeOperations } from "@/lib/operations";
 import { unmetDemandFromRows } from "@/lib/eval/unmet-demand";
+import { TONE_TEXT, typeScale } from "@/components/ananta/tokens";
+import { LocalDemoNotice } from "@/components/ananta/provider/local-demo-notice";
+import { UnmetDemandFeed } from "@/components/ananta/provider/unmet-demand-feed";
 
 /**
- * The provider workspace: listings, real demand, and a request inbox.
+ * The provider workspace. Listings, the request inbox, and the unmet-demand
+ * feed as the first block, because the feed is the part that matters: it is the
+ * only reason a provider would look at this page on a Tuesday.
  *
- * Three things changed here and each one is a correction of a claim the page used
- * to make without backing it up:
+ * Four claims this page used to make without backing them up, and what replaced
+ * them:
  *
- * - The demand figures are read from the persisted rejection stream, which is
- *   written by the real feasibility gate. The old page counted saves and then
- *   called `Math.max(counts[id], 4)` to trip its own `saves >= 3` alert. That was
- *   a fabricated number wearing a real-looking one, and it is gone.
- * - The form's price and duration are stored on the listing. They used to be
- *   `required`, browser-validated, shown to the provider, and then discarded.
- * - `TODAY` is passed in from the browser's own date at render, not frozen in the
- *   source, so the freshness alerts actually move.
+ * - "An admin must verify it before publishing" implied a publish path existed.
+ *   It did not. The admin console now has one, and the wording here points at it.
+ * - The old page counted saves and called `Math.max(counts[id], 4)` to trip its
+ *   own `saves >= 3` alert. That was invented data wearing a real-looking
+ *   number. Zero now reads as zero.
+ * - The `price` and `duration` inputs were `required`, browser-validated, shown
+ *   to the provider, and then discarded. They are stored now.
+ * - `TODAY` was a frozen literal, so every freshness alert was decorative. The
+ *   date comes from data now.
  *
- * There is no backend and no authentication on this page. It writes
- * `localStorage` on the visitor's own device and nothing leaves it. That is a
- * deliberate scope decision and the page says so in the open.
+ * The `Math.max` fix matters beyond this file. A demand feed that inflates
+ * itself teaches a provider to disbelieve every number in it, which defeats the
+ * purpose of building the feed at all.
  */
-
-function todayStamp(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
 
 const inr = (value: number): string => `\u20b9${value.toLocaleString("en-IN")}`;
 
@@ -69,7 +69,13 @@ export default function ProviderPage() {
   const [submitted, setSubmitted] = useState<string | null>(null);
   const [rows, setRows] = useState<DemandRow[]>([]);
   const [requests, setRequests] = useState<ProviderRequest[]>([]);
-  const [today] = useState(todayStamp);
+  /* The browser's own date, read once at mount. Every freshness comparison on
+     this page is measured against it, so the numbers move with the clock
+     instead of standing still. */
+  const [today] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
 
   const syncListings = useCallback(() => setListings(readProviderListings()), []);
   const syncRows = useCallback(() => setRows(readDemandRows()), []);
@@ -98,6 +104,10 @@ export default function ProviderPage() {
    */
   const demand = useMemo(() => unmetDemandFromRows(rows), [rows]);
 
+  /**
+   * A real count, or zero. The old version read `saves` and floored it at four.
+   * There is no floor here and there is no `Math.max` anywhere on this page.
+   */
   const refusals = useMemo(
     () => Object.fromEntries(ownDemand.map((signal) => [signal.id, signal.hits])),
     [ownDemand],
@@ -105,9 +115,7 @@ export default function ProviderPage() {
   const topRejection = useMemo(
     () =>
       Object.fromEntries(
-        ownDemand
-          .filter((signal) => signal.rejections.length)
-          .map((signal) => [signal.id, signal.rejections[0]?.sentence ?? ""]),
+        ownDemand.filter((signal) => signal.rejections.length).map((signal) => [signal.id, signal.rejections[0]?.sentence ?? ""]),
       ),
     [ownDemand],
   );
@@ -116,9 +124,7 @@ export default function ProviderPage() {
     () =>
       providerAlerts({
         updated: Object.fromEntries(listings.map((listing) => [listing.id, listing.updatedAt])),
-        availability: Object.fromEntries(
-          listings.map((listing) => [listing.id, listing.availability]),
-        ),
+        availability: Object.fromEntries(listings.map((listing) => [listing.id, listing.availability])),
         refusals,
         topRejection,
         today,
@@ -132,8 +138,9 @@ export default function ProviderPage() {
     const name = String(form.get("name") ?? "").trim();
     if (!name) return;
     const listing: ProviderListing = {
-      // Derived from the name, not Date.now(): the same experience submitted
-      // twice is the same listing, so it lands in review once instead of twice.
+      /* Derived from the name, not `Date.now()`. The same experience submitted
+         twice is the same listing, so it lands in review once instead of
+         creating a second identical queue row. */
       id: `draft-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "listing"}`,
       name,
       area: String(form.get("area") ?? "").trim(),
@@ -142,6 +149,8 @@ export default function ProviderPage() {
       availability: "Open",
       updated: "Just now",
       updatedAt: today,
+      /* Both stored. A blank price is unknown, not free, which is why `parsePrice`
+         returns null rather than 0. */
       priceInr: parsePrice(String(form.get("price") ?? "")),
       durationMinutes: parseDuration(String(form.get("duration") ?? "")),
       sourceUrl: normaliseUrl(String(form.get("source") ?? "")),
@@ -165,7 +174,7 @@ export default function ProviderPage() {
             : `Provider gave ${listing.priceInr === null ? "no price" : inr(listing.priceInr)} and ${
                 listing.durationMinutes === null ? "no duration" : `${listing.durationMinutes} min`
               }.`
-        } Publish it from the operations queue to put it in Explore.`,
+        } Publish it from the operations console to put it in Explore.`,
         lastChecked: "Not checked",
         listingId: listing.id,
       },
@@ -187,16 +196,11 @@ export default function ProviderPage() {
     writeProviderRequests(next);
   };
 
-  const ask = (recordId: string, message: string) => {
+  const openRequest = (recordId: string, message: string) => {
     const listing = listings.find((candidate) => candidate.id === recordId);
     if (!listing) return;
     const next = createRequest(
-      {
-        providerId: listing.id,
-        travellerId: "traveller-on-this-device",
-        recordId,
-        message,
-      },
+      { providerId: listing.id, travellerId: "traveller-on-this-device", recordId, message },
       today,
     );
     setRequests(next);
@@ -207,262 +211,139 @@ export default function ProviderPage() {
       <div className="mx-auto min-h-screen max-w-[1320px] bg-white lg:my-5 lg:min-h-[calc(100vh-40px)] lg:rounded-[28px] lg:shadow-card">
         <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
           <a href="/" className="flex items-center gap-2 text-sm font-bold">
-            <ArrowLeft size={18} /> Ananta
+            <ArrowLeft size={18} aria-hidden="true" /> Ananta
           </a>
           <div className="text-right">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Provider workspace</p>
             <h1 className="mt-1 text-lg font-bold">Manage your local listings</h1>
           </div>
         </header>
-        <section className="px-5 pb-12 pt-10 sm:px-8 lg:px-14">
+
+        <section className="px-5 pb-12 pt-8 sm:px-8 lg:px-14">
           <div className="grid gap-10 lg:grid-cols-[1fr_430px]">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Your experiences</p>
-              <h2 className="mt-3 text-4xl font-bold tracking-[-0.05em]">Keep the details current.</h2>
-              <p className="mt-4 max-w-2xl leading-7 text-muted">
-                Availability, price, and duration are the three facts that decide whether a
-                recommendation survives the feasibility gate. Update them and the change is live on
-                this device immediately.
+            <div className="min-w-0">
+              {/* The one display heading on this screen. */}
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Unmet demand</p>
+              <h2 className="mt-3 text-[28px] font-bold leading-[34px] tracking-[-0.04em]">
+                What travellers wanted, and what stopped them.
+              </h2>
+              <p className="mt-4 max-w-2xl text-[17px] leading-7 text-muted">
+                Every row below is a refusal the feasibility gate actually produced on this device.
+                The sentence naming the blocking constraint is the gate&apos;s own, not a paraphrase,
+                and the count is a real count with no floor under it.
               </p>
 
-              <p className="mt-5 flex max-w-2xl items-start gap-2 border border-line bg-[#fbfcfd] p-3 text-xs leading-5 text-muted">
-                <ShieldWarning size={16} className="mt-0.5 shrink-0 text-amber" />
-                <span>
-                  This workspace has no accounts and no server. Everything you type is written to this
-                  browser only, and anyone with this device can change it. That is a deliberate demo
-                  scope, not a hardened surface. See <code className="font-bold">docs/03-technical/ARCHITECTURE-ACTUAL.md</code>.
-                </span>
-              </p>
+              <UnmetDemandFeed
+                demand={demand}
+                totalRows={rows.length}
+                scanning={false}
+                onAsk={(item) =>
+                  openRequest(
+                    item.actionableFor[0] ?? item.fingerprint,
+                    `Travellers searched for ${item.query || "something in " + item.area} and were blocked by: ${item.dominantRejection.sentence}`,
+                  )
+                }
+              />
 
-              {alerts.length > 0 && (
-                <section aria-label="Demand alerts" className="mt-6 border border-line bg-[#fbfcfd] p-5">
-                  <div className="flex items-center gap-2">
-                    <Bell size={18} className="text-blue" />
-                    <h3 className="font-bold">Signals about your listings</h3>
-                  </div>
-                  <p className="mt-1 text-xs text-muted">
-                    Every number below is a recorded count: refusals come from the feasibility gate
-                    reading your listing facts, and no figure here is rounded up to look better.
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {alerts.map((alert) => (
-                      <li key={alert.id} className="flex items-start gap-2 text-sm leading-6">
-                        <span className="mt-0.5 shrink-0">
-                          {alert.severity === "attention" ? (
-                            <Warning size={16} className="text-amber" />
-                          ) : (
-                            <Bell size={16} className="text-blue" />
-                          )}
-                        </span>
-                        <span>
-                          <span className="font-bold">{alert.title}.</span> {alert.detail}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
+              <LocalDemoNotice variant="provider" className="mt-8" />
 
-              <div className="mt-8 space-y-3">
-                {listings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    demand={ownDemand.find((signal) => signal.id === listing.id) ?? null}
-                    onAvailabilityChange={(value) => updateAvailability(listing.id, value)}
-                  />
-                ))}
-              </div>
+              <section className="mt-10" aria-labelledby="listings-heading">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue">Your experiences</p>
+                <h2 id="listings-heading" className="mt-2 text-xl font-bold tracking-[-0.03em]">
+                  The three facts the gate reads
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
+                  Availability, price and duration are the fields the feasibility gate checks against
+                  a traveller&apos;s window and budget. Change one and it takes effect on this device
+                  immediately, with no publish step.
+                </p>
 
-              <section className="mt-10">
+                {alerts.length > 0 && (
+                  <section aria-label="Signals about your listings" className="mt-6 border border-line bg-canvas p-5">
+                    <div className="flex items-center gap-2">
+                      <Bell size={18} className="text-blue" aria-hidden="true" />
+                      <h3 className="font-bold">Signals about your listings</h3>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      Each line below cites the signal it came from. A refusal count comes from the
+                      gate reading your listing facts, and an age comes from the date on your record.
+                    </p>
+                    <ul className="mt-4 space-y-2">
+                      {alerts.map((alert) => (
+                        <li key={alert.id} className="flex items-start gap-2 text-sm leading-6">
+                          <span className="mt-0.5 shrink-0" aria-hidden="true">
+                            {alert.severity === "attention" ? (
+                              <Warning size={16} className="text-amber" />
+                            ) : (
+                              <Bell size={16} className="text-blue" />
+                            )}
+                          </span>
+                          <span>
+                            <span className="font-bold">{alert.title}.</span> {alert.detail}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                <div className="mt-6 grid gap-3">
+                  {listings.length === 0 ? (
+                    <StateNote state="nothing-retrieved">
+                      <p className="mt-3 text-sm leading-6 text-muted">
+                        No listings on this device. Submit one in the form and it appears here
+                        immediately, in a state that says it has not been published yet.
+                      </p>
+                    </StateNote>
+                  ) : (
+                    listings.map((listing) => (
+                      <ListingCard
+                        key={listing.id}
+                        listing={listing}
+                        demand={ownDemand.find((signal) => signal.id === listing.id) ?? null}
+                        onAvailabilityChange={(value) => updateAvailability(listing.id, value)}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section className="mt-10" aria-labelledby="requests-heading">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blueSoft text-blue">
-                    <EnvelopeOpen size={20} />
+                    <EnvelopeOpen size={20} aria-hidden="true" />
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">Requests</p>
-                    <h2 className="mt-1 text-xl font-bold">What travellers asked you for</h2>
+                    <h2 id="requests-heading" className="mt-1 text-xl font-bold tracking-[-0.03em]">
+                      What travellers asked you for
+                    </h2>
                   </div>
                 </div>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-                  Requests, not bookings. There is no payment, no commission, and no dispute flow
-                  anywhere in this product, by decision. Accept or decline, and the traveller sees
-                  your answer with a timestamp.
+                  A request is a message. It is not a booking, not a payment, and not a commitment on
+                  either side. There is no payment flow, no commission and no dispute handling
+                  anywhere in this product, by decision. Accepting one records your answer with a
+                  date and nothing more.
                 </p>
-                <div className="mt-4 space-y-3">
-                  {requests.length === 0 && (
-                    <p className="border border-line bg-canvas p-5 text-sm text-muted">
-                      No requests yet. Open one from the unmet demand feed below.
-                    </p>
+                <div className="mt-4 grid gap-3">
+                  {requests.length === 0 ? (
+                    <StateNote state="nothing-fits" className="max-w-2xl">
+                      <p className="mt-3 text-sm leading-6 text-muted">
+                        No requests on this device. Open one from the unmet-demand feed above and it
+                        lands here, unanswered, until you accept or decline it.
+                      </p>
+                    </StateNote>
+                  ) : (
+                    requests.map((request) => (
+                      <RequestCard key={request.id} request={request} onAnswer={answer} />
+                    ))
                   )}
-                  {requests.map((request) => (
-                    <RequestCard key={request.id} request={request} onAnswer={answer} />
-                  ))}
                 </div>
-              </section>
-
-              <section className="mt-10">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amberSoft text-amber">
-                    <Warning size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber">
-                      Unmet demand
-                    </p>
-                    <h2 className="mt-1 text-xl font-bold">What people wanted and could not get</h2>
-                  </div>
-                </div>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-                  This feed is built from the rejection stream the feasibility gate writes, grouped so
-                  repeated searches collapse into one row. The single constraint named first is the
-                  one that killed it most often. The full distribution is behind it, because one cause
-                  is rarely the whole story.
-                </p>
-                {rows.length === 0 ? (
-                  <p className="mt-4 border border-line bg-canvas p-5 text-sm text-muted">
-                    Nothing has been refused on this device yet, so there is no demand to show. That
-                    is the honest state, not an empty state we are hiding. An operator can generate
-                    real refusals from the live gate in the operations queue.
-                  </p>
-                ) : (
-                  <div className="mt-4 grid gap-3">
-                    {demand.map((item) => (
-                      <article key={item.id} className="border border-line p-5">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <StatusLabel tone={item.actionableFor.length ? "amber" : "blue"}>
-                              {item.area}
-                            </StatusLabel>
-                            <h3 className="mt-3 text-lg font-bold">
-                              {item.query || "A general search in this area"}
-                            </h3>
-                            <p className="mt-1 text-sm text-muted">
-                              {item.demandCount} traveller{item.demandCount === 1 ? "" : "s"} wanted
-                              this and could not get it.
-                            </p>
-                          </div>
-                          <div className="text-left sm:text-right">
-                            <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
-                              The one thing that blocked it
-                            </p>
-                            <p className="mt-1 max-w-xs text-sm font-semibold text-ink">
-                              {item.dominantRejection.sentence}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4 border-t border-line pt-3">
-                          <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
-                            Full distribution
-                          </p>
-                          <ul className="mt-2 flex flex-wrap gap-2">
-                            {item.rejectionMix.map((entry) => (
-                              <li
-                                key={entry.code}
-                                className="rounded bg-canvas px-2 py-1 text-xs font-semibold text-muted"
-                              >
-                                {entry.code.replace(/_/g, " ")} x{entry.count}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        {item.actionableFor.length > 0 ? (
-                          <div className="mt-4">
-                            {listings
-                              .filter((listing) => item.actionableFor.includes(listing.id))
-                              .map((listing) => (
-                                <button
-                                  key={listing.id}
-                                  onClick={() =>
-                                    ask(
-                                      listing.id,
-                                      `Travellers searched for ${item.query || "something in " + item.area} and were blocked by: ${item.dominantRejection.sentence}`,
-                                    )
-                                  }
-                                  className="mr-2 mt-2 rounded-lg border border-line px-3 py-2 text-xs font-bold"
-                                >
-                                  Ask travellers about {listing.name}
-                                </button>
-                              ))}
-                          </div>
-                        ) : (
-                          <p className="mt-4 text-xs text-muted">
-                            No provider can act on this one from the catalogue, because the blocker is
-                            weather, season, distance or the traveller&apos;s own party rather than
-                            anything a venue controls.
-                          </p>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                )}
               </section>
             </div>
 
-            <form onSubmit={submitListing} className="h-fit border border-line bg-[#fbfcfd] p-5 sm:p-7">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blueSoft text-blue">
-                  <Plus size={21} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">New listing</p>
-                  <h2 className="mt-1 text-xl font-bold">Submit an experience</h2>
-                </div>
-              </div>
-              <div className="mt-6 space-y-4">
-                <Field name="name" label="Experience name" placeholder="Example: Weekend pottery workshop" />
-                <Field name="area" label="Area" placeholder="Vashi, Fort, Bandra" />
-                <label className="block text-sm font-semibold">
-                  Category
-                  <select
-                    name="category"
-                    className="mt-2 block w-full rounded-lg border border-line bg-white px-3 py-3 text-sm outline-none focus:border-blue"
-                    defaultValue="Workshop"
-                  >
-                    {[
-                      "Workshop",
-                      "Food",
-                      "Culture",
-                      "Nature",
-                      "Shopping",
-                      "Nightlife",
-                      "Adventure",
-                      "Recreation",
-                      "Stay",
-                      "Family",
-                    ].map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field name="price" label="Price" placeholder="700" />
-                  <Field name="duration" label="Duration in minutes" placeholder="120" />
-                </div>
-                <p className="text-xs leading-5 text-muted">
-                  Both are optional and both are stored. Leave price blank if it varies; we will record
-                  it as unknown rather than as free.
-                </p>
-                <Field name="source" label="Source URL" placeholder="https://your-site.example" type="url" />
-              </div>
-              <p className="mt-4 text-xs leading-5 text-muted">
-                A submission is not discoverable until an operator publishes it from the operations
-                queue. Until then it exists only on this device, and the page will say so rather than
-                imply it is live.
-              </p>
-              <button
-                className="mt-6 w-full rounded-lg bg-blue px-4 py-3 text-sm font-bold text-white hover:bg-[#1249ad]"
-                type="submit"
-              >
-                Submit for review
-              </button>
-              {submitted && (
-                <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-green">
-                  <CheckCircle size={17} /> {submitted} is queued. An operator publishes it from the
-                  operations queue, and only then does it reach Explore.
-                </p>
-              )}
-            </form>
+            <ListingForm onSubmit={submitListing} submitted={submitted} />
           </div>
         </section>
       </div>
@@ -470,17 +351,105 @@ export default function ProviderPage() {
   );
 }
 
-function Field({
+/* ── the submission form ───────────────────────────────────────────────────── */
+
+const CATEGORIES = [
+  "Workshop", "Food", "Culture", "Nature", "Shopping",
+  "Nightlife", "Adventure", "Recreation", "Stay", "Family",
+] as const;
+
+function ListingForm({
+  onSubmit,
+  submitted,
+}: {
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  submitted: string | null;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="h-fit border border-line bg-canvas p-5 sm:p-7 lg:sticky lg:top-8">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blueSoft text-blue">
+          <Plus size={21} aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue">New listing</p>
+          <h2 className="mt-1 text-xl font-bold tracking-[-0.03em]">Submit an experience</h2>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4">
+        <FormField name="name" label="Experience name" placeholder="Weekend pottery workshop" required />
+        <FormField name="area" label="Area" placeholder="Vashi, Fort, Bandra" required />
+        <label className="block text-sm font-semibold">
+          Category
+          <select
+            name="category"
+            className="mt-2 block w-full rounded border border-line bg-white px-3 py-3 text-sm outline-none focus:border-blue"
+            defaultValue="Workshop"
+          >
+            {CATEGORIES.map((option) => (
+              <option key={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField name="price" label="Price in rupees" placeholder="700" inputMode="numeric" />
+          <FormField name="duration" label="Duration in minutes" placeholder="120" inputMode="numeric" />
+        </div>
+        {/* Both optional, both stored. The sentence says what a blank one means,
+            which is the difference between an honest field and a dead one. */}
+        <p className="text-xs leading-5 text-muted">
+          Both are optional and both are kept. Leave price blank if it varies: we record that as
+          unknown rather than as free, and an unknown price can never pass the budget gate.
+        </p>
+
+        <FormField
+          name="source"
+          label="Your link"
+          placeholder="https://your-site.example"
+          type="url"
+        />
+      </div>
+
+      <p className="mt-4 text-xs leading-5 text-muted">
+        A submission does not reach travellers until an operator publishes it from the
+        operations console. Until then it exists only on this device, and this page says so rather
+        than implying it is live.
+      </p>
+
+      <button
+        className="mt-6 w-full rounded bg-blue px-4 py-3 text-sm font-bold text-white hover:bg-[#1249ad]"
+        type="submit"
+      >
+        Submit for review
+      </button>
+
+      {submitted && (
+        <p className="mt-4 flex items-start gap-2 text-sm font-semibold leading-6 text-green">
+          <CheckCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>
+            {submitted} is queued for an operator. It reaches Explore only once it is published.
+          </span>
+        </p>
+      )}
+    </form>
+  );
+}
+
+function FormField({
   name,
   label,
   placeholder,
   type = "text",
+  inputMode,
   required = false,
 }: {
   name: string;
   label: string;
   placeholder: string;
   type?: string;
+  inputMode?: "numeric";
   required?: boolean;
 }) {
   return (
@@ -489,13 +458,16 @@ function Field({
       <input
         name={name}
         type={type}
+        inputMode={inputMode}
         required={required}
         placeholder={placeholder}
-        className="mt-2 block w-full rounded-lg border border-line bg-white px-3 py-3 text-sm outline-none focus:border-blue"
+        className="mt-2 block w-full rounded border border-line bg-white px-3 py-3 text-sm outline-none focus:border-blue"
       />
     </label>
   );
 }
+
+/* ── one listing ───────────────────────────────────────────────────────────── */
 
 function ListingCard({
   listing,
@@ -509,67 +481,82 @@ function ListingCard({
   return (
     <article className="border border-line p-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <StatusLabel tone={listing.status === "Published" ? "green" : "blue"}>
-              {listing.status}
-            </StatusLabel>
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
-              {listing.category}
-            </span>
-            {!listing.verified && listing.status === "Published" && (
-              <span className="text-xs font-bold uppercase tracking-[0.1em] text-amber">
-                Facts unverified
+            <StatusLabel tone={listing.status === "Published" ? "green" : "blue"}>{listing.status}</StatusLabel>
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">{listing.category}</span>
+            {listing.status === "Published" && !listing.verified && (
+              <span className="rounded border border-dashed border-muted bg-canvas px-2 py-0.5 text-xs font-semibold text-muted">
+                Opening hours unverified
               </span>
             )}
           </div>
-          <h3 className="mt-4 text-xl font-bold">{listing.name}</h3>
-          <p className="mt-1 text-sm text-muted">
+          <h3 className="mt-3 text-lg font-bold leading-6">{listing.name}</h3>
+          <p className={typeScale.meta + " mt-1 " + TONE_TEXT.muted}>
             {listing.area} · Updated {listing.updated}
           </p>
         </div>
-        <Storefront size={24} className="text-muted" />
+        <Storefront size={24} className="shrink-0 text-muted" aria-hidden="true" />
       </div>
-      <dl className="mt-5 grid gap-3 border-t border-line pt-4 text-sm sm:grid-cols-3">
+
+      {/* A definition list, because these are labelled facts and not a paragraph. */}
+      <dl className="mt-5 grid gap-4 border-t border-line pt-4 sm:grid-cols-3">
         <div>
           <dt className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Price</dt>
-          <dd className="mt-1 font-semibold">
-            {listing.priceInr === null ? "Not on record" : listing.priceInr === 0 ? "Free" : inr(listing.priceInr)}
+          <dd className="mt-1 text-sm font-semibold">
+            {listing.priceInr === null ? (
+              <span className="text-muted">Not on record</span>
+            ) : listing.priceInr === 0 ? (
+              "Free"
+            ) : (
+              inr(listing.priceInr)
+            )}
           </dd>
         </div>
         <div>
           <dt className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Duration</dt>
-          <dd className="mt-1 font-semibold">
-            {listing.durationMinutes === null ? "Not on record" : `${listing.durationMinutes} min`}
+          <dd className="mt-1 text-sm font-semibold">
+            {listing.durationMinutes === null ? (
+              <span className="text-muted">Not on record</span>
+            ) : (
+              `${listing.durationMinutes} min`
+            )}
           </dd>
         </div>
         <div>
           <dt className="text-xs font-bold uppercase tracking-[0.1em] text-muted">Refused by the gate</dt>
-          <dd className="mt-1 font-semibold">
-            {demand ? `${demand.hits} time${demand.hits === 1 ? "" : "s"}` : "0 times"}
+          <dd className="mt-1 text-sm font-semibold">
+            {/* Zero reads as zero. There is no floor and no rounding. */}
+            {demand ? (
+              <>
+                {demand.hits} time{demand.hits === 1 ? "" : "s"}
+              </>
+            ) : (
+              <span className="text-muted">0 times</span>
+            )}
           </dd>
         </div>
       </dl>
+
       {demand && demand.rejections.length > 0 && (
-        <p className="mt-3 text-sm leading-6 text-muted">
-          Most often: {demand.rejections[0]?.sentence}
-        </p>
+        <p className="mt-3 text-sm leading-6 text-muted">Most often: {demand.rejections[0]?.sentence}</p>
       )}
+
       <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-[1fr_auto] sm:items-center">
-        <div className="flex flex-wrap gap-4 text-xs font-semibold text-muted">
+        <div className="grid gap-2 text-xs font-semibold text-muted">
           <span>
-            <MapPin size={14} className="mr-1 inline" />
+            <MapPin size={14} className="mr-1 inline" aria-hidden="true" />
             {listing.sourceUrl ? (
               <a href={listing.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue underline">
-                Provider link
+                Your link
               </a>
             ) : (
-              "No provider link given"
+              "No link given"
             )}
           </span>
           <span>
-            <Clock size={14} className="mr-1 inline" />
-            Availability reaches the gate immediately
+            <Clock size={14} className="mr-1 inline" aria-hidden="true" />
+            Availability reaches the gate immediately, with no publish step
           </span>
         </div>
         <label className="text-xs font-bold text-muted">
@@ -577,7 +564,7 @@ function ListingCard({
           <select
             value={listing.availability}
             onChange={(event) => onAvailabilityChange(event.target.value as ProviderListing["availability"])}
-            className="ml-2 rounded-lg border border-line bg-white px-2 py-2 text-xs font-bold text-ink"
+            className="ml-2 rounded border border-line bg-white px-2 py-2 text-xs font-bold text-ink"
           >
             <option>Open</option>
             <option>Limited</option>
@@ -588,6 +575,8 @@ function ListingCard({
     </article>
   );
 }
+
+/* ── one request ───────────────────────────────────────────────────────────── */
 
 function RequestCard({
   request,
@@ -607,33 +596,37 @@ function RequestCard({
         <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
           Opened {request.createdAt}
         </span>
-        {request.respondedAt && (
+        {request.respondedAt ? (
           <span className="text-xs font-bold uppercase tracking-[0.1em] text-muted">
             Answered {request.respondedAt}
+          </span>
+        ) : (
+          <span className="rounded border border-dashed border-muted bg-canvas px-2 py-0.5 text-xs font-semibold text-muted">
+            Awaiting your answer
           </span>
         )}
       </div>
       <p className="mt-3 text-sm leading-6 text-ink">{request.message}</p>
-      <p className="mt-2 text-xs text-muted">
-        From {request.travellerId} about {request.recordId}. This is a message, not a booking and not
-        a payment.
+      <p className="mt-2 text-xs leading-5 text-muted">
+        From {request.travellerId} about {request.recordId}. This is a message. It is not a booking,
+        it is not a payment, and accepting it commits nobody to anything.
       </p>
-      {request.state === "open" && (
+      {request.state === "open" ? (
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => onAnswer(request.id, "accepted")}
-            className="inline-flex items-center gap-1 rounded-lg bg-blue px-3 py-2 text-xs font-bold text-white"
+            className="inline-flex items-center gap-1 rounded bg-blue px-3 py-2 text-xs font-bold text-white"
           >
-            <CheckCircle size={15} /> Accept
+            <CheckCircle size={15} aria-hidden="true" /> Accept
           </button>
           <button
             onClick={() => onAnswer(request.id, "declined")}
-            className="inline-flex items-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-bold"
+            className="inline-flex items-center gap-1 rounded border border-line px-3 py-2 text-xs font-bold"
           >
-            <XCircle size={15} /> Decline
+            <XCircle size={15} aria-hidden="true" /> Decline
           </button>
         </div>
-      )}
+      ) : null}
     </article>
   );
 }

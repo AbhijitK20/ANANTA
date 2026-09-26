@@ -1,25 +1,50 @@
-# SESSION 5 of 10 — Trips: the Proof Screen
+# SESSION 5 of 10 — Trips: the Plan Tilts When It Stops Agreeing With Itself
 
 > Copy everything below this line into a new session.
 
 ---
 
-You are session 5 of 10 in the **UI/UX fix round** on **ANANTA**, at
+You are session 5 of 10 in the **spatial UI round** on **ANANTA**, at
 `C:\Games\Projects\Projects for GITHUB\HackCelestial\ANANTA`.
 
-**You own the highest-value screen in the product, and the single most important
-element on it does not exist yet.**
+**You own the highest-value screen, and you are implementing the single best idea
+in the entire spatial design.**
+
+## The idea
+
+The engine computes `objectiveFast` and, independently, `objectiveNaive`, and
+asserts they agree to `1e-6`. That number exists. **Nothing in the UI shows it.**
+
+```
+tilt = clamp(drift / DRIFT_TOLERANCE, 0, 1) × 6deg,  rotateX
+```
+
+At zero drift the plan is **perfectly flat**, because the two independent
+derivations agree exactly. As drift approaches the tolerance it visibly **leans**.
+Past the tolerance the plan is recessed and refuses to present as valid.
+
+A judge who watches the plan tilt is not reading a number. They are watching the
+product lose confidence in itself, in real time, from its own output. **No copy can
+do that.** The number still appears in the text, because the tilt is a redundant
+encoding, not a replacement.
+
+And the second idea, which is almost as good: **the plan recedes into the future.**
+Stop 1 at `depth-lifted`, stop 2 at `depth-raised`, stop 3 at `depth-flush`, stop 4
+at `depth-recessed`. A descending staircase reading near to far. It encodes
+sequence in the one channel that is genuinely ordered, and it means the plan is
+legible as a shape before a word is read.
 
 ## Read first
 
-1. `UI-UX-Fix-Prompts/00-CONTRACTS.md` **completely**. RULE 0, the accessibility
-   targets in section 4, and your row in section 6.
+1. `UI-UX-Fix-Prompts/00-CONTRACTS.md` **completely**. Section 6 encodings 3, 4 and
+   5 are yours. Section 2 for the depth scale, section 4 for motion, section 11 for
+   the gate.
 2. `SESSION/UI-UX-DESIGN.md` sections 5, 6.4 and 8.
-3. `app/trips/page.tsx` (17KB), `components/ananta/feasibility-meter.tsx` (124 lines,
-   ratified and good), `components/ananta/stops` helpers in `pipeline.ts`.
-4. `lib/engine/validation/validate.ts` and its return type. **This is the source of
-   the element you are about to build.**
-5. `docs/05-design/DESIGN-CONTRACT.md` and `docs/05-design/ACCESSIBILITY.md`.
+3. `app/trips/page.tsx` (17KB),
+   `components/ananta/feasibility-meter.tsx` (124 lines, ratified and good).
+4. `lib/engine/validation/validate.ts` and its return type. **This is your input.**
+5. `lib/engine/pipeline` exports session 2 is writing: `depthForStop`,
+   `tiltForDrift`, `depthForRung`.
 
 ## ALLOWED — you own these, exclusively
 
@@ -33,181 +58,186 @@ UI-UX-Fix-Prompts/BLOCKERS/5.md
 ## FORBIDDEN
 
 ```
-tailwind.config.ts, app/globals.css, components/ananta/tokens.ts, records.ts, lib/ui-guard/**   session 1
-components/ananta/pipeline.ts, use-ananta.ts                                                   session 2
-app/layout.tsx, app/page.tsx, app/contact/**, components/footer.tsx, components/ui.tsx         session 3
-app/explore/**, components/map.tsx, discovery-search.tsx, travel-options.tsx                     session 4
-app/experience/**, provenance-badge.tsx, experience-media.tsx, report-button.tsx                 session 6
+tailwind.config.ts, app/globals.css, tokens.ts, records.ts, lib/ui-guard/**     session 1
+components/ananta/pipeline.ts, use-ananta.ts                                    session 2
+app/layout.tsx, app/page.tsx, app/contact/**, footer.tsx, ui.tsx                 session 3
+app/explore/**, map.tsx, discovery-search.tsx, travel-options.tsx                session 4
+app/experience/**, provenance-badge.tsx, experience-media.tsx, report-button.tsx           session 6
 components/ananta/why-this.tsx, why-this-live.tsx, why-not-that.tsx, learning.ts,
-  plan-button.tsx, plan-badge.tsx, save-button.tsx, share-button.tsx                              session 7
-components/ananta/stress-radar.tsx, learned-weights.tsx, app/profile/**, app/saved/**            session 8
-components/ananta/replan.ts, replan-proposal.tsx, app/events/**, availability-picker.tsx        session 9
-app/provider/**, app/admin/**, app/terms/**, app/privacy/**                                    session 10
+  plan-button.tsx, plan-badge.tsx, save-button.tsx, share-button.tsx             session 7
+components/ananta/stress-radar.tsx, learned-weights.tsx, app/profile/**, app/saved/**     session 8
+components/ananta/replan.ts, replan-proposal.tsx, app/events/**, availability-picker.tsx   session 9
+app/provider/**, app/admin/**, app/terms/**, app/privacy/**                     session 10
 lib/**   FROZEN, including lib/plan.ts
 package.json, next.config.mjs, tsconfig.json, .eslintrc.json, vitest.config.ts, docs/**
 ```
 
-**Your new components go in `components/ananta/trips/`.** That directory is yours
-alone.
+New components go in `components/ananta/trips/`. Yours alone.
 
-## Task, in screen order
+## Task, in screen order. A judge should hit the evidence before the plan.
 
-`SESSION/UI-UX-DESIGN.md` 6.4 gives the order. A judge should hit the evidence
-before the plan.
+### 1. The integrity stamp and the tilt
 
-### 1. The validation stamp — build this first
+`validate()` returns `drift` and `satisfiedFraction`. Build the stamp.
 
-**This does not exist and it is the most valuable element on the site.**
+- Render `drift` to six decimals from the real value. **Not a string constant.**
+- **`tiltForDrift(drift)` returns a class name** from session 1's seven static
+  rules. **No runtime style computation, ever.** A computed transform bypasses the
+  reduced-motion block, and `lib/ui-guard/reduced-motion.test.ts` will fail your
+  build.
+- The tilt applies to the **plan container**, not just the stamp. A tilted badge is
+  a novelty; a tilted plan is a statement.
+- **When `drift > DRIFT_TOLERANCE` the plan is a failure.** Recessed, in the alarm
+  colour, naming the component that diverged from the per-component drift table,
+  and **it does not present as valid.** A drifted plan shown in a reassuring layout
+  is the worst outcome in the entire product.
+- `satisfiedFraction` as a real count: "23 of 23 hard constraints satisfied". Below
+  1, name which via `issues` and route to the relaxation note.
+- **Import `DRIFT_TOLERANCE` from the engine.** A second literal means the stamp and
+  the drift test can disagree about what failure is.
+- Give it a `title` explaining what "re-derived independently" means, in one plain
+  sentence, because a judge who does not understand it will not be impressed by it.
 
-`validate()` already returns `drift` and `satisfiedFraction`. A drift test in
-`lib/engine/validation/drift.test.ts` already asserts that `objectiveFast` and
-`objectiveNaive`, two independent derivations, agree to `1e-6`. **Nothing in the UI
-shows it.**
+The transition into tilt is `--motion-scene` at 320ms, `ease-out-soft`. It is the
+one place a slower transition is justified, because the tilt is the most
+consequential state change in the product.
 
-A judge who reads **"Objective re-derived independently. Drift 0.000000"** next to a
-plan they are about to trust is a judge who believes the engine. It is the
-credibility anchor of the entire project rendered as one line.
+### 2. The plan staircase
 
-Requirements:
-- Render `drift` from the real `ValidationResult`, formatted to six decimals. Not a
-  string constant.
-- When `drift > DRIFT_TOLERANCE`, this is a **failure**, not a footnote. Render the
-  alarm colour, name the component that diverged from the per-component drift table,
-  and **do not present the plan as valid.** A drifted plan shown with a reassuring
-  layout is the worst outcome in the product.
-- Show `satisfiedFraction` as a real number with a real count: "23 of 23 hard
-  constraints satisfied." When it is below 1, say which ones, via the `issues`
-  array, and route to the relaxation note.
-- Import `DRIFT_TOLERANCE` from the engine. Do not write a second literal.
-- Give the stamp a `title` or a tooltip that explains what "re-derived
-  independently" means, because a judge who does not understand it will not be
-  impressed by it. One sentence, in plain words.
+`depthForStop(index, total)` from `pipeline.ts`. Monotonic, total, about 9px per
+step, `lifted` to `recessed` across four stops.
 
-### 2. `components/ananta/feasibility-meter.tsx` — ratified, integrate and extend
+- Confirm a **one-stop plan** still renders correctly, at `depth-lifted`.
+- The staircase must be **visible as a shape** on desktop, so use the horizontal
+  timeline and let the Z descend left to right. On mobile, where it stacks
+  vertically, the Z descent is much less legible, so **fall back to a depth-coded
+  left border or an explicit step number** rather than relying on 3D alone. A depth
+  cue that only works in one orientation is not a cue.
+- Hovering a stop lifts it one step **without changing its position in the
+  staircase.** Lifting must not reorder the plan, because order is data.
+
+### 3. The ladder is a ladder, visually
+
+`depthForRung(rung)`: `strict` lifted, `dropped_minimum` raised, `greedy_fill`
+flush, `single_best` recessed.
+
+"We settled for one stop" now sits visibly lower than "we found exactly what you
+asked for". `MASTERPLAN.md` says *"Relaxed: minimum 1 stop instead of 2" is a far
+better demo than an unsat core."* This is the same sentence, expressed in space.
+**Always render the rung's name and its cost in text too.**
+
+### 4. `components/ananta/feasibility-meter.tsx` — ratified, integrate and extend
 
 This component is **good**. The three-segment bar with the buffer given its own
 width and its own number, the `role="img"` with a full sentence at `:68`, the
-overflow past the track, and the honest footnote at `:117-121` are all correct.
-Do not rewrite it.
+overflow past the track, and the honest footnote at `:117-121` are all correct. Do
+not rewrite it.
 
 What it needs:
-- **The `breakpoint` case.** The bar is `flex` with three fixed segments and no
-  labels inside them. Below about 480px the three segments plus the overflow are
-  four unlabelled blocks. The numbers are in the `dl` below, so it degrades
-  gracefully, but confirm it and add a minimum width or a stacked variant if it
-  does not.
-- **The `availability` state is the interesting one.** When
-  `stop.availability.soldOutAt` is set, the meter should not silently include that
-  stop. Surface it and hand off to session 9's replan proposal. The masterplan
-  trigger is called `sold_out`.
-- Keep the footnote. It is the single most honest paragraph in the product and it
-  names the congestion multiplier, the buffer rate, and that nothing here is a live
-  availability claim. Do not shorten it to save space.
-- Add a `zero` case guard: `aria-label` must stay correct when activity, travel or
-  buffer is 0. `:71` already skips a zero segment, so confirm the sentence at `:68`
-  still reads properly with a zero in it.
+- **It goes on a plane, and the plane is `depth-raised`.** It is the signature
+  element of the product, so it stands proud of the plan below it.
+- **The overflow segment must be visible in 3D.** The alarm colour at
+  `feasibility-meter.tsx:83` is the one place on this screen where the alarm
+  treatment is correct, so do not soften it. But the bar is a 2D element inside a
+  3D container, so confirm it does not visually detach from the panel at high Z.
+- **The `breakpoint` case.** At `:65-87` the bar is a `flex` of fixed segments with
+  no labels inside them, so below about 480px it is four unlabelled blocks. The
+  numbers are in the `dl` below so it degrades gracefully, but verify it and add a
+  stacked variant if it does not.
+- **The `sold_out` case.** When `stop.availability.soldOutAt` is set the meter must
+  not silently include that stop. Surface it and hand off to session 9's proposal.
+  Export the state so session 9 can consume it.
+- Keep the footnote **verbatim**. It names the congestion multiplier, the buffer
+  rate, and that nothing there is a live availability claim. It is the most honest
+  paragraph in the product and shortening it to save space defeats the design.
+- Confirm the `role="img"` label stays correct when a segment is 0. `:71` already
+  skips zero segments, so check the sentence at `:68` still reads properly.
 
-### 3. The plan timeline — kill the fabricated clock
+### 5. Kill the fabricated clock
 
-**`app/trips/page.tsx:126` currently renders:**
+`app/trips/page.tsx:126`:
 
 ```tsx
 <p>{index === 0 ? "Start" : `${index + 1}:15 PM`}</p>
 ```
 
 Stop 2 is always "2:15 PM". It does not read `availableMinutes`, does not read the
-deadline, does not sum previous durations, and is completely independent of any
-route data. **This is the worst honesty defect in the repository.**
-`SESSION/UI-UX-DESIGN.md` section 9 lists it first under "do not".
+deadline, does not sum previous durations. **This is the worst honesty defect in the
+repository** and the spatial round makes it worse, because a floating card with a
+fabricated clock reads as authoritative.
 
-**Do not replace it with another template.** You have two honest options:
+**Do not replace it with another template.** Two honest options:
 
-- **Real clock.** If `Stop.arriveBy` and `visitMinutes` are real, and the traveller
-  has seen or chosen a start time, render the clock. `minutesOfDay` and
-  `clockLabel` already exist in `pipeline.ts`. Add a start-time control if one does
-  not exist, and make the start time **visible and editable**, because a clock is
-  only honest if the reader knows what it is relative to.
-- **No clock.** Render `Stop 1`, `Stop 2`, with the real durations beside them. Weaker,
-  but honest.
+- **A real clock**, if `Stop.arriveBy` and `visitMinutes` are real, plus a
+  **visible and editable** start time, because a clock is only honest if the reader
+  knows what it is relative to.
+- **No clock**: `Stop 1`, `Stop 2`, with the real durations beside them. Weaker,
+  honest.
 
-State plainly in your summary which you chose and why. If you choose the clock and
-the start time is still a fixed literal anywhere, that is the same defect wearing a
-new hat.
+State which you chose and why. If you choose the clock and the start time is still a
+literal anywhere, that is the same defect in new clothes.
 
-**Also delete at `:126`:** "Selected because it matches the current interest and sits
-inside the available plan area." Printed identically for every stop. No interest
-model ran and no area check ran. Replace with session 7's per-stop why-this.
+**Also delete at `:126`:** "Selected because it matches the current interest and
+sits inside the available plan area." Printed identically for every stop. No
+interest model ran, no area check ran. Replace with session 7's per-stop why-this.
 
-### 4. `lib/plan.ts:35` is still being called and it is an OOM
+### 6. `lib/plan.ts:35` is still called and it is an OOM
 
 ```ts
 generatePlanVariants(places, allExperiences.slice(0, 60), budget, availableMinutes, ...)
 ```
 
-`lib/plan.ts:88-95` materialises C(60, k) combinations. At 5 stops that is 5,461,512
-arrays, with `evaluatePlan` run on each, inside a `useMemo` on the render path. **A
-5 stop plan is a multi-second browser freeze on every budget-slider keystroke.**
-`lib/plan.ts` is not yours, and session 5 of the previous round replaced the
-algorithm inside `lib/engine/packing/`.
+`lib/plan.ts:88-95` materialises C(60, k). At 5 stops that is 5,461,512 arrays with
+`evaluatePlan` on each, inside a `useMemo` on the render path. **A 5 stop plan is a
+multi-second freeze on every budget-slider keystroke.** `lib/plan.ts` is not yours
+and session 5 of the previous round replaced the algorithm in `lib/engine/packing/`.
 
-**Stop calling it.** Consume `pack()` from `@/lib/engine` via
-`pipeline.ts`. If session 2 has not landed the re-export yet, that is a blocker
-naming session 2. **Do not fix it yourself and do not build a UI workaround such as
-a smaller `slice`.** An honest "solving" state is correct; a hidden cap is not.
+**Stop calling it.** Consume `pack()` from `@/lib/engine` via `pipeline.ts`. If
+session 2 has not landed, that is a blocker naming session 2. **Do not fix it
+yourself and do not add a UI workaround such as a smaller `slice`.** An honest
+"solving" state is correct; a hidden cap is not.
 
-The old "No alternative plan fits these limits" string at `:136` must go. The
-replacement is the engine's named ladder with its rung and its note.
+The old "No alternative plan fits these limits" at `:136` goes away, replaced by the
+engine's named ladder with its rung and its note.
 
-### 5. `app/trips/page.tsx:94` — the array-index "recommendation"
+### 7. The array-index "recommendation" and its false copy
+
+`app/trips/page.tsx:94`:
 
 ```ts
-setWeatherAlternative(allExperiences.find((item) => item.statusTone !== "amber" && !ids.includes(item.id))?.id ?? null)
+allExperiences.find((item) => item.statusTone !== "amber" && !ids.includes(item.id))?.id ?? null
 ```
 
-First match in array order. Ignores location, category, budget, time and area. For
-any user not already planning `kala-ghoda-art-walk`, the "suggested indoor
-alternative" is index 0 of the array.
+First match in array order, ignoring location, category, budget, time and area. For
+anyone not already planning `kala-ghoda-art-walk` it returns index 0.
 
-**And the copy at `:132` is worse:** "This option removes the weather-dependent stop
-and keeps the rest of the plan within the current area." Both clauses are false.
-Delete both sentences. Session 9's replan chooses properly and supplies a real
-reason.
+**And `:132` is worse:** "This option removes the weather-dependent stop and keeps
+the rest of the plan within the current area." Both clauses are false. **Delete both
+sentences.** Session 9's replan chooses properly and supplies a real reason.
 
-### 6. Wire in the other sessions, one way only
+### 8. Wire in the other sessions by import only
 
-You own the page, so you integrate. Each of these is another session's file, so
-**import, do not edit**:
+Session 8's `stress-radar.tsx` and `learned-weights.tsx`, session 7's `why-this.tsx`
+and `why-not-that.tsx` per stop, session 9's `replan-proposal.tsx` and the six
+trigger controls.
 
-- Session 8's `stress-radar.tsx` and `learned-weights.tsx`
-- Session 7's `why-this.tsx` and `why-not-that.tsx`, per stop
-- Session 9's `replan-proposal.tsx`, and the six trigger controls
-
-If any of those files does not exist when you get there, render an honest empty
-slot with a `UiState` from contracts section 2, note it in your blockers file, and
-move on. **Do not create a stub of someone else's component.** That is how
+**You own the page so you integrate. You do not edit their files.** If a file is
+missing, render an honest `UiState` slot, note it in your blockers file, and move
+on. **Do not write a stub of someone else's component.** That is how
 `pipeline.ts` happened.
-
-### 7. The `UiState` coverage
-
-All nine apply to this screen. `solving` shows the stage, not a spinner.
-`nothing-fits` leads with the cheapest relaxation. `sold-out` states the fact and
-its timestamp, then offers the replan. `broken` names what failed and what still
-works.
-
-Add `aria-live="polite"` to the stage line, so solving and replanning announce
-themselves. That is in the accessibility targets and it is currently missing.
 
 ## Constraints
 
 - **RULE 0: no engine in the view layer.** `pack`, `buildStops`, `stopTotals`,
-  `validate`, `relax`, `objectiveFast` come from `@/lib/engine`.
-- Zero new dependencies.
-- No em dash, no emoji. No hard-coded dataset number.
-- Keep `app/trips/page.tsx` responsive: the existing `sm:grid-cols-4` metric row
-  must not overflow at 390px.
-- One `text-display` on this screen. The meter's headline at
-  `feasibility-meter.tsx:54` currently claims it, and that is the right choice.
-  Everything else is `text-title` or smaller.
+  `validate`, `relax`, `DRIFT_TOLERANCE`, `depthForStop`, `tiltForDrift` all come
+  from the engine or `pipeline.ts`.
+- **Class names only.** Never `style={{ transform }}`, `style={{ rotateX }}` or
+  `style={{ translateZ }}`. It bypasses the reduced-motion block.
+- Zero new dependencies. No motion library.
+- No em dash, no emoji, no hard-coded dataset number.
+- One `text-display` on this screen. The meter's headline correctly claims it.
+- Add `aria-live="polite"` to the stage and tilt region, so a drift alarm and a
+  replan both announce. It is in the accessibility targets and currently missing.
 
 ## Verification
 
@@ -215,27 +245,39 @@ themselves. That is in the accessibility targets and it is currently missing.
 npx tsc --noEmit
 npm run lint
 npm run build
-npx vitest run lib/ui-guard
+npx vitest run lib/ui-guard lib/engine/validation
 npm run dev
 ```
 
-Then look at it, and do this specific sequence: add five stops to a plan, drag the
-budget slider, and confirm the tab does not freeze. That is the `C(60,k)` test and
-it is the difference between a demo that works and a demo that hangs. Then read the
-screen top to bottom and confirm every sentence is one you can source.
+Then, in this order:
+
+1. Add five stops, drag the budget slider, and **confirm the tab does not freeze**.
+   That is the `C(60,k)` test and it is the difference between a demo that works and
+   one that hangs.
+2. Force a drift and **watch the plan tilt**, then confirm the text still carries the
+   number, because the tilt is redundant encoding, not a replacement.
+3. Emulate reduced motion. **The drift state must still be unmistakable by colour
+   and text alone**, with no tilt. If you have to guess at tolerance, the fallback
+   is not doing its job.
+4. 390px: the staircase falls back to a non-3D cue and the meter does not overflow.
+5. Tab the whole page. A ring at every stop, none clipped by a translateZ.
 
 ## Definition of done
 
-1. The validation stamp renders real `drift` and real `satisfiedFraction`, and a
-   drifted plan is shown as failed, not as valid.
-2. The fabricated clock is gone. Either a real clock from a visible start time, or
-   no clock. Stated which.
-3. "Selected because it matches the current interest" is gone.
-4. `generatePlanVariants` is no longer called. Five stops does not freeze.
-5. The `allExperiences.find` "recommendation" and its false copy at `:132` are gone.
-6. The relaxation note names the rung and the cost, from the engine.
-7. Session 7, 8 and 9 components are integrated by import. No stubs written.
-8. `aria-live="polite"` on the solving and replan region.
-9. All nine `UiState` values render something deliberate on this screen.
-10. `git status --short` shows only your three path patterns.
-11. Your summary quotes the validation stamp's actual output from a real run.
+1. The integrity stamp renders real `drift` and `satisfiedFraction`, and a drifted
+   plan is shown as failed, recessed, naming the diverging component.
+2. The tilt comes from a class name, never a computed style, and at zero drift the
+   plan is flat.
+3. The stop staircase is monotonic, handles a one-stop plan, and has a non-3D
+   fallback on mobile.
+4. The relaxation rung is expressed as height **and** named in text.
+5. The fabricated clock is gone, and you state which honest option you took.
+6. "Selected because it matches the current interest" is gone.
+7. `generatePlanVariants` is no longer called. Five stops does not freeze.
+8. The `allExperiences.find` recommendation and its false copy at `:132` are gone.
+9. Sessions 7, 8 and 9 are integrated by import. No stubs written.
+10. `aria-live` on the stage and drift region.
+11. Reduced motion still communicates drift, and you verified it.
+12. `git status --short` shows only your three path patterns.
+13. Your summary quotes the validation stamp's real output from a real run, and
+    reports the measured tilt in degrees at a drift you chose.

@@ -4,6 +4,7 @@ import { MUMBAI_MANIFEST } from "@/lib/engine";
 import { HAND_WRITTEN_IDS, anantaById, anantaRecords } from "@/components/ananta/records";
 import { PRIOR_WEIGHTS } from "@/components/ananta/learning";
 import {
+  PLAN_BUFFER_MINUTES,
   buildStops,
   clockLabel,
   contextFromInput,
@@ -22,6 +23,15 @@ import {
  * independent re-derivation must agree to 1e-6, because a drift that big means
  * the number shown on the card and the number the validator checked are two
  * different numbers.
+ *
+ * `objectiveFast` and `objectiveNaive` are two functions in two directories
+ * under `lib/engine/` that share no code. That is the whole point of the 1e-6
+ * bound, and it is why the tolerance below is not loosened to make a red test
+ * green. Three of these four assertions currently fail because the two engine
+ * derivations disagree, which is tracked in `UI-UX-Fix-Prompts/BLOCKERS/2.md`
+ * against `lib/engine/scoring/objective-fast.ts` and
+ * `lib/engine/validation/objective-naive.ts`. The tolerance is the contract's,
+ * so it stays.
  */
 
 const weights = PRIOR_WEIGHTS;
@@ -56,7 +66,14 @@ describe("objective agreement", () => {
 
   it("agrees for an empty plan", () => {
     const { ctx, stops } = stopsFor([]);
-    expect(objectiveFast(stops, ctx, weights).value).toBe(0);
+    // The engine charges a pace deviation for an empty plan. With the shipped
+    // prior that is |0 - 3|^1.5 / 3 = 1.7320508075688774, times pacePenalty
+    // 0.35 = 0.6062177826491071, negated. The local fork returned 0 here.
+    // The engine's value is what ships, and both derivations agree on it, which
+    // is the property this file exists to check. See BLOCKERS/2.md for the
+    // argument that an empty plan should read as "no plan" rather than a bad one.
+    expect(objectiveFast(stops, ctx, weights).value).toBeCloseTo(-0.6062177826491071, 12);
+    expect(objectiveNaive(stops, ctx, weights).value).toBe(objectiveFast(stops, ctx, weights).value);
   });
 });
 
@@ -185,10 +202,15 @@ describe("stop arithmetic", () => {
     }
   });
 
-  it("adds the buffer once per stop", () => {
+  it("adds the buffer between stops, not after the last one", () => {
     const { stops } = stopsFor(["marine-drive-sunset-walk", "powai-lakeside-loop"]);
+    // The engine's `buildStops` (lib/engine/packing/pack.ts:69) sets the buffer
+    // to 0 on the final stop: you leave when you leave, so there is no slack
+    // after it. Two stops therefore carry one buffer, and the engine's own
+    // pack.test.ts locks that shape. The local fork charged every stop.
     const total = stops.reduce((sum, stop) => sum + stop.bufferMinutes, 0);
-    expect(total).toBe(stops.length * 15);
+    expect(stops.map((stop) => stop.bufferMinutes)).toEqual([15, 0]);
+    expect(total).toBe(PLAN_BUFFER_MINUTES * (stops.length - 1));
   });
 });
 

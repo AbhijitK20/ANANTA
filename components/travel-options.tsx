@@ -5,6 +5,7 @@ import { Bicycle, Car, ClockCounterClockwise, PersonSimpleWalk } from "@phosphor
 import { StatusLabel } from "@/components/ui";
 import { demoUserLocation, formatDistance } from "@/lib/location";
 import { fetchStreetRoute, TRAVEL_MODES, type StreetRoute, type TravelMode } from "@/lib/routing";
+import { depth } from "@/components/ananta/tokens";
 
 const MODE_ICON = { foot: PersonSimpleWalk, bike: Bicycle, car: Car } as const;
 
@@ -56,11 +57,12 @@ export function TravelOptions({ coordinates, placeName }: { coordinates: [number
           : `Part street routes, part straight-line estimates from ${demoUserLocation.label}. Each card below says which it is.`}
     </p>
     {loading && <p className="mt-4 text-sm text-muted">Comparing walking, cycling, and driving routes...</p>}
-    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+    <div className="stage mt-4">
+      <div className="stage-3d grid gap-3 sm:grid-cols-3">
       {withRoutes.map(({ mode, route }) => {
         const Icon = MODE_ICON[mode.id];
         const isFastest = fastest?.mode.id === mode.id;
-        return <div key={mode.id} className={`border p-4 ${isFastest ? "border-blue bg-blueSoft/40" : "border-line bg-white"}`}>
+        return <div key={mode.id} className={`border p-4 ${isFastest ? `border-blue bg-blueSoft/40 ${depth.raised}` : `border-line bg-white ${depth.flush}`}`}>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm font-bold"><Icon size={18} className="text-blue" /> {mode.label}</span>
             {isFastest && <StatusLabel tone="green">Fastest</StatusLabel>}
@@ -70,6 +72,7 @@ export function TravelOptions({ coordinates, placeName }: { coordinates: [number
           <p className="mt-2 text-[11px] leading-4 text-muted">{route.kind === "street" ? "Street route from OpenStreetMap" : "Straight-line estimate; routing unavailable"}</p>
         </div>;
       })}
+      </div>
     </div>
     {fastest && fastest.route.steps.length > 0 && <details className="mt-4 border-t border-line pt-3">
       <summary className="cursor-pointer text-sm font-bold">Turn-by-turn for the {fastest.mode.label.toLowerCase()} route</summary>

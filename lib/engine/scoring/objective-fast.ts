@@ -1,4 +1,5 @@
 import type {
+  ComponentId,
   DiscoveryContext,
   Objective,
   ObjectiveBreakdown,
@@ -33,14 +34,23 @@ function sumInOrder(values: readonly number[]): number {
  * Quadratic in distance, linear in time. Each leg is
  * `minutes * (1 + km / 8)^2`, summed in plan order.
  *
- * The squaring is the point: the sixth kilometre of an afternoon hurts more
- * than the first, which is the difference between a plan a person can walk and
- * a plan that looks good on a map.
+ * Rule G-3: a stop with `travelMinutes === 0` contributes nothing, whatever its
+ * `travelKm`. The origin leg is the one place the two readings of `Stop` can
+ * disagree, and this makes both produce the same total, so the ambiguity in the
+ * `Stop` comment cannot cost anyone the drift test.
+ *
+ * The squaring is the point: the sixth kilometre of an afternoon hurts more than
+ * the first, which is the difference between a plan a person can walk and a plan
+ * that looks good on a map.
  */
 export function superlinearTravel(stops: readonly Stop[]): number {
   const legs: number[] = [];
   for (const stop of stops) {
     const minutes = isFiniteNumber(stop.travelMinutes) ? Math.max(0, stop.travelMinutes) : 0;
+    if (minutes === 0) {
+      legs.push(0);
+      continue;
+    }
     const km = isFiniteNumber(stop.travelKm) ? Math.max(0, stop.travelKm) : 0;
     legs.push(minutes * Math.pow(1 + km / TRAVEL_KM_SCALE, 2));
   }
@@ -81,11 +91,16 @@ export function redundancyPenalty(stops: readonly Stop[]): number {
   return safeDiv(0.5 * pairs, Math.max(1, stops.length - 1));
 }
 
-/** `|n - idealStops|^1.5 / max(1, idealStops)`. Zero only when the count matches. */
+/**
+ * `objective-spec.md` section 5 writes this as `d * sqrt(d)` and says explicitly
+ * that it is written that way, "not as `d ^ 1.5`, because they are equal
+ * mathematically and only one of them is guaranteed to be the same bits in two
+ * independently written implementations". `Math.pow(d, 1.5)` is the other one.
+ */
 export function paceDeviation(stops: number, ctx: DiscoveryContext): number {
   const ideal = Math.max(1, ctx.idealStops);
   const gap = Math.abs(stops - ctx.idealStops);
-  return safeDiv(Math.pow(gap, 1.5), ideal);
+  return safeDiv(gap * Math.sqrt(gap), ideal);
 }
 
 /** `1 / (1 + km)`, in (0, 1]. Zero distance is a perfect 1, never a division by zero. */
@@ -103,24 +118,31 @@ export function planProximity(stops: readonly Stop[]): number {
 /**
  * The single scalar. Maximise.
  *
- *     utility(stop)                       summed in plan order
- *   - travelPenalty * superlinearTravel
- *   - crowd         * crowdLoad
- *   - novelty       * redundancyPenalty
- *   - pacePenalty   * paceDeviation
+ *     sum over stops of  U(stop)
+ *   - W.travelPenalty * superlinearTravel
+ *   - W.crowd         * crowdLoad
+ *   - W.novelty       * redundancyPenalty
+ *   - W.pacePenalty   * paceDeviation
  *
- * Every per-stop component is already signed, so no sign is flipped here. The
- * four aggregate terms are the only places a penalty is applied, which is what
- * keeps the breakdown legible in the UI: a negative contribution in the panel is
- * a property of that stop, and a negative aggregate is a property of the plan.
+ * **`crowd` and `novelty` are aggregate only.** `objective-spec.md`'s component
+ * table puts them in `aggregate.crowd` and `aggregate.novelty`, subtracted once
+ * each by `w.crowd` and `w.novelty`. The old composition added their per stop
+ * contributions into the utility *and* subtracted the aggregate, so both were
+ * charged twice. That single bug guaranteed the drift could never close, and it
+ * is the reason 15 tests are disabled: `UPSTREAM_AGREES` is
+ * `driftProbe().drift <= 1e-6`, and it has been false since the pipeline landed.
  *
- * The ten utility weights are read straight off the profile and are not
- * re-normalised. Section 3 of the contract states the scalar as `W.c_i * U_i`
- * and says nothing about the weight vector being a partition, so normalising
- * here would have been an unrequested change to the number session 6 checks.
- * `clampWeights` is exported for the code that *writes* a profile, which is
- * where making the vector a partition belongs.
+ * The per stop breakdown still lists all ten components, because the traveller is
+ * owed to see what a crowd reading did on the card they are looking at. Those two
+ * rows are diagnostic. They are not added.
+ *
+ * Composition order is normative, section 6: push per stop values into an array,
+ * push the four penalties into another in the order travel, crowd, novelty, pace,
+ * then reduce each in index order and subtract. `(a + b) + c` is not `a + (b + c)`
+ * in binary floating point, and the reducer is the contract.
  */
+const AGGREGATE_ONLY: ReadonlySet<ComponentId> = new Set(["crowd", "novelty"]);
+
 export function objectiveFast(stops: readonly Stop[], ctx: DiscoveryContext): Objective {
   const weights = ctx.profile.weights;
   const components: ScoreComponent[] = [];
@@ -128,26 +150,28 @@ export function objectiveFast(stops: readonly Stop[], ctx: DiscoveryContext): Ob
 
   for (let i = 0; i < stops.length; i += 1) {
     const block = scoreStop(stops[i], ctx, { index: i, prior: stops.slice(0, i) });
-    const contributions: number[] = [];
+    const utilityParts: number[] = [];
     for (const entry of block) {
       components.push(entry);
-      contributions.push(entry.contribution);
+      if (AGGREGATE_ONLY.has(entry.id)) continue;
+      utilityParts.push(entry.contribution);
     }
-    perStop.push(sumInOrder(contributions));
+    perStop.push(sumInOrder(utilityParts));
   }
 
   const utility = sumInOrder(perStop);
-  const travel = superlinearTravel(stops);
-  const crowd = crowdLoad(stops, ctx);
+  const travel = superlinearTravel(stops);  const crowd = crowdLoad(stops, ctx);
   const novelty = redundancyPenalty(stops);
   const pace = paceDeviation(stops.length, ctx);
   const proximity = planProximity(stops);
 
-  const total = utility
-    - weights.travelPenalty * travel
-    - weights.crowd * crowd
-    - weights.novelty * novelty
-    - weights.pacePenalty * pace;
+  const penaltyTerms: number[] = [];
+  penaltyTerms.push(weights.travelPenalty * travel);
+  penaltyTerms.push(weights.crowd * crowd);
+  penaltyTerms.push(weights.novelty * novelty);
+  penaltyTerms.push(weights.pacePenalty * pace);
+
+  const total = sumInOrder(perStop) - sumInOrder(penaltyTerms);
 
   const breakdown: ObjectiveBreakdown = {
     total,

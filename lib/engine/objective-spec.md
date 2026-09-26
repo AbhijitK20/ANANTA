@@ -157,9 +157,14 @@ wilsonLowerBound(positive, total):
   z2   = 3.8416
   denom  = 1 + z2 / total
   centre = p + z2 / (2 * total)
-  margin = z * sqrt((p * (1 - p) + z2 / (4 * total)) / total)
+  margin = z * sqrt((p * (1 - p) + z2 / 4) / total)
   return (centre - margin) / denom
 ```
+
+The `z2 / 4` term is the standard form, so it divides by 4 and not by
+`4 * total`. An earlier revision of this file wrote `z2 / (4 * total)`, which
+produces `z2 / (4n²)` inside the root and is not the Wilson bound. Corrected
+here, and both implementations follow the corrected line.
 
 `z = 1.96`, the 95% two sided normal quantile. Fixed, not configurable, so both
 implementations use the same literal. The result is in `[0, 1]`, so it needs no

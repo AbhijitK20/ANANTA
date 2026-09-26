@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  PROXIMITY_WEIGHT_FALLBACK,
   authenticityScore,
   clamp01,
   clampSigned,
@@ -11,7 +10,6 @@ import {
   paceDeviation,
   peakHourFactor,
   proximityDecay,
-  proximityWeight,
   ratingScore,
   redundancyPenalty,
   reliabilityScore,

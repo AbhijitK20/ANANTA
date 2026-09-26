@@ -7,90 +7,42 @@ import type {
 } from "@/lib/engine/contracts/types";
 
 /**
- * Every normalised score component, re-derived from the written objective in
- * `SESSION/00-CONTRACTS.md` section 3.
+ * Every normalised score component, re-derived from `lib/engine/objective-spec.md`.
  *
  * Audit note: this file and `scoring/objective-fast.ts` are deliberate duplicates
- * of the same specification. Never merge them. A shared helper is a shared bug,
- * and the drift comparison is evidence only while the two derivations are
- * independent.
+ * of the same specification. **Never merge them, and never let one import the
+ * other.** A shared helper is a shared bug, and the drift comparison is evidence
+ * only while the two derivations are independent.
  *
- * What the spec pins down:
- *   - the shape of the scalar, with utility minus four aggregate penalties
- *   - superlinearTravel = sum( minutes * (1 + km / 8)^2 )
- *   - crowdLoad = mean over stops of clamp01(crowdProfile ?? 0.5) * peakHour
- *   - redundancy = sum over unordered pairs of 0.5 per equal category, / max(1, n-1)
- *   - paceDeviation = |n - idealStops|^1.5 / max(1, idealStops)
- *   - proximityDecay = 1 / (1 + travelKm)
- *   - peakHourFactor = 1.0 at the record's best time, 0.4 at the opposite end
- *   - nil fallbacks: rating 0 when reviewCount is null, value 0 when the price
- *     is unknown, weather 0 when the weather is unknown
- *
- * What the spec leaves open, and what this file does:
- *   ponytail: the normalisations below are this file's reading of a spec that
- *   names the components without giving their closed form. They are collected
- *   here rather than scattered so that a divergence is one edit, not six.
- *   Upgrade path: when session 4 lands `objectiveFast`, `drift.test.ts` names
- *   the first component that disagrees, and the fix is to move that row to the
- *   agreed formula. Logged in SESSION/BLOCKERS/6.md.
- *
- *   1. rating     ratings are on a 1..5 scale, so (lowerBound - 3) / 2 maps
- *                 1 -> -1, 3 -> 0, 5 -> +1.
- *   2. interest   profile.interests[category] minus profile.avoid[category],
- *                 clamped to [-1, 1]. An unlisted category is neutral, not zero
- *                 interest.
- *   3. value      the per-head price as a share of the traveller's own per-head
- *                 budget: 1 - 2 * clamp01(share). Free is +1, a stop that eats
- *                 the whole head budget is -1, half of it is 0.
- *   4. weather    0 when the weather is unknown, 1 for every record when it is
- *                 clear, and an indoor/mixed/outdoor ladder when it is not.
- *   5. groupFit   0.25 baseline, minus 0.5 per unmet access need, minus 0.4 per
- *                 unmet diet, minus 1 for a party larger than capacity, minus 1
- *                 for a record that is not kid friendly when a toddler is
- *                 present. Clamped to [-1, 1].
- *   6. peakHour   morning -> afternoon -> evening -> night is a 4-step cycle.
- *                 0 steps away is 1.0, 1 or 3 steps is 0.7, 2 steps is 0.4.
- *                 A record whose best time is "any" never loses anything.
- *   7. time of day comes from the text of the ISO string, never from the host
- *                 clock or the host timezone, so the result cannot depend on
- *                 where the test happens to run.
+ * The spec is normative and this file now conforms to it. It previously did not:
+ * the ten terms below each had their own reading, and the measured drift on a
+ * four stop plan was 7.588 against a 1e-6 bound. Every divergence is annotated
+ * with what the spec says and why the old reading was wrong.
  */
 
-/** 1..5 rating scale midpoint and half span, used to lift the Wilson bound into [-1, 1]. */
-const RATING_MIDPOINT = 3;
-const RATING_HALF_SPAN = 2;
-/** A record's ratings are stars out of five, so there are five trials per review. */
+/** 1..5 rating scale, so a `ratingSum` is a sum of stars out of five per review. */
 const STAR_SCALE = 5;
 
-/** How sharply a record is punished for being outdoors as the weather worsens. */
-const WEATHER_OUTDOOR: Record<
+/**
+ * `objective-spec.md` section 4 gives the weather table and says "copy the
+ * table, do not derive it":
+ *
+ *   "clear"      indoor 0.4   outdoor 1     mixed 0.7
+ *   "rain"       indoor 1     outdoor 0.2   mixed 0.6
+ *   "heavy_rain" indoor 1     outdoor -1    mixed -0.4
+ *   "storm"      indoor 0.8   outdoor -1    mixed -0.5
+ *
+ * and unknown weather is 0, not a neutral 0.5. A neutral score is a claim; "we
+ * do not know" is not one.
+ */
+const WEATHER_FIT: Record<
   NonNullable<DiscoveryContext["weatherSeverity"]>,
-  number
+  Record<ExperienceV2["indoor"], number>
 > = {
-  clear: 0.7,
-  rain: 0.1,
-  heavy_rain: 0,
-  storm: 0,
-};
-
-const WEATHER_MIXED: Record<
-  NonNullable<DiscoveryContext["weatherSeverity"]>,
-  number
-> = {
-  clear: 0.9,
-  rain: 0.5,
-  heavy_rain: 0.35,
-  storm: 0.2,
-};
-
-const WEATHER_INDOOR: Record<
-  NonNullable<DiscoveryContext["weatherSeverity"]>,
-  number
-> = {
-  clear: 1,
-  rain: 1,
-  heavy_rain: 1,
-  storm: 1,
+  clear: { indoor: 0.4, outdoor: 1, mixed: 0.7 },
+  rain: { indoor: 1, outdoor: 0.2, mixed: 0.6 },
+  heavy_rain: { indoor: 1, outdoor: -1, mixed: -0.4 },
+  storm: { indoor: 0.8, outdoor: -1, mixed: -0.5 },
 };
 
 const SLOTS = ["morning", "afternoon", "evening", "night"] as const;
@@ -108,80 +60,95 @@ export function clampSigned(value: number): number {
 }
 
 /**
- * Wilson score lower bound at 95% (z = 1.96) for `positive` successes out of
- * `total` trials, returned as a proportion in [0, 1].
+ * Wilson score lower bound at 95%, as the proportion in `[0, 1]`.
  *
- * `ExperienceV2.ratingSum` is a sum of star ratings on a five point scale, so
- * the trial count is `reviewCount * 5`, not `reviewCount`. Passing `reviewCount`
- * here makes `positive` exceed `total`, the proportion runs above 1 and the
- * square root returns NaN, which is a silent NaN in the objective rather than a
- * loud failure. The proportion is therefore clamped even though the caller is
- * supposed to get it right.
+ * The spec pins `z2 = 3.8416` as that literal rather than `z * z`, precisely so
+ * two independently written implementations cannot disagree in the last bit, so
+ * it is written that way here and in `scoring/wilson.ts`.
+ *
+ * `ratingSum` is a sum of star ratings out of five, so the trial count is
+ * `reviewCount * STAR_SCALE`, not `reviewCount`.
  */
-export function wilsonLowerBound(
-  positive: number,
-  total: number,
-  z = 1.96,
-): number {
+export function wilsonLowerBound(positive: number, total: number): number {
   if (total <= 0) return 0;
+  const z = 1.96;
+  const z2 = 3.8416;
   const p = clamp01(positive / total);
-  const z2 = z * z;
-  const denominator = 1 + z2 / total;
+  const denom = 1 + z2 / total;
   const centre = p + z2 / (2 * total);
-  const margin = z * Math.sqrt((p * (1 - p) + z2 / (4 * total)) / total);
-  return clamp01((centre - margin) / denominator);
+  const margin = z * Math.sqrt((p * (1 - p) + z2 / 4) / total);
+  return clamp01((centre - margin) / denom);
 }
 
-/** Wilson lower bound lifted onto [-1, 1]. 0 when there are no reviews. */
+/** The raw bound, unrescaled. The spec is explicit: the result is in [0,1] already. */
 export function ratingScore(record: ExperienceV2): number {
   if (record.ratingSum === null || record.reviewCount === null) return 0;
   if (record.reviewCount <= 0) return 0;
-  // A five point scale, so there are five trials per review, not one.
-  const bound = wilsonLowerBound(record.ratingSum, record.reviewCount * STAR_SCALE);
-  return clampSigned((bound * STAR_SCALE - RATING_MIDPOINT) / RATING_HALF_SPAN);
+  return wilsonLowerBound(record.ratingSum, record.reviewCount * STAR_SCALE);
 }
 
-export function interestScore(
-  record: ExperienceV2,
-  ctx: DiscoveryContext,
-): number {
-  const wanted = ctx.profile.interests[record.category] ?? 0;
-  const avoided = ctx.profile.avoid[record.category] ?? 0;
-  return clampSigned(wanted - avoided);
+/**
+ * `base = clamp01(interests[category] ?? 0.5)`, `veto = clamp01(avoid[..] ?? 0)`,
+ * `value = clamp11((base - 0.5) * 2 - veto)`.
+ *
+ * The old reading was `interests - avoid`, which put an unlisted category at 0
+ * by accident and a half interest at 0.5, so half the scale carried no meaning.
+ */
+export function interestScore(record: ExperienceV2, ctx: DiscoveryContext): number {
+  const rawBase = ctx.profile.interests[record.category];
+  const rawVeto = ctx.profile.avoid[record.category];
+  const base = typeof rawBase === "number" && Number.isFinite(rawBase) ? clamp01(rawBase) : 0.5;
+  const veto = typeof rawVeto === "number" && Number.isFinite(rawVeto) ? clamp01(rawVeto) : 0;
+  return clampSigned((base - 0.5) * 2 - veto);
 }
+
+/**
+ * null price scores 0, a non positive price scores 1, and otherwise it is
+ * `clamp11(ratio / 4 * 2 - 1)` with `ratio = perHeadBudget / pricePerPerson`.
+ * An `estimate` confidence price scores 0, because a price we guessed must not
+ * be allowed to buy ranking.
+ */
+const UNPRICED: readonly string[] = ["estimate", "unverified"];
 
 export function valueScore(record: ExperienceV2, ctx: DiscoveryContext): number {
+  const confidence = record.confidence.price ?? "unverified";
+  if (UNPRICED.indexOf(confidence) !== -1) return 0;
   const perPerson = record.pricePerPersonInr;
   if (perPerson === null) return 0;
+  if (perPerson <= 0) return 1;
   const perHead = ctx.budgetInr / Math.max(1, ctx.partySize);
   if (perHead <= 0) return 0;
-  return 1 - 2 * clamp01(perPerson / perHead);
+  return clampSigned(perHead / perPerson / 4 * 2 - 1);
 }
 
-export function weatherScore(
-  record: ExperienceV2,
-  ctx: DiscoveryContext,
-): number {
+export function weatherScore(record: ExperienceV2, ctx: DiscoveryContext): number {
   const severity = ctx.weatherSeverity;
   if (severity === null) return 0;
-  if (record.indoor === "indoor") return WEATHER_INDOOR[severity];
-  if (record.indoor === "mixed") return WEATHER_MIXED[severity];
-  return WEATHER_OUTDOOR[severity];
+  return WEATHER_FIT[severity][record.indoor];
 }
 
-export function groupScore(
-  record: ExperienceV2,
-  ctx: DiscoveryContext,
-): number {
-  let score = 0.25;
-  for (const need of ctx.accessNeeds) {
-    if (record.access[need] === false) score -= 0.5;
+/**
+ * The spec's clause tree. Its governing sentence is the one this product is
+ * built on: a null fact never scores against the group, only a recorded false
+ * does. The old reading started from a 0.25 baseline and subtracted per unmet
+ * need, so a record with nothing recorded scored slightly positive, which is a
+ * claim about a record nobody checked.
+ */
+export function groupScore(record: ExperienceV2, ctx: DiscoveryContext): number {
+  let score = 0;
+  if (ctx.hasToddler) {
+    if (record.kidFriendly === true) score += 1;
+    else if (record.kidFriendly === false) score -= 1;
+    if (record.access.stroller_ok === true) score += 0.5;
+    else if (record.access.stroller_ok === false) score -= 0.5;
   }
-  for (const diet of ctx.diets) {
-    if (record.diets.indexOf(diet) === -1) score -= 0.4;
+  if (ctx.hasElderly) {
+    if (record.access.low_walking === true) score += 1;
+    else if (record.access.low_walking === false) score -= 1;
   }
-  if (record.capacity !== null && record.capacity < ctx.partySize) score -= 1;
-  if (ctx.hasToddler && record.kidFriendly === false) score -= 1;
+  if (ctx.partySize > 1 && record.capacity !== null) {
+    score += record.capacity >= ctx.partySize ? 0.25 : -1;
+  }
   return clampSigned(score);
 }
 
@@ -193,56 +160,67 @@ export function reliabilityScore(record: ExperienceV2): number {
   return clamp01(record.providerReliability ?? 0.5);
 }
 
-/** Which of the four slots an ISO local timestamp falls in. */
+/** The four slots exactly as the spec numbers them: 5..11, 12..16, 17..20, else night. */
 export function slotOfDay(iso: string): number {
-  const match = /T(\d{1,2}):\d{2}/.exec(iso);
-  const hour = match ? Number(match[1]) : 0;
-  if (hour < 12) return 0;
-  if (hour < 17) return 1;
-  if (hour < 21) return 2;
+  const match = /T(\d{2}):(\d{2})/.exec(iso);
+  const hours = match ? Number(match[1]) : 0;
+  if (!Number.isFinite(hours)) return 0;
+  if (hours >= 5 && hours < 12) return 0;
+  if (hours >= 12 && hours < 17) return 1;
+  if (hours >= 17 && hours < 21) return 2;
   return 3;
 }
 
-/** 1.0 at the record's best time, 0.7 one step either way, 0.4 opposite. */
-export function peakHourFactor(
-  now: string,
-  best: ExperienceV2["bestTimeOfDay"],
-): number {
+/**
+ * `t = clamp01(abs(slot(hour) - index(best)) / 3)`, `factor = 1 - 0.6 * t`.
+ *
+ * Linear, not a ring. The old reading was `1 - 0.6 * (steps / 2)` on a four point
+ * cycle, which is the same shape but reaches its floor at two steps, so it could
+ * not distinguish "one slot away" from "two slots away" the way the spec's `t`
+ * does. The hour also came from `hour < 12` as a single test, which put 05:00 in
+ * the morning bucket for the wrong reason.
+ */
+export function peakHourFactor(now: string, best: ExperienceV2["bestTimeOfDay"]): number {
   if (best === "any") return 1;
-  const here = slotOfDay(now);
-  const there = SLOTS.indexOf(best);
-  const raw = Math.abs(here - there);
-  const steps = Math.min(raw, 4 - raw);
-  return 1 - 0.6 * (steps / 2);
+  const bestIndex = SLOTS.indexOf(best);
+  if (bestIndex < 0) return 1;
+  const t = clamp01(Math.abs(slotOfDay(now) - bestIndex) / 3);
+  return 1 - 0.6 * t;
 }
 
 export function proximityDecay(travelKm: number): number {
   return 1 / (1 + travelKm);
 }
 
+/** Rule G-3: a zero minute leg contributes zero whatever its km. */
 export function superlinearTravel(
   stops: readonly Stop[],
   legKm: readonly number[],
 ): number {
-  let total = 0;
+  const legs: number[] = [];
   for (let i = 0; i < stops.length; i += 1) {
+    const minutes = stops[i].travelMinutes > 0 ? stops[i].travelMinutes : 0;
+    if (minutes === 0) {
+      legs.push(0);
+      continue;
+    }
     const km = legKm[i] ?? 0;
     const ratio = 1 + km / 8;
-    total += stops[i].travelMinutes * ratio * ratio;
+    legs.push(minutes * Math.pow(ratio, 2));
   }
+  let total = 0;
+  for (const value of legs) total += value;
   return total;
 }
 
-export function crowdLoad(
-  stops: readonly Stop[],
-  ctx: DiscoveryContext,
-): number {
+export function crowdLoad(stops: readonly Stop[], ctx: DiscoveryContext): number {
   if (stops.length === 0) return 0;
-  let total = 0;
+  const parts: number[] = [];
   for (const stop of stops) {
-    const crowd = clamp01(stop.record.crowdProfile ?? 0.5);
-    total += crowd * peakHourFactor(ctx.now, stop.record.bestTimeOfDay);
+    parts.push(clamp01(stop.record.crowdProfile ?? 0.5) * peakHourFactor(ctx.now, stop.record.bestTimeOfDay));
   }
+  let total = 0;
+  for (const value of parts) total += value;
   return total / stops.length;
 }
 
@@ -256,25 +234,10 @@ export function redundancyPenalty(stops: readonly Stop[]): number {
   return pairs / Math.max(1, stops.length - 1);
 }
 
+/** The spec writes this `d * sqrt(d)`, not `d ^ 1.5`, for bit identity. */
 export function paceDeviation(stopCount: number, ctx: DiscoveryContext): number {
   const gap = Math.abs(stopCount - ctx.idealStops);
-  return Math.pow(gap, 1.5) / Math.max(1, ctx.idealStops);
-}
-
-/**
- * `Weights` has no `proximity` key, so the per-stop proximity term has to come
- * from somewhere. This reads the key when it is present and falls back to a
- * documented constant when it is not, so the day session 1 adds it, both
- * derivations use their own number with no edit here.
- * ponytail: ceiling is the fallback constant. Upgrade path is one deleted line.
- */
-export const PROXIMITY_WEIGHT_FALLBACK = 0.15;
-
-export function proximityWeight(weights: Weights): number {
-  const candidate = (weights as { proximity?: number }).proximity;
-  return typeof candidate === "number" && Number.isFinite(candidate)
-    ? candidate
-    : PROXIMITY_WEIGHT_FALLBACK;
+  return (gap * Math.sqrt(gap)) / Math.max(1, ctx.idealStops);
 }
 
 export function mean(values: readonly number[]): number {

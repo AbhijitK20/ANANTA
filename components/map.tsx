@@ -5,27 +5,24 @@ import maplibregl from "maplibre-gl";
 import { clusterMarkers } from "@/lib/cluster";
 import { demoUserLocation } from "@/lib/location";
 import { positionAlongRoute, type StreetRoute } from "@/lib/routing";
+import { depth } from "@/components/ananta/tokens";
 import type { ExperienceV2 } from "@/lib/engine";
 
 /**
- * Map fixes, all of them honesty or performance.
+ * Map, in the spatial round. The map stays 2D: a tilted basemap is a navigation
+ * hazard and MapLibre owns its own render loop. Depth here is pin state only,
+ * per contracts section 7.
  *
- * 1. The marker count is capped. `clusterMarkers` returns `undefined` cell size
- *    at zoom 14 and above, which turns clustering off entirely, and the old
- *    caller passed all 1107 records. Selecting a place called `flyTo({ zoom: 13 })`,
- *    one step away. So the caller now hands the map a ranked, capped slice and
- *    the cap is stated on screen. `lib/cluster.ts` also does an `items.find()`
- *    inside a `.map()`, which is the underlying O(n squared); reported as a
- *    blocker because that file is not mine.
+ * The one thing to be careful about: the MapLibre container and its controls are
+ * NOT inside the 3D `.stage` container. A `perspective` or `preserve-3d` on an
+ * ancestor of the canvas transforms the canvas itself and the navigation
+ * controls drift out of alignment. Only the marker elements, which MapLibre
+ * positions in its own absolutely-placed marker pane, carry a depth class, and
+ * the pane is already outside the canvas transform.
  *
- * 2. `Popup.setHTML` is gone. 1107 venue names flowed into an `innerHTML` sink
- *    and `.github/workflows/refresh-geocode.yml` rewrites that data from Overpass
- *    every month, so the data is not even ours to vouch for. `setDOMContent`
- *    with real text nodes cannot execute anything, and a CSP will not break it.
- *
- * 3. Individual markers are real focusable buttons with a label, so the map is
- *    not a keyboard trap. The container `aria-label` came off a plain div, which
- *    is an ARIA lie, and is replaced by a visible note.
+ * Rain desaturates the map, and heavy rain and storm blur it, because that is
+ * what rain does to distance perception and it makes the straight-line estimate
+ * label feel necessary rather than pedantic.
  */
 
 const MAX_MARKERS = 250;
@@ -35,9 +32,13 @@ type Props = {
   selectedId?: string;
   onSelect: (id: string) => void;
   route?: StreetRoute | null;
+  /** Ids the gate refused, so their pins recede. */
+  rejectedIds?: string[];
+  /** Current weather, which desaturates and blurs the map. */
+  weather?: "clear" | "rain" | "heavy_rain" | "storm" | null;
 };
 
-export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
+export function ExperienceMap({ records, selectedId, onSelect, route, rejectedIds, weather }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -105,6 +106,7 @@ export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
     const capped = records.slice(0, MAX_MARKERS);
     setDropped(Math.max(0, records.length - capped.length));
     const byId = new Map(capped.map((record) => [record.id, record]));
+    const refused = new Set(rejectedIds ?? []);
 
     markersRef.current = clusterMarkers(
       capped.map(({ id, coordinates }) => ({ id, coordinates })),
@@ -114,7 +116,9 @@ export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
         if (entry.kind === "cluster") {
           const element = document.createElement("button");
           element.type = "button";
-          element.className = "cluster-badge";
+          // A cluster already means "a group at one place", so elevation
+          // reinforces a meaning that exists rather than inventing one.
+          element.className = `cluster-badge ${depth.raised}`;
           element.textContent = String(entry.ids.length);
           element.setAttribute("aria-label", `${entry.ids.length} experiences in this area. Zoom in to expand.`);
           element.addEventListener("click", () =>
@@ -129,9 +133,20 @@ export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
         // label. MapLibre gives us the div, we give it the semantics.
         const element = document.createElement("button");
         element.type = "button";
-        element.className = "place-pin";
+        // Selected lifts to floating; a refused record is recessed and dashed.
+        // Depth encodes what we know and whether we will send you here, never a
+        // magnitude, so nothing here reads price or distance.
+        const isSelected = record.id === selectedId;
+        const isRefused = refused.has(record.id);
+        const depthClass = isSelected
+          ? depth.floating
+          : isRefused
+            ? depth.recessed
+            : depth.raised;
+        element.className = `place-pin ${depthClass}`;
         element.style.setProperty("--pin", record.statusTone === "amber" ? "#A15C07" : record.statusTone === "green" ? "#087443" : "#175CD3");
-        element.setAttribute("aria-label", `${record.name}, ${record.area}, ${record.priceInr === 0 ? "free" : `₹${record.priceInr}`}. Select to see why it ranks here.`);
+        const refusedNote = isRefused ? " The gate did not select this." : "";
+        element.setAttribute("aria-label", `${record.name}, ${record.area}, ${record.priceInr === 0 ? "free" : `₹${record.priceInr}`}.${refusedNote} Select to see why it ranks here.`);
         const popup = new maplibregl.Popup({ offset: 18, closeButton: true }).setDOMContent(
           popupBody(record.name, `${record.area} · ${record.priceInr === 0 ? "Free" : `₹${record.priceInr.toLocaleString("en-IN")}`} · ${record.durationMinutes} min visit`),
         );
@@ -141,7 +156,7 @@ export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
         return marker;
       })
       .filter((marker): marker is maplibregl.Marker => marker !== null);
-  }, [records, zoom]);
+  }, [records, zoom, selectedId, rejectedIds]);
 
   useEffect(() => {
     const selected = records.find((record) => record.id === selectedId);
@@ -217,9 +232,27 @@ export function ExperienceMap({ records, selectedId, onSelect, route }: Props) {
     return cleanup;
   }, [route, mapReady]);
 
+  // Rain dulls distance perception, so the map dulls with it. heavy_rain and
+  // storm blur as well, because that is what heavy rain does to a horizon, and
+  // it is what makes a straight-line estimate honest rather than pedantic. This
+  // is a CSS filter via Tailwind filter utilities, deliberately NOT a 3D
+  // transform: the canvas and its controls must stay outside any perspective
+  // context, and a filter never creates one.
+  const weatherClass =
+    weather === "storm"
+      ? "saturate-40 blur-[2px]"
+      : weather === "heavy_rain"
+        ? "saturate-50 blur-[1px]"
+        : weather === "rain"
+          ? "saturate-60"
+          : "";
+
   return (
     <div className="absolute inset-0">
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* The MapLibre container and its navigation control stay OUTSIDE the 3D
+          stage. A perspective on this element would transform the canvas and
+          drift the zoom controls. Only the marker elements carry depth. */}
+      <div ref={containerRef} className={`absolute inset-0 ${weatherClass}`} />
       <p className="pointer-events-none absolute bottom-3 left-3 max-w-[280px] rounded-md border border-line bg-white/95 px-3 py-2 text-[11px] font-semibold leading-4 text-muted shadow-card">
         The ranked list below is the accessible path. Every pin here is also a labelled button you can tab to.
       </p>

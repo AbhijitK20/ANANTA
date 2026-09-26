@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, Flag, MapPin, Storefront, Wrench } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, ArrowRight, Flag, MapPin, Storefront, Wrench } from "@phosphor-icons/react/dist/ssr";
+import { StateNote, buttonClass } from "@/components/ui";
 
 /**
  * Contact, without inventing a contact.
@@ -59,27 +60,57 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-10 space-y-4">
-          {ROUTES.map((route) => {
-            const Icon = route.icon;
-            return (
-              <section key={route.href} className="border border-line p-5">
-                <div className="flex items-start gap-3">
-                  <Icon size={20} className="mt-0.5 shrink-0 text-blue" />
-                  <div>
-                    <h2 className="text-lg font-bold">{route.title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-muted">{route.body}</p>
-                    <Link
-                      href={route.href}
-                      className="mt-3 inline-block text-sm font-bold text-blue underline"
-                    >
-                      Open {route.href}
-                    </Link>
+          {ROUTES.length === 0 ? (
+            /* A real failure, not a hypothetical one. `ROUTES` is the data this
+               page exists to render, and an empty table would otherwise leave a
+               blank section under a confident heading. `broken` is the only state
+               allowed to look like a failure, and even here it names what broke
+               and what still works. */
+            <StateNote state="broken">
+              <p className="text-xs leading-5 text-muted">
+                The contact routes failed to load, so the three paths below could not be
+                listed. The report mechanism they point at still works: open any place from
+                Explore and use Report incorrect information on its page.
+              </p>
+            </StateNote>
+          ) : (
+            ROUTES.map((route) => {
+              const Icon = route.icon;
+              return (
+                <section key={route.href} className="border border-line p-5">
+                  <div className="flex items-start gap-3">
+                    <Icon size={20} className="mt-0.5 shrink-0 text-blue" />
+                    <div>
+                      <h2 className="text-lg font-bold">{route.title}</h2>
+                      <p className="mt-2 text-sm leading-6 text-muted">{route.body}</p>
+                      <Link
+                        href={route.href}
+                        className="mt-3 inline-block text-sm font-bold text-blue underline"
+                      >
+                        Open {route.href}
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </section>
-            );
-          })}
+                </section>
+              );
+            })
+          )}
         </div>
+
+        <section className="mt-10 border-t border-line pt-6">
+          <h2 className="text-xl font-bold">What a report actually does</h2>
+          <p className="mt-3 leading-7 text-muted">
+            A report carries the record id, the reason you picked and your note into
+            the operator queue at /admin/operations, where an admin can verify a
+            record or mark it stale. It is read by whoever is operating this build,
+            which today means anyone who loads that page, because no operator is
+            on call. It is not emailed anywhere and it does not leave your browser.
+          </p>
+          <Link href="/explore" className={buttonClass("secondary", "mt-4")}>
+            Open a place to report it
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        </section>
 
         <section className="mt-10 border-t border-line pt-6">
           <h2 className="text-xl font-bold">What this product is not</h2>

@@ -39,7 +39,7 @@ export function wilsonLowerBound(positive: number | null, total: number | null):
   // a corrupt record from producing a bound above 1.
   const successes = Math.min(total, Math.max(0, positive));
   const p = successes / total;
-  const z2 = WILSON_Z * WILSON_Z;
+  const z2 = 3.8416;
   const denominator = 1 + z2 / total;
   const inner = (p * (1 - p) + z2 / 4) / total;
   const lower = (p + z2 / (2 * total) - WILSON_Z * Math.sqrt(Math.max(0, inner))) / denominator;

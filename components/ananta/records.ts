@@ -10,24 +10,26 @@ import type {
 } from "@/lib/engine";
 
 /**
- * v1 to v2 record adapter.
+ * v1 to v2 record adapter, and the single source of every number the UI may show.
  *
- * Session 8 owns `lib/data/ananta/records.ts` and exports `anantaRecords` plus
- * `enrich(base, now)`. Those have not landed. This file is the stand-in so the
- * traveller screens have honest, fully-populated `ExperienceV2` records to
- * render, and it is written to be deleted the moment `anantaRecords` exists:
- * every call site reads the exported `anantaRecords` symbol and nothing else.
+ * `lib/data/ananta/records.ts` now exports the real `anantaRecords` and
+ * `enrich(base, now)`. This adapter is still the one the screens read, because
+ * its `anantaById` is a `Record` and the engine side is a `ReadonlyMap`, and
+ * switching nine in-flight sessions onto a different lookup shape is not a
+ * change this round can make safely. The cutover and the `Record` versus
+ * `ReadonlyMap` decision are written up in `UI-UX-Fix-Prompts/BLOCKERS/1.md`.
  *
  * The two rules from `SESSION/00-CONTRACTS.md` section 6 that matter most are
  * enforced here rather than hoped for:
  *
  *   1. A field derived from a hash is `inferred` + `estimate`, never `curated`.
  *      `lib/data/factory.ts` picks every generated price and duration with
- *      `hash(id)`, so all 1064 generated records label both as estimates. Only
- *      the hand-written `experienceSeed` records earn `curated`.
- *   2. `sourceUrl` is `string | null` and never `example.com`. The v1 record's
- *      `sourceUrl` is a placeholder, so it is dropped rather than passed
- *      through; only genuinely real URLs (Commons, OpenStreetMap) survive.
+ *      `hash(id)`, so all generated records label both as estimates. Only the
+ *      hand-written `experienceSeed` records earn `curated`.
+ *   2. `sourceUrl` is `string | null` and never a placeholder host. The v1
+ *      record's `sourceUrl` is a placeholder, so it is dropped rather than
+ *      passed through; only genuinely real URLs (Commons, OpenStreetMap)
+ *      survive.
  *
  * Everything here is a pure function of the frozen seed, so the module-level
  * `anantaRecords` is byte-identical on the server and in the browser. No
@@ -35,12 +37,12 @@ import type {
  */
 
 /** Hand-written records, the only ones allowed to claim `curated` facts. */
-const HAND_WRITTEN = new Set(experienceSeed.map((record) => record.id));
+const HAND_WRITTEN_ID_SET = new Set(experienceSeed.map((record) => record.id));
 
 /** The v1 confidence sentence splits cleanly on its semicolon. */
-const OSM_MATCHED = "Location matched on OpenStreetMap";
+const OSM_MATCHED_PREFIX = "Location matched on OpenStreetMap";
 
-export const HAND_WRITTEN_IDS = HAND_WRITTEN;
+export const HAND_WRITTEN_IDS = HAND_WRITTEN_ID_SET;
 
 /** `"Free"` is zero. Anything else is the first digit run in the string. */
 export function priceInrFrom(text: string): number {
@@ -81,10 +83,6 @@ const COMMUNITY_SOURCES = new Set([
   "Community submission",
 ]);
 
-function note(parts: string[]): string {
-  return parts.join(" ");
-}
-
 function sourced<T>(
   value: T,
   provenance: Provenance,
@@ -110,10 +108,10 @@ function sourced<T>(
  * silent guesses: `null` means "we do not know" and the badge says so.
  */
 export function enrich(base: Experience): ExperienceV2 {
-  const handWritten = HAND_WRITTEN.has(base.id);
+  const handWritten = HAND_WRITTEN_ID_SET.has(base.id);
   const asOf = base.lastChecked;
   const community = COMMUNITY_SOURCES.has(base.source);
-  const onOsm = base.confidence.startsWith(OSM_MATCHED);
+  const onOsm = base.confidence.startsWith(OSM_MATCHED_PREFIX);
 
   const price = priceInrFrom(base.price);
   const duration = durationMinutesFrom(base.duration);
@@ -394,6 +392,14 @@ export const legacyById: Record<string, Experience> = Object.fromEntries(
 
 export const DATASET_SIZE = anantaRecords.length;
 
+/** Hand-written records. The only ones allowed to claim a `curated` fact. */
+export const HAND_WRITTEN = HAND_WRITTEN_ID_SET.size;
+
+/** Records whose coordinates were matched to an OpenStreetMap feature. */
+export const OSM_MATCHED = anantaRecords.filter(
+  (record) => record.confidence.coordinates === "verified",
+).length;
+
 export const CURATED_CATEGORY_COUNT = new Set(
   anantaRecords.map((record) => record.category),
 ).size;
@@ -410,9 +416,38 @@ export const communityRecordIds = new Set(
     .map((record) => record.id),
 );
 
-export const provenanceSummary = note([
-  "Every field carries its own provenance.",
-  "Hand-entered facts are marked curated.",
-  "Hash-derived values are marked inferred and shown as estimates.",
-  "Fields with nothing on record are marked unverified and the product refuses to guess them.",
-]);
+/**
+ * How many records have at least one field in each knowledge state.
+ *
+ * These do NOT add up to `DATASET_SIZE`, and that is the point: a record with a
+ * matched pin and a hash-derived price is in two buckets at once, and the
+ * design contract says a partly known record must never collapse into one
+ * state. A badge is generated from this map, never guessed.
+ */
+export const provenanceSummary: Record<Confidence, number> = {
+  verified: 0,
+  community: 0,
+  estimate: 0,
+  unverified: 0,
+};
+for (const record of anantaRecords) {
+  const seen = new Set<Confidence>(Object.values(record.confidence) as Confidence[]);
+  for (const state of seen) provenanceSummary[state] += 1;
+}
+
+/** `1107` renders as `1,107`. Hand rolled so server and browser agree. */
+function grouped(value: number): string {
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * The one sentence the landing page leads with. Every number is read from the
+ * data above, so it cannot drift from the catalogue and there is nothing to
+ * hard-code when the dataset changes.
+ */
+export function credibilityLine(): string {
+  return (
+    `${grouped(DATASET_SIZE)} local places. ${grouped(HAND_WRITTEN)} have hand-written facts. ` +
+    `Every field is labelled.`
+  );
+}
