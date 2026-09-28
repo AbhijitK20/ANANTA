@@ -6,61 +6,61 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-0",
     "file": "File:Kala Ghoda.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Reshub / CC BY-SA 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-1",
     "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-2",
     "file": "File:MumbaiBrickCart gobeirne.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Greg O'Beirne / CC BY-SA 3.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-3",
     "file": "File:MumbaiIceCart gobeirne.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Greg O'Beirne / CC BY-SA 3.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-4",
     "file": "File:Mumbai 03-2016 27 skyline at Marine Drive.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-5",
     "file": "File:Mumbai 03-2016 46 evening at Marine Drive.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-6",
     "file": "File:Bhindi Bazaar.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Dsouzamarshall ( talk ) / CC BY-SA 3.0",
     "query": "Bhendi Bazaar Mumbai"
   },
   {
     "key": "commons-7",
     "file": "File:Old bhendi Bazaar.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Boomchikaboomboom / CC BY-SA 4.0",
     "query": "Bhendi Bazaar Mumbai"
   },
   {
     "key": "commons-8",
     "file": "File:Lesser Flamingos at Sewri Mudflats, Mumbai by Raju Kasambe.JPG",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Dr. Raju Kasambe / CC BY-SA 3.0",
     "query": "Sewri Mumbai"
   },
   {
     "key": "commons-9",
     "file": "File:Mumbai 03-2016 56 Sewri station.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Sewri Mumbai"
   },
   {
@@ -162,61 +162,61 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-26",
     "file": "File:Marine Lines Mumbai 2021.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Dr Vikramjit Kakati / CC BY-SA 4.0",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-27",
     "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (3).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-28",
     "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (4).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-29",
     "file": "File:Bagdadi Restaurant, Colaba, Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "WL from Shanghai, China / CC BY 2.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-30",
     "file": "File:Colaba Causeway - panoramio (2).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-31",
     "file": "File:Marine Drive of Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "BroKholi94 / CC BY-SA 4.0",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-32",
     "file": "File:SWITCH - Ac Double Decker Bus of BEST, Marine Drive Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Meghdhanu / CC BY-SA 4.0",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-33",
     "file": "File:Girgaum Chowpatty.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Marina / CC BY 2.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-34",
     "file": "File:Girgaum Chowpatty Sea.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "AroundTheGlobe / CC BY-SA 3.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-35",
     "file": "File:Navi Mumbai India.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "The original uploader was Nikkul at English Wikipedia . / CC BY-SA 2.0",
     "query": "Belapur Navi Mumbai"
   },
   {

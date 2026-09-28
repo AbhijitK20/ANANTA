@@ -490,7 +490,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-69",
     "id": "TpvlYXHhvsM",
     "title": "🌿 Sanjay Gandhi National Park Vlog | Kanheri Caves Trek | Monsoon Adventure in Mumbai 🌧",
-    "creator": "piyush hadayle vlogss",
+    "creator": "piyush hadayle vlogs",
     "query": ""
   },
   {
@@ -2331,7 +2331,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-332",
     "id": "Aixz3wDhweo",
     "title": "KP ARTS | Gharguti Murti Price 5 Lakh | Khas Mulakat with Krunal Dada Patil | Ganesh Utsav 2026 ",
-    "creator": "Mumbaichakunal ",
+    "creator": "Kunalvlogs555",
     "query": "Mumbai art workshop"
   },
   {
