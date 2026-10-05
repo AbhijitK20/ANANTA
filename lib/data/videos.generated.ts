@@ -560,7 +560,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-79",
     "id": "OGjeMmd20Sw",
     "title": "Top 3 Rooftop Bars in Mumbai with Stunning Views 🌇 | Best Places to Chill in 2025 #mumbai #rooftop",
-    "creator": "VillageToWorld",
+    "creator": "Uttam Explores",
     "query": ""
   },
   {
@@ -1050,7 +1050,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-149",
     "id": "JU4YJ79SnXU",
     "title": "Inside AER Rooftop Bar Mumbai – 34th Floor Luxury! 🍸🌇 COMPLETE GUIDE #vlog #aer #rooftop",
-    "creator": "VillageToWorld",
+    "creator": "Uttam Explores",
     "query": "Mumbai rooftops"
   },
   {
@@ -1512,7 +1512,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-215",
     "id": "IVYZ9vtTxKg",
     "title": "Navi Mumbai ka Hidden Nature Spot 🌿 | Airoli Mangrove Walkway Family Vlog",
-    "creator": "Saurabh Rai Vlogs | Desi Family in Perth Australia",
+    "creator": "Saurabh Rai",
     "query": "Airoli mangrove park"
   },
   {
@@ -1827,7 +1827,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-260",
     "id": "I4gtB3-zpRg",
     "title": "Mumbai’s MINI VARANASI! 😱 This Place Is Connected to Lord Ram 🙏 | Baan Ganga ",
-    "creator": "journeywithnabh | Temples & Travel:",
+    "creator": "journeywithnabh | Temples & Travel vlog",
     "query": "Banganga tank Mumbai"
   },
   {

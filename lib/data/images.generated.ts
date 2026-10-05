@@ -348,61 +348,61 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-57",
     "file": "File:Mumbai, India, Bombay, Chowpatty (Chaupati) Beach.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Vyacheslav Argenberg / CC BY 4.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-58",
     "file": "File:Mumbai, India, Mumbai city skyline.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Vyacheslav Argenberg / CC BY 4.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-59",
     "file": "File:Bandra worli sealinkബാന്ദ്ര-വർളി കടൽപാലം.JPG",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Arjuncm3 / CC BY-SA 3.0",
     "query": "Bandra Mumbai"
   },
   {
     "key": "commons-60",
     "file": "File:Mumbai 03-2016 104 Bandra station.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Bandra Mumbai"
   },
   {
     "key": "commons-61",
     "file": "File:KalaGhoda, Fort,Mumbai - panoramio (18).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-62",
     "file": "File:Taj Mahal Hotel, Colaba, South Bombay, Mumbai.tif",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Wander-earth / CC BY-SA 4.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-63",
     "file": "File:Mumbai, India, Chowpatty Beach.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Vyacheslav Argenberg / CC BY 4.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-64",
     "file": "File:Mumbai, India, Bombay, Mumbai skyline at sunset.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Vyacheslav Argenberg / CC BY 4.0",
     "query": "Girgaon Chowpatty Mumbai"
   },
   {
     "key": "commons-65",
     "file": "File:Mumbai 03-2016 105 Bandra station surroundings.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Bandra Mumbai"
   },
   {
     "key": "commons-66",
     "file": "File:Mumbai 03-2016 106 Bandra station surroundings.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "A.Savin / FAL",
     "query": "Bandra Mumbai"
   },
   {
