@@ -150,13 +150,13 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-24",
     "file": "File:Colaba Causeway construction, view from Colaba island, 1826.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Jose M. Gonsalves (fl. 1826-c.1842) / Public domain",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-25",
     "file": "File:Marine Drive in Mumbai 20.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Pinakpani / CC BY-SA 4.0",
     "query": "Marine Drive Mumbai"
   },
   {
