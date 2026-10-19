@@ -222,43 +222,43 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-36",
     "file": "File:Palm Beach Road, Belapur, Navi Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Rohini / CC BY-SA 3.0",
     "query": "Belapur Navi Mumbai"
   },
   {
     "key": "commons-37",
     "file": "File:Utsav Chauk, Kharghar Navi Mumbai.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Hemantdhamne / CC BY-SA 3.0",
     "query": "Kharghar Navi Mumbai"
   },
   {
     "key": "commons-38",
     "file": "File:Central Park, Kharghar, Navi Mumbai, India.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Ojha.iiitm / CC BY-SA 4.0",
     "query": "Kharghar Navi Mumbai"
   },
   {
     "key": "commons-39",
     "file": "File:Little Cormorant, Airoli, Navi Mumbai, Maharashtra 2.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Ravi Vaidyanathan / CC BY 2.5",
     "query": "Airoli Navi Mumbai"
   },
   {
     "key": "commons-40",
     "file": "File:Little Cormorant, Airoli, Navi Mumbai, Maharashtra 1.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Ravi Vaidyanathan / CC BY 2.5",
     "query": "Airoli Navi Mumbai"
   },
   {
     "key": "commons-41",
     "file": "File:Dhodani,Panvel,Maharashtra - panoramio (2).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Panvel Maharashtra"
   },
   {
     "key": "commons-42",
     "file": "File:Dhodani,Panvel,Maharashtra - panoramio (16).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Panvel Maharashtra"
   },
   {

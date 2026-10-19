@@ -2331,7 +2331,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-332",
     "id": "Aixz3wDhweo",
     "title": "KP ARTS | Gharguti Murti Price 5 Lakh | Khas Mulakat with Krunal Dada Patil | Ganesh Utsav 2026 ",
-    "creator": "Kunalvlogs555",
+    "creator": "MUMBAICHAKUNAL ",
     "query": "Mumbai art workshop"
   },
   {
