@@ -114,37 +114,37 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-47",
     "file": "File:Mumbai suburban railway emu 1.JPG",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "WillaMissionary / Public domain",
     "query": "Mumbai local train"
   },
   {
     "key": "commons-48",
     "file": "File:KalaGhoda, Fort,Mumbai - panoramio (26).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-49",
     "file": "File:KalaGhoda, Fort,Mumbai - panoramio (32).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-21",
     "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (1).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-22",
     "file": "File:Kala Ghoda, Fort, Mumbai, Maharashtra 400001, India - panoramio (2).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Fort Kala Ghoda"
   },
   {
     "key": "commons-23",
     "file": "File:Antiques being sold on Colaba Causeway.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "https://www.flickr.com/photos/ghoseb/ / CC BY-SA 2.0",
     "query": "Mumbai Colaba Causeway"
   },
   {

@@ -1439,13 +1439,6 @@ export const generatedVideos: GeneratedVideo[] = [
     "query": "Aarey colony Mumbai"
   },
   {
-    "key": "yt-205",
-    "id": "5923thf2FVs",
-    "title": "Aarey Colony, Goregaon - 4K HDR Ride - , Mumbai IN",
-    "creator": "TheSilentTraveller",
-    "query": "Aarey colony Mumbai"
-  },
-  {
     "key": "yt-206",
     "id": "GC9lVsKsAsY",
     "title": "Mumbai Ki Sabse Mysterious Jagah? Aarey Colony #vlog7",
@@ -2239,7 +2232,7 @@ export const generatedVideos: GeneratedVideo[] = [
   {
     "key": "yt-319",
     "id": "8wNsD637Mq0",
-    "title": "NOVOTEL Mumbai Airport Full Tour  ✈️ Luxury 5 star Hotel Review | Rooftop Pool & Room Tour",
+    "title": "NOVOTEL Mumbai Airport Full Tour✈️ 5-Star Luxury Hotel Tour & Stay Experience | Rooftop Pool & Room",
     "creator": "Hustle With Siraj",
     "query": "Mumbai hotel rooftop pool"
   },
@@ -2382,5 +2375,12 @@ export const generatedVideos: GeneratedVideo[] = [
     "title": "Parel Workshop Update | Lalbagcha Raja & Mumbaicha Raja Update 2026 | All Ganpati Mandap Update",
     "creator": "Sudhir with Jyoti vlogs",
     "query": "Mumbai craft workshop"
+  },
+  {
+    "key": "yt-339",
+    "id": "nqXzkG-jU84",
+    "title": "Full Tour of St. Regis Mumbai Hotel: Room, Gym, Buffet, Lobby",
+    "creator": "Nick Gray",
+    "query": "Mumbai hotel room tour"
   }
 ];
