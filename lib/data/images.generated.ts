@@ -324,25 +324,25 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-53",
     "file": "File:Colaba Causeway, Bombay.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Unknown Publisher / CC BY 4.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-54",
     "file": "File:Mumbai - Kuvar House Building.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Ingo Mehling / CC BY-SA 4.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
     "key": "commons-55",
     "file": "File:Marine Drive Mumbai (1).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Prof tpms / CC0",
     "query": "Marine Drive Mumbai"
   },
   {
     "key": "commons-56",
     "file": "File:Marine Drive Mumbai (2).jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Prof tpms / CC0",
     "query": "Marine Drive Mumbai"
   },
   {

@@ -504,7 +504,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-71",
     "id": "NRZq0mURvhs",
     "title": "Mumbai Ke Beech Itna Bada Jungle?! 😱 | Sanjay Gandhi National Park ka  Dengerous vlog",
-    "creator": "Pradeep Xplora ",
+    "creator": "Pdx.creator07",
     "query": ""
   },
   {
@@ -2324,7 +2324,7 @@ export const generatedVideos: GeneratedVideo[] = [
     "key": "yt-332",
     "id": "Aixz3wDhweo",
     "title": "KP ARTS | Gharguti Murti Price 5 Lakh | Khas Mulakat with Krunal Dada Patil | Ganesh Utsav 2026 ",
-    "creator": "MUMBAICHAKUNAL ",
+    "creator": "The Kunal Vlogs",
     "query": "Mumbai art workshop"
   },
   {
