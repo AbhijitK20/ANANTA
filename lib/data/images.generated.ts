@@ -66,7 +66,7 @@ export const generatedImages: GeneratedImage[] = [
   {
     "key": "commons-39",
     "file": "File:Colaba Causeway,Mumbai - panoramio.jpg",
-    "credit": "Wikimedia Commons contributor",
+    "credit": "Udaykumar PR / CC BY 3.0",
     "query": "Mumbai Colaba Causeway"
   },
   {
